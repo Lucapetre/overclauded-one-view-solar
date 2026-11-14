@@ -1,0 +1,8 @@
+node_modules/
+dist/
+*.tar.gz
+*.sqlite-wal
+*.sqlite-shm
+.env*
+.openai/*.local.json
+public/mobile-qa.html
