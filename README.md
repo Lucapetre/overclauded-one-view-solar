@@ -2,7 +2,31 @@
 
 Combined phase 1 provider scraper and phase 2 backend for the customer and PPC Operations applications. Provider payloads become canonical measurements, then authorized FastAPI queries expose those measurements and their quality information to either frontend. The architecture follows pages 5, 12 and 13 of [the build plan](./Challenge1_Build_Plan.pdf).
 
-The [phase 1 walkthrough](./STEP1_README.md), [data dictionary](./DATA_DICTIONARY.md) and [source notes](./SOURCE_NOTES.md) describe the registry-driven scraper, nine fictional Huawei/Fronius/SolarEdge sites, and its generated datasets. All bundled provider data are synthetic. Both frontend UIs remain separate work; generated TypeScript types and an API client are included here.
+The [phase 1 walkthrough](./STEP1_README.md), [data dictionary](./DATA_DICTIONARY.md) and [source notes](./SOURCE_NOTES.md) describe the registry-driven scraper, nine fictional Huawei/Fronius/SolarEdge sites, and its generated datasets. All bundled provider data are synthetic. The [React frontend](./frontend/README.md) now connects customer and operations workspaces to this backend using the shared API client and generated types.
+
+## Run the integrated app
+
+After creating an account and importing data as described below, build the frontend and start the backend from the repository root:
+
+```sh
+npm --prefix frontend ci
+npm --prefix frontend run build
+.venv/bin/python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000
+```
+
+Open [the customer app](http://127.0.0.1:8000/consumer) or [the operations app](http://127.0.0.1:8000/ops). Sign in with a backend username such as `alice` and its actual password. The server supplies the role and authorized scope; customer accounts see their installations, while dispatchers, supervisors and technicians see their permitted operations views. The frontend restores the cookie session after reload and polls site data and area coverage every five seconds. Source labels, replay dates, missing values, boundary distinctions and coverage remain visible. Historical charts and paginated observations use the actual backend records.
+
+For development, keep the backend running and start Vite in another terminal:
+
+```sh
+npm --prefix frontend run dev
+```
+
+Open [http://127.0.0.1:5173](http://127.0.0.1:5173). Vite proxies `/api` to `http://127.0.0.1:8000`, preserving same-origin session behavior. Set `SOLAR_BACKEND_URL` when starting Vite to use a different backend port. Built apps are served directly by FastAPI from the same origin; `SOLAR_FRONTEND_DIST` can override the build directory. Build before starting or restarting the backend. API-only use still works without a frontend build.
+
+The frontend branch's complete planning, support, video-review and dispatch simulation remains available at `/demo/`, with a visible browser-only simulation banner. Those workflows retain their fictional accounts and local browser storage. The connected `/consumer` and `/ops` applications use real API sessions and telemetry; they do not silently fall back to mock data or claim that the simulation's mutations were saved to the backend. Planning, incidents, media and dispatch write APIs are separate work beyond phase 2.
+
+Use `npm --prefix frontend test` to run the frontend's domain and telemetry-presentation tests. Backend hosting and authorization tests are included in the Python suite.
 
 ## Run the combined pipeline
 

@@ -1,0 +1,692 @@
+{
+  "requestTypes": [
+    {
+      "id": "solar",
+      "label": "Solar production or inverter performance",
+      "family": "Production",
+      "owner": "Solar O&M",
+      "routeTo": "Solar Care"
+    },
+    {
+      "id": "device-warning",
+      "label": "Inverter warning or device temperature",
+      "family": "Temperature",
+      "owner": "Solar O&M",
+      "routeTo": "Solar Care"
+    },
+    {
+      "id": "grid",
+      "label": "Grid connection or voltage",
+      "family": "Voltage",
+      "owner": "Grid operator",
+      "routeTo": "Grid Response"
+    },
+    {
+      "id": "electrical",
+      "label": "Home electrical issue",
+      "family": "Local issue",
+      "owner": "Customer electrician",
+      "routeTo": "Field Service"
+    },
+    {
+      "id": "billing",
+      "label": "Billing or contract question",
+      "family": "Billing",
+      "owner": "Supplier support",
+      "routeTo": "Supplier Support"
+    },
+    {
+      "id": "other",
+      "label": "Other or not sure",
+      "family": "Other",
+      "owner": "Unassigned review",
+      "routeTo": "PPC Triage"
+    }
+  ],
+  "incidents": [
+    {
+      "id": "I101",
+      "site": "S01",
+      "title": "Production below expected",
+      "family": "Production",
+      "tier": "P2",
+      "owner": "Solar O&M",
+      "evidence": "Observed 2.1 kW against a 4.2 kW synthetic baseline for 65 minutes. Clouds or shading remain possible.",
+      "strength": "Fresh PV + synthetic baseline",
+      "value": 4.4,
+      "status": "New",
+      "confirmedOwner": "",
+      "revision": 1,
+      "age": 65,
+      "timeline": [
+        {
+          "text": "Episode opened from synthetic replay · rule v1.0",
+          "actor": "Replay",
+          "time": "2026-11-14T11:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "I102",
+      "site": "S02",
+      "title": "Device temperature warning",
+      "family": "Temperature",
+      "tier": "P1",
+      "owner": "Solar O&M",
+      "evidence": "DEMO_TEMP_WARN is present. The synthetic device policy requires urgent technical review; this is not a real equipment threshold.",
+      "strength": "Simulated device alarm",
+      "value": null,
+      "status": "New",
+      "confirmedOwner": "",
+      "revision": 1,
+      "age": 77,
+      "timeline": [
+        {
+          "text": "Episode opened from synthetic replay · rule v1.0",
+          "actor": "Replay",
+          "time": "2026-11-14T11:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "I103",
+      "site": "S06",
+      "title": "Telemetry connection interrupted",
+      "family": "Telemetry",
+      "tier": "P3",
+      "owner": "Unassigned review",
+      "evidence": "Last reading at 10:00; replay time 13:00. Production is unavailable, not zero.",
+      "strength": "Missing telemetry",
+      "value": null,
+      "status": "New",
+      "confirmedOwner": "",
+      "revision": 1,
+      "age": 89,
+      "timeline": [
+        {
+          "text": "Episode opened from synthetic replay · rule v1.0",
+          "actor": "Replay",
+          "time": "2026-11-14T11:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "I104",
+      "site": "S09",
+      "title": "Voltage outside demo policy",
+      "family": "Voltage",
+      "tier": "P1",
+      "owner": "Grid operator",
+      "evidence": "DEMO_VOLT_WARN at 249 V. Owner remains unconfirmed pending technical review.",
+      "strength": "Simulated voltage + device alarm",
+      "value": null,
+      "status": "New",
+      "confirmedOwner": "",
+      "revision": 1,
+      "age": 101,
+      "timeline": [
+        {
+          "text": "Episode opened from synthetic replay · rule v1.0",
+          "actor": "Replay",
+          "time": "2026-11-14T11:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "I105",
+      "site": "S10",
+      "title": "Related feeder voltage reports",
+      "family": "Area event",
+      "tier": "P1",
+      "owner": "Grid operator",
+      "evidence": "Sites S09 and S10 share simulated feeder DEMO-F2 and event timing. Parent event; child financial impact is not added twice.",
+      "strength": "Known simulated topology",
+      "value": null,
+      "status": "New",
+      "confirmedOwner": "",
+      "revision": 1,
+      "age": 113,
+      "timeline": [
+        {
+          "text": "Episode opened from synthetic replay · rule v1.0",
+          "actor": "Replay",
+          "time": "2026-11-14T11:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "I106",
+      "site": "S17",
+      "title": "Customer reports a local issue",
+      "family": "Local issue",
+      "tier": "P2",
+      "owner": "Customer electrician",
+      "evidence": "Customer describes an intermittent display. A safe observation and qualified review are needed.",
+      "strength": "Customer report",
+      "value": null,
+      "status": "New",
+      "confirmedOwner": "",
+      "revision": 1,
+      "age": 125,
+      "timeline": [
+        {
+          "text": "Episode opened from synthetic replay · rule v1.0",
+          "actor": "Replay",
+          "time": "2026-11-14T11:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "I107",
+      "site": "S18",
+      "title": "Weather-related output change",
+      "family": "Weather",
+      "tier": "P3",
+      "owner": "Unassigned review",
+      "evidence": "PV follows the broad cloudy-weather baseline. No equipment fault is established.",
+      "strength": "Synthetic weather context",
+      "value": null,
+      "status": "New",
+      "confirmedOwner": "",
+      "revision": 1,
+      "age": 137,
+      "timeline": [
+        {
+          "text": "Episode opened from synthetic replay · rule v1.0",
+          "actor": "Replay",
+          "time": "2026-11-14T11:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "I108",
+      "site": "S03",
+      "title": "Unrecognised device code",
+      "family": "Unknown code",
+      "tier": "P3",
+      "owner": "Solar O&M",
+      "evidence": "Vendor code X-704 is not mapped. Preserve the code and request technical review; do not infer a component diagnosis.",
+      "strength": "Unmapped code X-704",
+      "value": null,
+      "status": "New",
+      "confirmedOwner": "",
+      "revision": 1,
+      "age": 149,
+      "timeline": [
+        {
+          "text": "Episode opened from synthetic replay · rule v1.0",
+          "actor": "Replay",
+          "time": "2026-11-14T11:00:00Z"
+        }
+      ]
+    }
+  ],
+  "visits": [],
+  "plans": [],
+  "preferences": {},
+  "assignments": [],
+  "audit": [],
+  "users": [
+    {
+      "id": "u1",
+      "name": "Alex Morgan",
+      "email": "alex@solarlenes.demo",
+      "role": "client",
+      "sites": [
+        "S01"
+      ],
+      "area": "North",
+      "active": true
+    },
+    {
+      "id": "u2",
+      "name": "Elena Popescu",
+      "email": "elena@solarlenes.demo",
+      "role": "client",
+      "sites": [
+        "S02"
+      ],
+      "area": "North",
+      "active": true
+    },
+    {
+      "id": "u3",
+      "name": "David Ionescu",
+      "email": "david@solarlenes.demo",
+      "role": "client",
+      "sites": [
+        "S09"
+      ],
+      "area": "Central",
+      "active": true
+    },
+    {
+      "id": "u4",
+      "name": "Sofia Marin",
+      "email": "sofia@solarlenes.demo",
+      "role": "client",
+      "sites": [
+        "S17"
+      ],
+      "area": "South",
+      "active": true
+    },
+    {
+      "id": "u5",
+      "name": "Andrei Radu",
+      "email": "ceo@solarlenes.demo",
+      "role": "ceo",
+      "sites": [],
+      "area": "All",
+      "active": true
+    },
+    {
+      "id": "u6",
+      "name": "Maria Stan",
+      "email": "manager@solarlenes.demo",
+      "role": "manager",
+      "sites": [],
+      "area": "North",
+      "active": true
+    },
+    {
+      "id": "u7",
+      "name": "Radu Pavel",
+      "email": "dispatch@solarlenes.demo",
+      "role": "dispatcher",
+      "sites": [],
+      "area": "North",
+      "active": true
+    },
+    {
+      "id": "u8",
+      "name": "Ioana Dima",
+      "email": "ioana@solarlenes.demo",
+      "role": "technician",
+      "sites": [
+        "S01",
+        "S02",
+        "S03"
+      ],
+      "area": "North",
+      "crew": "Solar Care",
+      "active": true
+    },
+    {
+      "id": "u9",
+      "name": "Mihai Petrescu",
+      "email": "mihai@solarlenes.demo",
+      "role": "technician",
+      "sites": [
+        "S09",
+        "S10"
+      ],
+      "area": "Central",
+      "crew": "Grid Response",
+      "active": true
+    },
+    {
+      "id": "u10",
+      "name": "Ana Tudor",
+      "email": "ana@solarlenes.demo",
+      "role": "technician",
+      "sites": [
+        "S17",
+        "S18"
+      ],
+      "area": "South",
+      "crew": "Field Service",
+      "active": true
+    },
+    {
+      "id": "u11",
+      "name": "Victor Ene",
+      "email": "support@solarlenes.demo",
+      "role": "support",
+      "sites": [
+        "S01",
+        "S02",
+        "S03",
+        "S04",
+        "S05",
+        "S06",
+        "S07",
+        "S08"
+      ],
+      "area": "North",
+      "active": true
+    },
+    {
+      "id": "u12",
+      "name": "Irina Matei",
+      "email": "support.central@solarlenes.demo",
+      "role": "support",
+      "sites": [
+        "S09",
+        "S10",
+        "S11",
+        "S12",
+        "S13",
+        "S14",
+        "S15",
+        "S16"
+      ],
+      "area": "Central",
+      "active": true
+    },
+    {
+      "id": "u13",
+      "name": "Paul Dumitru",
+      "email": "support.south@solarlenes.demo",
+      "role": "support",
+      "sites": [
+        "S17",
+        "S18",
+        "S19",
+        "S20",
+        "S21",
+        "S22",
+        "S23",
+        "S24"
+      ],
+      "area": "South",
+      "active": true
+    },
+    {
+      "id": "u14",
+      "name": "Carmen Voicu",
+      "email": "dispatch.central@solarlenes.demo",
+      "role": "dispatcher",
+      "sites": [],
+      "area": "Central",
+      "active": true
+    },
+    {
+      "id": "u15",
+      "name": "Dorin Ilie",
+      "email": "dispatch.south@solarlenes.demo",
+      "role": "dispatcher",
+      "sites": [],
+      "area": "South",
+      "active": true
+    }
+  ],
+  "sites": [
+    {
+      "id": "S01",
+      "name": "The Green House",
+      "area": "North",
+      "feeder": "DEMO-F1",
+      "capacity": 6,
+      "battery": false,
+      "stale": false,
+      "pv": 3.6
+    },
+    {
+      "id": "S02",
+      "name": "Solar home 02",
+      "area": "North",
+      "feeder": "DEMO-F1",
+      "capacity": 7,
+      "battery": true,
+      "stale": false,
+      "pv": 3.9
+    },
+    {
+      "id": "S03",
+      "name": "Solar home 03",
+      "area": "North",
+      "feeder": "DEMO-F1",
+      "capacity": 8,
+      "battery": false,
+      "stale": false,
+      "pv": 4.2
+    },
+    {
+      "id": "S04",
+      "name": "Solar home 04",
+      "area": "North",
+      "feeder": "DEMO-F1",
+      "capacity": 6,
+      "battery": false,
+      "stale": false,
+      "pv": 4.5
+    },
+    {
+      "id": "S05",
+      "name": "Solar home 05",
+      "area": "North",
+      "feeder": "DEMO-F1",
+      "capacity": 7,
+      "battery": false,
+      "stale": false,
+      "pv": 4.8
+    },
+    {
+      "id": "S06",
+      "name": "Solar home 06",
+      "area": "North",
+      "feeder": "DEMO-F1",
+      "capacity": 8,
+      "battery": true,
+      "stale": true,
+      "pv": 3.6
+    },
+    {
+      "id": "S07",
+      "name": "Solar home 07",
+      "area": "North",
+      "feeder": "DEMO-F1",
+      "capacity": 6,
+      "battery": false,
+      "stale": false,
+      "pv": 3.9
+    },
+    {
+      "id": "S08",
+      "name": "Solar home 08",
+      "area": "North",
+      "feeder": "DEMO-F1",
+      "capacity": 7,
+      "battery": false,
+      "stale": true,
+      "pv": 4.2
+    },
+    {
+      "id": "S09",
+      "name": "Solar home 09",
+      "area": "Central",
+      "feeder": "DEMO-F2",
+      "capacity": 8,
+      "battery": false,
+      "stale": false,
+      "pv": 4.5
+    },
+    {
+      "id": "S10",
+      "name": "Solar home 10",
+      "area": "Central",
+      "feeder": "DEMO-F2",
+      "capacity": 6,
+      "battery": true,
+      "stale": false,
+      "pv": 4.8
+    },
+    {
+      "id": "S11",
+      "name": "Solar home 11",
+      "area": "Central",
+      "feeder": "DEMO-F2",
+      "capacity": 7,
+      "battery": false,
+      "stale": false,
+      "pv": 3.6
+    },
+    {
+      "id": "S12",
+      "name": "Solar home 12",
+      "area": "Central",
+      "feeder": "DEMO-F2",
+      "capacity": 8,
+      "battery": false,
+      "stale": false,
+      "pv": 3.9
+    },
+    {
+      "id": "S13",
+      "name": "Solar home 13",
+      "area": "Central",
+      "feeder": "DEMO-F2",
+      "capacity": 6,
+      "battery": false,
+      "stale": false,
+      "pv": 4.2
+    },
+    {
+      "id": "S14",
+      "name": "Solar home 14",
+      "area": "Central",
+      "feeder": "DEMO-F2",
+      "capacity": 7,
+      "battery": true,
+      "stale": false,
+      "pv": 4.5
+    },
+    {
+      "id": "S15",
+      "name": "Solar home 15",
+      "area": "Central",
+      "feeder": "DEMO-F2",
+      "capacity": 8,
+      "battery": false,
+      "stale": true,
+      "pv": 4.8
+    },
+    {
+      "id": "S16",
+      "name": "Solar home 16",
+      "area": "Central",
+      "feeder": "DEMO-F2",
+      "capacity": 6,
+      "battery": false,
+      "stale": false,
+      "pv": 3.6
+    },
+    {
+      "id": "S17",
+      "name": "Solar home 17",
+      "area": "South",
+      "feeder": "DEMO-F3",
+      "capacity": 7,
+      "battery": false,
+      "stale": false,
+      "pv": 3.9
+    },
+    {
+      "id": "S18",
+      "name": "Solar home 18",
+      "area": "South",
+      "feeder": "DEMO-F3",
+      "capacity": 8,
+      "battery": true,
+      "stale": false,
+      "pv": 4.2
+    },
+    {
+      "id": "S19",
+      "name": "Solar home 19",
+      "area": "South",
+      "feeder": "DEMO-F3",
+      "capacity": 6,
+      "battery": false,
+      "stale": false,
+      "pv": 4.5
+    },
+    {
+      "id": "S20",
+      "name": "Solar home 20",
+      "area": "South",
+      "feeder": "DEMO-F3",
+      "capacity": 7,
+      "battery": false,
+      "stale": false,
+      "pv": 4.8
+    },
+    {
+      "id": "S21",
+      "name": "Solar home 21",
+      "area": "South",
+      "feeder": "DEMO-F3",
+      "capacity": 8,
+      "battery": false,
+      "stale": false,
+      "pv": 3.6
+    },
+    {
+      "id": "S22",
+      "name": "Solar home 22",
+      "area": "South",
+      "feeder": "DEMO-F3",
+      "capacity": 6,
+      "battery": true,
+      "stale": false,
+      "pv": 3.9
+    },
+    {
+      "id": "S23",
+      "name": "Solar home 23",
+      "area": "South",
+      "feeder": "DEMO-F3",
+      "capacity": 7,
+      "battery": false,
+      "stale": true,
+      "pv": 4.2
+    },
+    {
+      "id": "S24",
+      "name": "Solar home 24",
+      "area": "South",
+      "feeder": "DEMO-F3",
+      "capacity": 8,
+      "battery": false,
+      "stale": false,
+      "pv": 4.5
+    }
+  ],
+  "crews": [
+    {
+      "name": "Solar Care",
+      "area": "North",
+      "owner": "Solar O&M",
+      "skills": [
+        "Production",
+        "Temperature",
+        "Unknown code",
+        "Local issue"
+      ],
+      "shift": "08:00–18:00",
+      "members": "Ioana Dima · 2 technicians"
+    },
+    {
+      "name": "Grid Response",
+      "area": "Central",
+      "owner": "Grid operator",
+      "skills": [
+        "Voltage",
+        "Area event"
+      ],
+      "shift": "08:00–18:00",
+      "members": "Mihai Petrescu · 3 technicians"
+    },
+    {
+      "name": "Field Service",
+      "area": "South",
+      "owner": "Customer electrician",
+      "skills": [
+        "Local issue"
+      ],
+      "shift": "08:00–18:00",
+      "members": "Ana Tudor · 2 technicians"
+    }
+  ]
+}

@@ -5,6 +5,14 @@ from pathlib import Path
 
 @dataclass(frozen=True)
 class Settings:
+    frontend_dist: Path = field(
+        default_factory=lambda: Path(
+            os.getenv(
+                "SOLAR_FRONTEND_DIST",
+                str(Path(__file__).resolve().parents[1] / "frontend" / "dist"),
+            )
+        )
+    )
     database_path: Path = field(
         default_factory=lambda: Path(
             os.getenv("SOLAR_DATABASE", ".local/solar.sqlite3")

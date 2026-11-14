@@ -8,7 +8,8 @@ from fastapi import Body, Depends, FastAPI, Query, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException
 
 from backend.config import Settings
@@ -416,6 +417,33 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return app.openapi_schema
 
     app.openapi = openapi
+
+    # Serve built browser apps from the same origin as the session API.
+    # Keep the fallback limited to frontend paths; unknown API routes remain JSON 404s.
+    if (settings.frontend_dist / "assets").is_dir():
+        app.mount(
+            "/assets",
+            StaticFiles(directory=settings.frontend_dist / "assets"),
+            name="frontend-assets",
+        )
+
+    @app.get("/", include_in_schema=False)
+    @app.get("/consumer", include_in_schema=False)
+    @app.get("/consumer/{path:path}", include_in_schema=False)
+    @app.get("/ops", include_in_schema=False)
+    @app.get("/ops/{path:path}", include_in_schema=False)
+    @app.get("/demo", include_in_schema=False)
+    @app.get("/demo/{path:path}", include_in_schema=False)
+    def frontend(path: str = ""):
+        index = settings.frontend_dist / "index.html"
+        if not index.is_file():
+            raise ApiError(
+                503,
+                "frontend_not_built",
+                "Build the frontend with npm ci and npm run build in frontend/, or use the Vite development server",
+            )
+        return FileResponse(index, media_type="text/html")
+
     return app
 
 

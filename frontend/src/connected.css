@@ -1,0 +1,615 @@
+.app-loading {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  color: #627257;
+}
+.connected-auth {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  background: #fff;
+}
+.auth-story {
+  background: #f0f3e9;
+  padding: 48px max(45px, 8vw);
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+.auth-story .brand {
+  color: var(--ink);
+  margin-bottom: 72px;
+  width: fit-content;
+}
+.auth-story h1 {
+  font-size: clamp(38px, 4vw, 62px);
+  letter-spacing: -2.2px;
+  line-height: 1.18;
+  margin: 18px 0 24px;
+}
+.auth-story > p {
+  max-width: 380px;
+  color: #66705e;
+  font-size: 15px;
+}
+.auth-story .energy-scene {
+  min-height: 290px;
+  flex: 1;
+  margin: 20px -15px 10px;
+}
+.auth-story .scene-sun {
+  left: 3%;
+  top: 20%;
+}
+.auth-story .scene-sun b {
+  font-size: 14px;
+}
+.auth-story .house-illustration {
+  left: 60%;
+  top: 57%;
+}
+.auth-foot {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  color: #65735b;
+  font-size: 12px;
+}
+.auth-form {
+  align-self: center;
+  padding: 65px max(30px, 6vw);
+  max-width: 650px;
+  width: 100%;
+  margin: auto;
+}
+.auth-form > h2 {
+  font-size: 35px;
+  margin: 12px 0;
+}
+.auth-form form {
+  margin-top: 30px;
+}
+.auth-form form label {
+  margin: 22px 0;
+}
+.auth-form input {
+  min-height: 49px;
+}
+.auth-form .btn {
+  min-height: 49px;
+  justify-content: space-between;
+}
+.auth-form > .small-note {
+  margin-top: 22px;
+}
+.auth-demo {
+  margin-top: 45px;
+  padding-top: 25px;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+}
+.auth-demo p {
+  margin: 10px 0 15px;
+  color: #77816f;
+}
+.auth-demo a {
+  display: inline-flex;
+  gap: 10px;
+}
+.connected-error {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 15px 18px;
+  margin: 16px 0;
+  background: #fff1e8;
+  color: #964725;
+  border: 1px solid #f0c9ad;
+  border-radius: 9px;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.connected-error small {
+  display: block;
+  font-size: 10px;
+  margin-top: 5px;
+}
+.connected-error .text-btn {
+  margin-left: auto;
+}
+.source-banner,
+.source-banner > div {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.source-banner {
+  justify-content: space-between;
+  margin-bottom: 23px;
+  padding: 13px 17px;
+  border: 1px solid #e1e6d8;
+  border-radius: 10px;
+  background: #eef2e7;
+  font-size: 12px;
+}
+.source-banner > div > span {
+  color: #72796b;
+}
+.connected-app .heading-controls,
+.connected-app .page-heading > .site-selector {
+  max-width: 320px;
+}
+.connected-app .site-selector {
+  min-width: 0;
+}
+.connected-app .site-selector select {
+  max-width: 270px;
+  text-overflow: ellipsis;
+}
+.connected-app .page-heading {
+  gap: 20px;
+}
+.connected-app .page-heading p {
+  max-width: 680px;
+}
+.connected-app .energy-hero h2 {
+  max-width: 470px;
+  font-size: 21px;
+}
+.connected-app .energy-hero > .section-head {
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.connected-app .scene-sun b,
+.connected-app .scene-home b,
+.connected-app .scene-grid-export b {
+  font-size: 23px;
+}
+.connected-app .hero-foot {
+  gap: 15px;
+  font-size: 11px;
+}
+.connected-app .hero-foot > span {
+  min-width: 0;
+}
+.connected-app .hero-foot > span:last-child {
+  white-space: nowrap;
+}
+.connected-app .hero-foot > span:last-child svg {
+  margin-right: 5px;
+}
+.connected-opportunity {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 18px;
+}
+.connected-opportunity .eyebrow {
+  margin-top: 2px;
+}
+.connected-opportunity > .small-note {
+  margin-top: auto;
+  color: #565c42;
+  font-size: 11px;
+}
+.connected-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  margin: 24px 0;
+}
+.metric-card {
+  min-width: 0;
+  padding: 22px;
+}
+.metric-card h3 {
+  margin: 17px 0 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #697261;
+}
+.metric-card .metric-value {
+  font-size: 31px;
+  font-family: Manrope, sans-serif;
+  font-weight: 700;
+  letter-spacing: -1px;
+}
+.metric-value small {
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: #7a8370;
+}
+.metric-value.missing-value {
+  font-size: 21px;
+  color: #7f8679;
+}
+.metric-card p {
+  font-size: 11px;
+  color: #777f6e;
+  margin: 9px 0 6px;
+}
+.metric-card > small {
+  display: block;
+  color: #909588;
+  font-size: 10px;
+}
+.metric-card .pill {
+  font-size: 9px;
+  max-width: 65%;
+  overflow-wrap: anywhere;
+}
+.connected-readings .section-head {
+  gap: 15px;
+  flex-wrap: wrap;
+}
+.table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+}
+.connected-app .table-scroll {
+  margin-top: 20px;
+  max-height: 540px;
+}
+.connected-app .table-scroll th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+.paused-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #b8b6a3;
+  display: inline-block;
+}
+.connected-app table small {
+  max-width: 350px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.connected-app td {
+  padding: 17px 13px;
+  min-width: 110px;
+  font-size: 11px;
+}
+.source-health {
+  gap: 15px;
+  flex-wrap: wrap;
+}
+.source-health > div {
+  min-width: 0;
+  flex: 1;
+}
+.source-health > div b {
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.source-health > span {
+  font-size: 10px;
+  color: #68705f;
+}
+.connected-area-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 18px;
+}
+.connected-area {
+  text-align: left;
+  border: 1px solid var(--border);
+}
+.connected-area.selected {
+  outline: 2px solid #b9a342;
+  background: #f3f2de;
+}
+.connected-area strong {
+  display: block;
+  margin: 20px 0 8px;
+  font-size: 36px;
+}
+.connected-area strong span {
+  color: #969b8d;
+  font-size: 20px;
+}
+.connected-area p {
+  color: #77806e;
+}
+.installation-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 15px;
+  margin: 25px 0;
+}
+.installation {
+  min-width: 0;
+  background: #f4f5f0;
+  padding: 23px;
+  border: 1px solid #e4e7dc;
+  border-radius: 10px;
+  text-align: left;
+}
+.installation:hover {
+  border-color: #b6c096;
+  background: #edf1e3;
+}
+.installation > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.installation > div > svg {
+  color: #8c9c66;
+}
+.installation.stale > div > svg {
+  color: #a4a69c;
+}
+.installation h3 {
+  font-size: 13px;
+  margin: 18px 0 8px;
+}
+.installation p,
+.installation small {
+  color: #7d8473;
+  font-size: 11px;
+}
+.installation > span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #667a47;
+  font-size: 11px;
+  margin-top: 17px;
+}
+.history-controls {
+  display: grid;
+  grid-template-columns: 1.35fr 1fr 1fr;
+  gap: 22px;
+}
+.history-controls label {
+  min-width: 0;
+  margin: 0;
+}
+.history-controls input,
+.history-controls select {
+  width: 100%;
+  min-width: 0;
+}
+.connected-chart {
+  position: relative;
+  margin: 25px 0 20px;
+}
+.connected-chart svg {
+  width: 100%;
+  height: auto;
+  min-height: 170px;
+  display: block;
+}
+.connected-chart text {
+  font-size: 11px;
+  fill: #89917e;
+}
+.connected-chart > span {
+  position: absolute;
+  right: 3%;
+  top: 0;
+  color: #69775e;
+  font-size: 11px;
+}
+.pagination {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+  margin-top: 18px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: #6e7862;
+}
+.pagination > span {
+  margin-right: auto;
+}
+.coverage-strip {
+  display: flex;
+  gap: 3px;
+  margin: 20px 0 13px;
+  min-height: 28px;
+}
+.coverage-strip > span {
+  flex: 1;
+  border-radius: 2px;
+  min-width: 1px;
+  background: #87a065;
+}
+.coverage-strip > span.partial {
+  background: #e5cb6b;
+}
+.coverage-strip > span.missing {
+  background: #dfe2d8;
+}
+.connected-learning {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+}
+.connected-learning h2 {
+  font-size: 19px;
+  margin: 22px 0 15px;
+}
+.connected-learning p {
+  color: #737d68;
+}
+.connected-account {
+  max-width: 750px;
+}
+.connected-account > h2 {
+  margin: 18px 0 12px;
+}
+.connected-account > .list-row {
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.connected-account > p {
+  margin: 20px 0;
+}
+.workflow-demo-banner {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: #f1d962;
+  padding: 12px 20px;
+  text-align: center;
+  font-size: 12px;
+  color: #343a22;
+}
+.workflow-demo-banner a {
+  font-weight: 700;
+  margin-left: 20px;
+  text-decoration: underline;
+}
+.connected-app .sidebar .side-note a {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  margin-top: 15px;
+  color: #cdd8be;
+}
+@media (max-width: 1100px) {
+  .connected-auth {
+    grid-template-columns: 1fr 1fr;
+  }
+  .auth-story {
+    padding: 40px;
+  }
+  .auth-form {
+    padding: 40px;
+  }
+  .connected-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .connected-learning {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 760px) {
+  .connected-auth {
+    display: block;
+  }
+  .auth-story {
+    padding: 28px;
+  }
+  .auth-story .brand {
+    margin-bottom: 28px;
+  }
+  .auth-story h1 {
+    font-size: 38px;
+  }
+  .auth-story > p {
+    font-size: 13px;
+  }
+  .auth-story .energy-scene {
+    display: none;
+  }
+  .auth-foot {
+    margin-top: 24px;
+    font-size: 11px;
+  }
+  .auth-form {
+    padding: 35px 28px;
+  }
+  .auth-form > h2 {
+    font-size: 28px;
+  }
+  .auth-demo {
+    margin-top: 30px;
+  }
+  .connected-app .page-heading {
+    align-items: stretch;
+  }
+  .connected-app .page-heading > .site-selector {
+    max-width: 100%;
+    width: 100%;
+  }
+  .connected-app .site-selector select {
+    max-width: 100%;
+    width: 100%;
+  }
+  .connected-app .header-actions .account-button > span:last-child {
+    display: none;
+  }
+  .connected-app .header-actions {
+    gap: 6px;
+  }
+  .connected-app .home-grid {
+    grid-template-columns: 1fr;
+  }
+  .connected-app .energy-hero h2 {
+    max-width: 230px;
+    font-size: 17px;
+  }
+  .connected-app .scene-sun b,
+  .connected-app .scene-home b,
+  .connected-app .scene-grid-export b {
+    font-size: 18px;
+  }
+  .connected-app .hero-foot {
+    flex-wrap: wrap;
+  }
+  .connected-metrics {
+    gap: 12px;
+  }
+  .metric-card {
+    padding: 17px 13px;
+  }
+  .metric-card .metric-value {
+    font-size: 25px;
+  }
+  .metric-value.missing-value {
+    font-size: 17px;
+    letter-spacing: -0.5px;
+  }
+  .metric-card .section-head {
+    gap: 5px;
+  }
+  .history-controls {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .connected-area-grid {
+    grid-template-columns: 1fr;
+  }
+  .connected-area strong {
+    font-size: 30px;
+  }
+  .connected-area {
+    padding: 22px;
+  }
+  .installation-grid {
+    grid-template-columns: 1fr;
+  }
+  .connected-chart text {
+    font-size: 16px;
+  }
+  .coverage-strip {
+    gap: 1px;
+  }
+  .workflow-demo-banner {
+    font-size: 10px;
+    padding: 8px 12px;
+  }
+  .workflow-demo-banner a {
+    display: block;
+    margin: 5px 0 0;
+  }
+  .connected-app .bottom-nav {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
