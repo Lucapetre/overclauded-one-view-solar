@@ -48,7 +48,9 @@ def seed_demo(database: Database, password: str | None = None) -> dict[str, str]
                     "INSERT OR IGNORE INTO sites VALUES (?,?,?,?,?,?,?,?)",
                     (
                         site_id,
-                        f"Demo home {site_id}",
+                        "Demo bistro central-03"
+                        if site_id == "central-03"
+                        else f"Demo home {site_id}",
                         area,
                         "simulated",
                         900,
@@ -65,25 +67,27 @@ def seed_demo(database: Database, password: str | None = None) -> dict[str, str]
                     "INSERT OR IGNORE INTO energy_streams VALUES (?,?,?)",
                     (site_id, f"meter-{site_id}", "synthetic-demo"),
                 )
-        for username, role in (
-            ("customer", "customer"),
-            ("other-customer", "customer"),
-            ("dispatcher", "dispatcher"),
-            ("technician", "technician"),
-            ("supervisor", "supervisor"),
+        for username, role, account_type in (
+            ("customer", "customer", "home"),
+            ("other-customer", "customer", "home"),
+            ("business-customer", "customer", "business"),
+            ("dispatcher", "dispatcher", "home"),
+            ("technician", "technician", "home"),
+            ("supervisor", "supervisor", "home"),
         ):
             if not connection.execute(
                 "SELECT 1 FROM users WHERE username=?", (username,)
             ).fetchone():
                 secret = password or secrets.token_urlsafe(18)
                 connection.execute(
-                    "INSERT INTO users VALUES (?,?,?,?)",
-                    (username, username, hash_password(secret), role),
+                    "INSERT INTO users(user_id,username,password_hash,role,account_type) VALUES (?,?,?,?,?)",
+                    (username, username, hash_password(secret), role, account_type),
                 )
                 credentials[username] = secret
         for user_id, site_id in (
             ("customer", "north-01"),
             ("other-customer", "south-01"),
+            ("business-customer", "central-03"),
             ("technician", "north-01"),
             ("technician", "north-02"),
         ):

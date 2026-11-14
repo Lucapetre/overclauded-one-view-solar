@@ -11,7 +11,13 @@ from backend.errors import ApiError
 from backend.ingestion import ingest
 from backend.models import SiteRegistration, utc
 from backend.providers import import_provider_snapshot
-from backend.provisioning import create_user, grant_access, register_site, set_password
+from backend.provisioning import (
+    create_user,
+    grant_access,
+    register_site,
+    set_account_type,
+    set_password,
+)
 from backend.seed import seed_demo
 
 
@@ -53,6 +59,17 @@ def main(argv=None):
         choices=["customer", "dispatcher", "technician", "supervisor"],
         required=True,
     )
+    account.add_argument(
+        "--account-type",
+        choices=["home", "business"],
+        default="home",
+        help="Customer accounts only: household or business presentation",
+    )
+    kind = commands.add_parser(
+        "set-account-type", help="Switch a customer account between home and business"
+    )
+    kind.add_argument("username")
+    kind.add_argument("account_type", choices=["home", "business"])
     password = commands.add_parser(
         "set-password",
         help="Change an existing account's password and revoke its sessions",
@@ -119,13 +136,22 @@ def execute(arguments, database: Database, settings: Settings):
             "New password (12–256 characters): "
         )
         if arguments.command == "create-user":
-            create_user(database, arguments.username, password, arguments.role)
+            create_user(
+                database,
+                arguments.username,
+                password,
+                arguments.role,
+                arguments.account_type,
+            )
             print(f"Created account {arguments.username} with no site or area grants")
         else:
             set_password(database, arguments.username, password)
             print(
                 f"Updated password for {arguments.username}; existing sessions revoked"
             )
+    elif arguments.command == "set-account-type":
+        set_account_type(database, arguments.username, arguments.account_type)
+        print(f"{arguments.username} is now a {arguments.account_type} account")
     elif arguments.command.startswith("grant-"):
         grant_access(
             database,

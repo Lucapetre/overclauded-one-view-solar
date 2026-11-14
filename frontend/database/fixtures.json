@@ -2,17 +2,45 @@
   "requestTypes": [
     {
       "id": "solar",
-      "label": "Solar production or inverter performance",
+      "label": "Solar production looks low",
       "family": "Production",
       "owner": "Solar O&M",
       "routeTo": "Solar Care"
     },
     {
       "id": "device-warning",
-      "label": "Inverter warning or device temperature",
+      "label": "Inverter warning, error code or overheating",
       "family": "Temperature",
       "owner": "Solar O&M",
       "routeTo": "Solar Care"
+    },
+    {
+      "id": "inverter-offline",
+      "label": "Inverter is off or not starting",
+      "family": "Production",
+      "owner": "Solar O&M",
+      "routeTo": "Solar Care"
+    },
+    {
+      "id": "battery",
+      "label": "Battery or storage issue",
+      "family": "Local issue",
+      "owner": "Solar O&M",
+      "routeTo": "Solar Care"
+    },
+    {
+      "id": "panel-damage",
+      "label": "Panel damage, dirt or shading",
+      "family": "Production",
+      "owner": "Solar O&M",
+      "routeTo": "Solar Care"
+    },
+    {
+      "id": "monitoring",
+      "label": "App data missing or not updating",
+      "family": "Telemetry",
+      "owner": "Unassigned review",
+      "routeTo": "PPC Triage"
     },
     {
       "id": "grid",
@@ -22,16 +50,37 @@
       "routeTo": "Grid Response"
     },
     {
+      "id": "outage",
+      "label": "Power cut or frequent disconnections",
+      "family": "Area event",
+      "owner": "Grid operator",
+      "routeTo": "Grid Response"
+    },
+    {
       "id": "electrical",
-      "label": "Home electrical issue",
+      "label": "Electrical issue inside the building",
       "family": "Local issue",
       "owner": "Customer electrician",
       "routeTo": "Field Service"
     },
     {
+      "id": "meter",
+      "label": "Meter reading or prosumer settlement",
+      "family": "Billing",
+      "owner": "Supplier support",
+      "routeTo": "Supplier Support"
+    },
+    {
       "id": "billing",
       "label": "Billing or contract question",
       "family": "Billing",
+      "owner": "Supplier support",
+      "routeTo": "Supplier Support"
+    },
+    {
+      "id": "upgrade",
+      "label": "Extend the system (panels, battery, EV charger)",
+      "family": "Other",
       "owner": "Supplier support",
       "routeTo": "Supplier Support"
     },
@@ -409,6 +458,18 @@
       "sites": [],
       "area": "South",
       "active": true
+    },
+    {
+      "id": "u16",
+      "name": "Ilinca Barbu",
+      "email": "bistro@solarlenes.demo",
+      "role": "client",
+      "sites": [
+        "S04"
+      ],
+      "area": "North",
+      "business": true,
+      "active": true
     }
   ],
   "sites": [
@@ -444,13 +505,14 @@
     },
     {
       "id": "S04",
-      "name": "Solar home 04",
+      "name": "Bistro Soare",
       "area": "North",
       "feeder": "DEMO-F1",
       "capacity": 6,
       "battery": false,
       "stale": false,
-      "pv": 4.5
+      "pv": 4.5,
+      "business": true
     },
     {
       "id": "S05",

@@ -130,13 +130,25 @@ export const users = [
     sites: [],
     area: "South",
   },
+  {
+    id: "u16",
+    name: "Ilinca Barbu",
+    email: "bistro@solarlenes.demo",
+    role: "client",
+    sites: ["S04"],
+    area: "North",
+    business: true,
+  },
 ];
 export const sites = Array.from({ length: 24 }, (_, i) => ({
   id: `S${String(i + 1).padStart(2, "0")}`,
   name:
     i === 0
       ? "The Green House"
-      : `Solar home ${String(i + 1).padStart(2, "0")}`,
+      : i === 3
+        ? "Bistro Soare"
+        : `Solar home ${String(i + 1).padStart(2, "0")}`,
+  business: i === 3,
   area: ["North", "Central", "South"][Math.floor(i / 8)],
   feeder: `DEMO-F${Math.floor(i / 8) + 1}`,
   capacity: 6 + (i % 3),
@@ -147,17 +159,45 @@ export const sites = Array.from({ length: 24 }, (_, i) => ({
 export const requestTypes = [
   {
     id: "solar",
-    label: "Solar production or inverter performance",
+    label: "Solar production looks low",
     family: "Production",
     owner: "Solar O&M",
     routeTo: "Solar Care",
   },
   {
     id: "device-warning",
-    label: "Inverter warning or device temperature",
+    label: "Inverter warning, error code or overheating",
     family: "Temperature",
     owner: "Solar O&M",
     routeTo: "Solar Care",
+  },
+  {
+    id: "inverter-offline",
+    label: "Inverter is off or not starting",
+    family: "Production",
+    owner: "Solar O&M",
+    routeTo: "Solar Care",
+  },
+  {
+    id: "battery",
+    label: "Battery or storage issue",
+    family: "Local issue",
+    owner: "Solar O&M",
+    routeTo: "Solar Care",
+  },
+  {
+    id: "panel-damage",
+    label: "Panel damage, dirt or shading",
+    family: "Production",
+    owner: "Solar O&M",
+    routeTo: "Solar Care",
+  },
+  {
+    id: "monitoring",
+    label: "App data missing or not updating",
+    family: "Telemetry",
+    owner: "Unassigned review",
+    routeTo: "PPC Triage",
   },
   {
     id: "grid",
@@ -167,16 +207,37 @@ export const requestTypes = [
     routeTo: "Grid Response",
   },
   {
+    id: "outage",
+    label: "Power cut or frequent disconnections",
+    family: "Area event",
+    owner: "Grid operator",
+    routeTo: "Grid Response",
+  },
+  {
     id: "electrical",
-    label: "Home electrical issue",
+    label: "Electrical issue inside the building",
     family: "Local issue",
     owner: "Customer electrician",
     routeTo: "Field Service",
   },
   {
+    id: "meter",
+    label: "Meter reading or prosumer settlement",
+    family: "Billing",
+    owner: "Supplier support",
+    routeTo: "Supplier Support",
+  },
+  {
     id: "billing",
     label: "Billing or contract question",
     family: "Billing",
+    owner: "Supplier support",
+    routeTo: "Supplier Support",
+  },
+  {
+    id: "upgrade",
+    label: "Extend the system (panels, battery, EV charger)",
+    family: "Other",
     owner: "Supplier support",
     routeTo: "Supplier Support",
   },
@@ -358,6 +419,7 @@ export function seed() {
     visits: [],
     plans: [],
     preferences: {},
+    contracts: {},
     assignments: [],
     audit: [],
     users: users.map((x) => ({ ...x, active: true })),
@@ -388,7 +450,15 @@ export function rank(incidents) {
     (a, b) => a.tier.localeCompare(b.tier) || b.age - a.age,
   );
 }
-export function recommend(task, plans = [], siteId = "S01") {
+export const defaultPrices = { importPrice: 1.3, exportPrice: 0.55 };
+// Prices come from the customer's saved contract when there is one.
+export function recommend(
+  task,
+  plans = [],
+  siteId = "S01",
+  prices = defaultPrices,
+) {
+  const margin = prices.importPrice - prices.exportPrice;
   const { energy, power, from, to, deadline, normal } = task;
   const duration = energy / power;
   if (
@@ -436,7 +506,7 @@ export function recommend(task, plans = [], siteId = "S01") {
         Math.min(power, t >= 12 && t < 16 ? 3 : t >= 10 && t < 17 ? 1.5 : 0) *
         Math.min(0.5, normal + duration - t);
     }
-    const saving = (solar - baseSolar) * 0.75;
+    const saving = (solar - baseSolar) * margin;
     if (available && saving > 0.05)
       slots.push({
         start,
@@ -444,10 +514,10 @@ export function recommend(task, plans = [], siteId = "S01") {
         power,
         energy,
         saving,
-        low: Math.max(0, (solar * 0.5 - baseSolar) * 0.75),
-        higher: Math.max(0, (solar * 0.7 - baseSolar) * 0.75),
-        baseline: energy * 1.3 - baseSolar * 0.75,
-        cost: energy * 1.3 - solar * 0.75,
+        low: Math.max(0, (solar * 0.5 - baseSolar) * margin),
+        higher: Math.max(0, (solar * 0.7 - baseSolar) * margin),
+        baseline: energy * prices.importPrice - baseSolar * margin,
+        cost: energy * prices.importPrice - solar * margin,
       });
   }
   return slots.sort(

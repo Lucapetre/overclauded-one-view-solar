@@ -152,6 +152,7 @@ class User(Model):
     user_id: str
     username: str
     role: Literal["customer", "dispatcher", "technician", "supervisor"]
+    account_type: Literal["home", "business"] = "home"
 
 
 class SessionView(Model):

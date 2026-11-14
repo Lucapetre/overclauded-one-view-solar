@@ -110,7 +110,9 @@ def login(request: Request, credentials: Login) -> tuple[str, SessionView]:
             request.state.request_id,
         )
     return token, SessionView(
-        user=User(**{key: row[key] for key in ("user_id", "username", "role")}),
+        user=User(
+            **{key: row[key] for key in ("user_id", "username", "role", "account_type")}
+        ),
         csrf_token=csrf,
         expires_at=expires,
     )
@@ -127,7 +129,7 @@ def authenticated(
         )
     with request.app.state.database.connect() as connection:
         row = connection.execute(
-            "SELECT u.user_id,u.username,u.role,s.csrf_token,s.expires_at "
+            "SELECT u.user_id,u.username,u.role,u.account_type,s.csrf_token,s.expires_at "
             "FROM sessions s JOIN users u ON u.user_id=s.user_id "
             "WHERE s.token_hash=? AND s.expires_at>?",
             (token_hash(token), stamp()),
@@ -135,7 +137,9 @@ def authenticated(
     if not row:
         raise ApiError(401, "authentication_required", "Session is missing or expired")
     return SessionView(
-        user=User(**{key: row[key] for key in ("user_id", "username", "role")}),
+        user=User(
+            **{key: row[key] for key in ("user_id", "username", "role", "account_type")}
+        ),
         csrf_token=row["csrf_token"],
         expires_at=row["expires_at"],
     )

@@ -52,6 +52,7 @@ import {
   sites,
   inverters,
   requestTypes,
+  defaultPrices,
   routeRequest,
   crews,
   canSee,
@@ -72,6 +73,16 @@ import {
   getMedia,
   clearMedia,
 } from "./store";
+import {
+  ContractCard,
+  EnergyBars,
+  ForecastCard,
+  FriendlyEnergy,
+  LessonDeck,
+} from "./features";
+import { words } from "./friendly";
+import { demoBuckets, PERIODS } from "./periods";
+import lessonSource from "../../backend/fixtures/lessons.json";
 import "./styles.css";
 const icons = {
   Home: LayoutDashboard,
@@ -447,7 +458,7 @@ export default function DemoApp() {
           {active === "Home" && <Home {...ctx} />}
           {active === "Plan" && <Plan {...ctx} />}
           {active === "Support" && <Support {...ctx} />}
-          {active === "Learn" && <Learn />}
+          {active === "Learn" && <Learn user={user} />}
           {active === "Area Radar" && (
             <Radar {...ctx} visibleSites={visibleSites} />
           )}
@@ -507,15 +518,27 @@ export default function DemoApp() {
     </div>
   );
 }
-function Home({ db, user, current, nav, setSelected, incidents }) {
+function Home({
+  db,
+  user,
+  current,
+  nav,
+  setSelected,
+  incidents,
+  notify,
+  requireLogin,
+}) {
   const bat = current.battery;
+  const accountType = current.business ? "business" : "home";
+  const w = words(accountType);
+  const contract = db.contracts?.[current.id] || null;
   return (
     <>
       <div className="home-grid">
         <section className="energy-hero">
           <div className="section-head">
             <div>
-              <div className="eyebrow">YOUR HOME, CONNECTED</div>
+              <div className="eyebrow">{w.eyebrow}</div>
               <h2>Powered by a brighter day.</h2>
             </div>
             <Pill tone="dark">
@@ -563,7 +586,7 @@ function Home({ db, user, current, nav, setSelected, incidents }) {
             <div className="scene-home">
               <House size={22} />
               <span>
-                Home consumption
+                {w.consumption}
                 <b>
                   {current.stale ? "Unavailable" : "1.6"}{" "}
                   <small>{!current.stale && "kW"}</small>
@@ -590,7 +613,7 @@ function Home({ db, user, current, nav, setSelected, incidents }) {
               <span className="green-dot" />
               {current.stale
                 ? "Feed is stale · measurements unavailable"
-                : "Solar is covering your home’s demand"}
+                : `Solar is covering your ${w.place}’s demand`}
             </span>
             <span>
               Updated 13:00 EET <Activity size={14} />
@@ -633,6 +656,13 @@ function Home({ db, user, current, nav, setSelected, incidents }) {
           <small>Illustrative 6 kWh charge · Advice, not automation</small>
         </section>
       </div>
+      <section className="card friendly-strip">
+        <FriendlyEnergy
+          kwh={current.stale ? null : bat ? 12.4 : 16.2}
+          subject="Today’s export"
+          accountType={accountType}
+        />
+      </section>
       <div className="stat-grid">
         <Stat
           icon={Sun}
@@ -644,7 +674,7 @@ function Home({ db, user, current, nav, setSelected, incidents }) {
         />
         <Stat
           icon={House}
-          label="Home energy today"
+          label={current.business ? "Business energy today" : "Home energy today"}
           value="12.6"
           unit="kWh"
           detail="From solar and grid"
@@ -652,10 +682,10 @@ function Home({ db, user, current, nav, setSelected, incidents }) {
         />
         <Stat
           icon={Leaf}
-          label="Solar used at home"
+          label={current.business ? "Solar used on site" : "Solar used at home"}
           value="68"
           unit="%"
-          detail="Share of home demand from solar"
+          detail={`Share of ${w.place} demand from solar`}
         />
         <Stat
           icon={bat ? BatteryCharging : Plug}
@@ -671,10 +701,10 @@ function Home({ db, user, current, nav, setSelected, incidents }) {
         />
       </div>
       <div className="lower-grid">
-        <EnergyChart />
+        <EnergyChart consumptionLabel={w.consumption} />
         <section className="card activity-card">
           <div className="section-head">
-            <h3>Looking after your home</h3>
+            <h3>{w.care}</h3>
             <span className="subtle-icon">
               <ShieldCheck size={19} />
             </span>
@@ -708,9 +738,9 @@ function Home({ db, user, current, nav, setSelected, incidents }) {
               <BookOpen size={20} />
             </span>
             <div>
-              <small>30 SECONDS TO KNOW MORE</small>
+              <small>ONE MINUTE · EARN A REWARD</small>
               <b>Making sense of your solar</b>
-              <p>Generation, consumption, and the grid.</p>
+              <p>Short lessons with a mini test.</p>
             </div>
             <ArrowUpRight size={19} />
           </button>
@@ -721,6 +751,29 @@ function Home({ db, user, current, nav, setSelected, incidents }) {
             </button>
           </div>
         </section>
+      </div>
+      <div className="two-col mt">
+        <ForecastCard
+          kwp={contract?.installed_kwp || current.capacity}
+          contract={contract}
+          accountType={accountType}
+        />
+        <ContractCard
+          key={current.id}
+          contract={contract}
+          defaultKwp={current.capacity}
+          onSave={async (value) => {
+            if (!user) {
+              requireLogin(() => {});
+              throw Error("Log in with a demo account to save a contract.");
+            }
+            mutate((d) => {
+              d.contracts = { ...d.contracts, [current.id]: value };
+              audit(d, user, "Saved energy contract", current.id);
+            });
+            notify("Contract saved. Estimates now use your prices.");
+          }}
+        />
       </div>
       <div className="preview-note">
         <Activity size={16} />
@@ -750,19 +803,49 @@ function Stat({ icon: Icon, label, value, unit, detail, trend, spark }) {
     </section>
   );
 }
-function EnergyChart() {
+function EnergyChart({ consumptionLabel }) {
   const [period, setPeriod] = useState("Today"),
     [hover, setHover] = useState(null);
-  const data =
-    period === "Today"
-      ? [
-          0, 0, 0, 0, 0.1, 0.5, 1.2, 2.5, 3.8, 4.5, 4.8, 4.2, 3.2, 2.4, 1.5,
-          0.5, 0.1, 0, 0,
-        ]
-      : [
-          0, 0, 0, 0.1, 0.3, 0.8, 1.5, 2.3, 3.2, 3.7, 4.1, 3.8, 3.1, 2.2, 1.2,
-          0.5, 0, 0, 0,
-        ];
+  const data = [
+    0, 0, 0, 0, 0.1, 0.5, 1.2, 2.5, 3.8, 4.5, 4.8, 4.2, 3.2, 2.4, 1.5, 0.5,
+    0.1, 0, 0,
+  ];
+  if (period !== "Today") {
+    const buckets = demoBuckets(period);
+    return (
+      <section className="card chart-card">
+        <div className="section-head">
+          <div>
+            <h3>Your energy, {PERIODS[period].title}</h3>
+            <p>Simulated energy totals.</p>
+          </div>
+          <select
+            aria-label="Chart period"
+            value={period}
+            onChange={(e) => setPeriod(e.target.value)}
+          >
+            {Object.keys(PERIODS).map((name) => (
+              <option key={name}>{name}</option>
+            ))}
+          </select>
+        </div>
+        <EnergyBars buckets={buckets} consumptionLabel={consumptionLabel} />
+        <div className="chart-foot">
+          <span>
+            <Sun size={14} />
+            Solar produced{" "}
+            <b>
+              {Math.round(
+                buckets.reduce((sum, b) => sum + b.production, 0),
+              ).toLocaleString("en-GB")}{" "}
+              kWh
+            </b>
+          </span>
+          <span>Up to 14 Nov · EET</span>
+        </div>
+      </section>
+    );
+  }
   const points = data.map((v, i) => `${45 + i * 32},${155 - v * 25}`).join(" ");
   return (
     <section className="card chart-card">
@@ -776,8 +859,9 @@ function EnergyChart() {
           value={period}
           onChange={(e) => setPeriod(e.target.value)}
         >
-          <option>Today</option>
-          <option>Yesterday</option>
+          {Object.keys(PERIODS).map((name) => (
+            <option key={name}>{name}</option>
+          ))}
         </select>
       </div>
       <div className="chart-legend">
@@ -860,7 +944,7 @@ function EnergyChart() {
       <div className="chart-foot">
         <span>
           <Sun size={14} />
-          Peak production <b>{period === "Today" ? "4.8" : "4.1"} kW</b>
+          Peak production <b>4.8 kW</b>
         </span>
         <span>14 Nov · EET</span>
       </div>
@@ -943,6 +1027,21 @@ function Login({ db, onLogin, onClose }) {
               )
             );
           })}
+          {db.users
+            .filter((u) => u.business && u.active)
+            .map((u) => (
+              <button
+                key={u.id}
+                onClick={() => {
+                  setEmail(u.email);
+                  setError("");
+                }}
+                className={email === u.email ? "selected" : ""}
+              >
+                Business client
+                <small>{u.name}</small>
+              </button>
+            ))}
         </div>
         <details>
           <summary>All demo accounts & password</summary>
@@ -986,7 +1085,17 @@ function Plan({ db, user, current, notify, requireLogin }) {
     }),
     [index, setIndex] = useState(0),
     [offer, setOffer] = useState(null);
-  const options = recommend(task, db.plans, current.id),
+  const contract = db.contracts?.[current.id];
+  const prices = contract
+    ? {
+        importPrice: contract.import_price_ron_kwh,
+        exportPrice: contract.export_price_ron_kwh,
+      }
+    : defaultPrices;
+  const taskTypes = current.business
+    ? ["Dishwasher cycle", "Oven pre-heat", "EV charging"]
+    : ["EV charging", "Dishwasher", "Washing machine"];
+  const options = recommend(task, db.plans, current.id, prices),
     best = options[index % Math.max(1, options.length)],
     plans = db.plans.filter((p) => p.site === current.id);
   const change = (k, v) => {
@@ -1001,7 +1110,7 @@ function Plan({ db, user, current, notify, requireLogin }) {
         setOffer(null);
         return;
       }
-      const fresh = recommend(task, readDB().plans, current.id).find(
+      const fresh = recommend(task, readDB().plans, current.id, prices).find(
         (x) => x.start === best?.start,
       );
       if (!fresh) {
@@ -1031,7 +1140,7 @@ function Plan({ db, user, current, notify, requireLogin }) {
         <div className="eyebrow">01 / YOUR TASK</div>
         <h2>What are we planning?</h2>
         <div className="segmented">
-          {["EV charging", "Dishwasher", "Washing machine"].map((t) => (
+          {taskTypes.map((t) => (
             <button
               key={t}
               className={task.type === t ? "active" : ""}
@@ -1180,7 +1289,11 @@ function Plan({ db, user, current, notify, requireLogin }) {
               <details>
                 <summary>How we calculate this</summary>
                 <p>
-                  Assumed import: 1.30 RON/kWh. Export value: 0.55 RON/kWh.
+                  {contract
+                    ? `From your ${contract.supplier} contract:`
+                    : "Assumed (add your contract on Home to replace these):"}{" "}
+                  import {prices.importPrice.toFixed(2)} RON/kWh, export{" "}
+                  {prices.exportPrice.toFixed(2)} RON/kWh.
                   Baseline cost {best.baseline.toFixed(2)} RON − proposed cost{" "}
                   {best.cost.toFixed(2)} RON = {best.saving.toFixed(2)} RON.
                   Surplus solar is 3 kW at 12:00–16:00, 1.5 kW at 10:00–12:00
@@ -1198,6 +1311,7 @@ function Plan({ db, user, current, notify, requireLogin }) {
                     },
                     [],
                     current.id,
+                    prices,
                   )[0]?.saving.toFixed(2) || "0.00"}{" "}
                   RON opportunity. Indexed-contract tariffs need a future
                   adapter.
@@ -1299,7 +1413,6 @@ function Support({ db, user, current, notify, requireLogin, setSelected }) {
     [requestType, setRequestType] = useState("solar"),
     [consent, setConsent] = useState(false),
     [danger, setDanger] = useState(false),
-    [urgent, setUrgent] = useState(false),
     [file, setFile] = useState(null),
     [busy, setBusy] = useState(false);
   async function submit(e) {
@@ -1343,11 +1456,7 @@ function Support({ db, user, current, notify, requireLogin, setSelected }) {
         await putMedia(id, file);
       }
       const request = routeRequest(requestType);
-      const priority = danger
-        ? "immediate_danger"
-        : urgent
-          ? "urgent"
-          : "standard";
+      const priority = danger ? "immediate_danger" : "standard";
       const owner = danger ? "Unassigned review" : request.owner;
       const routedTo = danger ? "PPC Triage" : request.routeTo;
       mutate((d) => {
@@ -1357,7 +1466,7 @@ function Support({ db, user, current, notify, requireLogin, setSelected }) {
           site: current.id,
           title: `Customer request: ${request.label}`,
           family: request.family,
-          tier: danger ? "P0" : urgent ? "P1" : "P2",
+          tier: danger ? "P0" : "P2",
           owner,
           requestType,
           priority,
@@ -1399,7 +1508,6 @@ function Support({ db, user, current, notify, requireLogin, setSelected }) {
       setRequestType("solar");
       setFile(null);
       setConsent(false);
-      setUrgent(false);
       setDanger(false);
       notify(
         `Request routed to ${routedTo}. A staff account can review and reply.`,
@@ -1479,16 +1587,6 @@ function Support({ db, user, current, notify, requireLogin, setSelected }) {
                   capture="environment"
                   onChange={(e) => setFile(e.target.files?.[0] || null)}
                 />
-              </label>
-            )}
-            {!danger && (
-              <label className="checkbox">
-                <input
-                  type="checkbox"
-                  checked={urgent}
-                  onChange={(e) => setUrgent(e.target.checked)}
-                />
-                This request needs urgent review
               </label>
             )}
             <p className="small-note">
@@ -1624,115 +1722,54 @@ function Support({ db, user, current, notify, requireLogin, setSelected }) {
             </div>
           )}
         </section>
-        <section className="card mt">
-          <h3>The right help, from the right team</h3>
-          {[
-            ["Solar O&M", "Panel and inverter performance"],
-            ["Grid operator", "Supported grid voltage or network issues"],
-            ["Customer electrician", "Household electrical concerns"],
-            ["Supplier support", "Contract and billing questions"],
-          ].map(([a, b]) => (
-            <div className="list-row" key={a}>
-              <div>
-                <b>{a}</b>
-                <small>{b}</small>
-              </div>
-              <ArrowUpRight size={17} />
-            </div>
-          ))}
-          <p className="small-note">
-            Ownership is confirmed by a person after reviewing the evidence and
-            service agreement.
-          </p>
-        </section>
       </div>
     </div>
   );
 }
-function Learn() {
-  const [open, setOpen] = useState(null),
-    [completed, setCompleted] = useState(() =>
-      JSON.parse(localStorage.getItem("solar-lessons") || "[]"),
-    );
-  const cards = [
-    [
-      "01",
-      "Follow the energy",
-      "Generation isn’t the same as grid import.",
-      "Your panels generate electricity. Your home uses some of it; surplus can go to the grid. When demand exceeds solar, the grid supplies the difference. A battery percentage alone does not tell us its power flow.",
-      "Example: 4.8 kW solar − 1.6 kW home demand = 3.2 kW exported, with no battery charging.",
-    ],
-    [
-      "02",
-      "Give sunshine a time slot",
-      "A small change in timing can make a difference.",
-      "Move a flexible task into a window when solar would otherwise be exported. The benefit is avoided import cost minus the export value you give up. A forecast is an opportunity, not money already earned.",
-      "6 kWh × (1.30 − 0.55) RON/kWh = 4.50 RON estimated benefit. Half the usable solar means 2.25 RON.",
-    ],
-    [
-      "03",
-      "Find the right kind of help",
-      "One request. The right service owner.",
-      "Solar maintenance, the grid operator, your electrician and your supplier have different responsibilities. A technician reviews the evidence and confirms the appropriate route. You can always request support without finishing a lesson.",
-      "An inverter production issue may go to solar O&M. A billing question goes to supplier support. Unclear evidence stays open for review.",
-    ],
-  ];
+function Learn({ user }) {
+  const key = `solar-lessons-v2:${user?.id || "guest"}`;
+  const [earned, setEarned] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem(key)) || {};
+    } catch {
+      return {};
+    }
+  });
+  const sum = (map) => Object.values(map).reduce((a, b) => a + b, 0);
+  const catalog = {
+    lessons: lessonSource.lessons.map((lesson) => ({
+      ...lesson,
+      completed: lesson.id in earned,
+    })),
+    total_reward_ron: sum(earned),
+    reward_note: lessonSource.reward_note,
+  };
   return (
-    <>
-      <div className="learn-intro">
-        <BookOpen size={30} />
-        <span>
-          Small lessons. More confidence.
-          <small>
-            Three quick reads, about 30 seconds each. Support is always
-            available.
-          </small>
-        </span>
-      </div>
-      <div className="learn-grid">
-        {cards.map(([id, title, sub, body, example], i) => (
-          <section className="card lesson" key={id}>
-            <div className={"lesson-art art-" + i}>
-              {i === 0 ? (
-                <Sun size={64} />
-              ) : i === 1 ? (
-                <Clock size={64} />
-              ) : (
-                <LifeBuoy size={64} />
-              )}
-              <span>{id}</span>
-            </div>
-            <div className="eyebrow">ENERGY ESSENTIALS · 30 SEC</div>
-            <h2>{title}</h2>
-            <p>{sub}</p>
-            <button
-              className="btn secondary full"
-              onClick={() => setOpen(open === id ? null : id)}
-            >
-              {completed.includes(id) ? "Read again" : "Explore lesson"}
-              <ArrowUpRight size={17} />
-            </button>
-            {open === id && (
-              <div className="lesson-body">
-                <p>{body}</p>
-                <div className="info-box">{example}</div>
-                <button
-                  className="text-btn"
-                  onClick={() => {
-                    const next = [...new Set([...completed, id])];
-                    setCompleted(next);
-                    localStorage.setItem("solar-lessons", JSON.stringify(next));
-                  }}
-                >
-                  <CheckCircle2 size={17} />
-                  {completed.includes(id) ? "Completed" : "Mark as read"}
-                </button>
-              </div>
-            )}
-          </section>
-        ))}
-      </div>
-    </>
+    <LessonDeck
+      catalog={catalog}
+      onComplete={async (id, answers) => {
+        const lesson = lessonSource.lessons.find((item) => item.id === id);
+        const correct = lesson.questions.filter(
+          (question, index) => question.answer === answers[index],
+        ).length;
+        const passed = correct === lesson.questions.length;
+        const already = id in earned;
+        const next =
+          passed && !already ? { ...earned, [id]: lesson.reward_ron } : earned;
+        if (next !== earned) {
+          setEarned(next);
+          localStorage.setItem(key, JSON.stringify(next));
+        }
+        return {
+          passed,
+          correct,
+          total: lesson.questions.length,
+          reward_ron: passed && !already ? lesson.reward_ron : 0,
+          already_completed: already,
+          total_reward_ron: sum(next),
+        };
+      }}
+    />
   );
 }
 function Radar({ db, user, visibleSites, incidents, setSelected, notify }) {

@@ -13,6 +13,27 @@ from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException
 
 from backend.config import Settings
+from backend.customer import (
+    REQUEST_TYPES,
+    add_reply,
+    complete_lesson,
+    create_request,
+    get_contract,
+    lesson_catalog,
+    list_requests,
+    save_contract,
+)
+from backend.customer_models import (
+    Contract,
+    ContractView,
+    LessonAnswers,
+    LessonCatalog,
+    LessonResult,
+    RequestType,
+    SupportReplyCreate,
+    SupportRequest,
+    SupportRequestCreate,
+)
 from backend.db import Database, site_from_row
 from backend.energy import history, snapshot
 from backend.errors import ApiError
@@ -381,6 +402,111 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 unassessed_sites=statuses.count("future")
                 + statuses.count("unknown_clock"),
                 sites=snapshots,
+            )
+
+    @app.get(
+        "/api/v1/sites/{site_id}/contract",
+        response_model=ContractView,
+        tags=["customer"],
+    )
+    def contract(site_id: str, session: Session):
+        with database.connect() as connection:
+            return get_contract(connection, session.user, site_id)
+
+    @app.post(
+        "/api/v1/sites/{site_id}/contract",
+        response_model=ContractView,
+        tags=["customer"],
+    )
+    def update_contract(
+        site_id: str, payload: Contract, request: Request, session: Session
+    ):
+        require_csrf(request, session)
+        with database.connect() as connection:
+            return save_contract(
+                database,
+                connection,
+                session.user,
+                site_id,
+                payload,
+                request.state.request_id,
+            )
+
+    @app.get(
+        "/api/v1/support/request-types",
+        response_model=list[RequestType],
+        tags=["customer"],
+    )
+    def request_types(session: Session):
+        return REQUEST_TYPES
+
+    @app.get(
+        "/api/v1/support/requests",
+        response_model=list[SupportRequest],
+        tags=["customer"],
+    )
+    def support_requests(session: Session):
+        with database.connect() as connection:
+            return list_requests(connection, session.user)
+
+    @app.post(
+        "/api/v1/support/requests",
+        response_model=SupportRequest,
+        status_code=201,
+        tags=["customer"],
+    )
+    def open_request(payload: SupportRequestCreate, request: Request, session: Session):
+        require_csrf(request, session)
+        with database.connect() as connection:
+            return create_request(
+                database, connection, session.user, payload, request.state.request_id
+            )
+
+    @app.post(
+        "/api/v1/support/requests/{request_id}/replies",
+        response_model=SupportRequest,
+        status_code=201,
+        tags=["customer"],
+    )
+    def reply(
+        request_id: str,
+        payload: SupportReplyCreate,
+        request: Request,
+        session: Session,
+    ):
+        require_csrf(request, session)
+        with database.connect() as connection:
+            return add_reply(
+                database,
+                connection,
+                session.user,
+                request_id,
+                payload.text,
+                request.state.request_id,
+            )
+
+    @app.get("/api/v1/lessons", response_model=LessonCatalog, tags=["customer"])
+    def lessons(session: Session):
+        with database.connect() as connection:
+            return lesson_catalog(connection, session.user)
+
+    @app.post(
+        "/api/v1/lessons/{lesson_id}/complete",
+        response_model=LessonResult,
+        tags=["customer"],
+    )
+    def finish_lesson(
+        lesson_id: str, payload: LessonAnswers, request: Request, session: Session
+    ):
+        require_csrf(request, session)
+        with database.connect() as connection:
+            return complete_lesson(
+                database,
+                connection,
+                session.user,
+                lesson_id,
+                payload.answers,
+                request.state.request_id,
             )
 
     @app.post(

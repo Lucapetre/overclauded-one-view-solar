@@ -41,12 +41,12 @@ for k,c in enumerate(f['crews']):
   if u.get('crew')==c['name']:db.execute('INSERT INTO crew_members VALUES (?,?)',(f'C{k+1}',u['id']))
 db.commit()
 assert db.execute('PRAGMA foreign_key_check').fetchall()==[]
-assert db.execute('SELECT count(*) FROM users').fetchone()[0]==15
+assert db.execute('SELECT count(*) FROM users').fetchone()[0]==16
 assert db.execute("SELECT count(*) FROM users WHERE role='ceo'").fetchone()[0]==1
 assert db.execute('SELECT count(*) FROM inverters').fetchone()[0]==24
-assert db.execute('SELECT count(*) FROM request_types').fetchone()[0]==6
+assert db.execute('SELECT count(*) FROM request_types').fetchone()[0]==13
 assert db.execute('SELECT count(*) FROM user_sites WHERE user_id IN (\'u11\',\'u12\',\'u13\')').fetchone()[0]==24
 assert db.execute('PRAGMA integrity_check').fetchone()[0]=='ok'
 db.execute('PRAGMA wal_checkpoint(TRUNCATE)')
 db.close()
-print('Seeded 15 accounts, 24 sites and inverters, 8 incidents, 6 request routes, 3 crews. Foreign keys and integrity verified.')
+print('Seeded 16 accounts, 24 sites and inverters, 8 incidents, 13 request routes, 3 crews. Foreign keys and integrity verified.')

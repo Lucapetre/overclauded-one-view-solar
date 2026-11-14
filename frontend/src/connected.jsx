@@ -5,7 +5,6 @@ import {
   Activity,
   ArrowRight,
   ArrowUpRight,
-  CalendarDays,
   ChevronRight,
   LogOut,
   Lock,
@@ -17,6 +16,8 @@ import {
   User,
   Database,
   AlertTriangle,
+  LifeBuoy,
+  MessageSquare,
   BatteryCharging,
   Plug,
   Zap,
@@ -40,6 +41,18 @@ import {
   unit,
   when,
 } from "./telemetry";
+import {
+  CareCard,
+  ContractAndForecast,
+  HomeEnergyChart,
+  LearnPage,
+  StaffRequests,
+  SupportPage,
+  useEnergy,
+} from "./customer";
+import { FriendlyEnergy } from "./features";
+import { words } from "./friendly";
+import { total } from "./periods";
 
 const api = new SolarClient(import.meta.env.VITE_API_URL || "");
 const roles = {
@@ -53,6 +66,8 @@ const pageIcons = {
   "Area Radar": Radio,
   Sites: House,
   History: BarChart3,
+  Support: LifeBuoy,
+  Requests: MessageSquare,
   Learn: BookOpen,
   Account: User,
 };
@@ -398,8 +413,9 @@ export default function ConnectedApp() {
     );
   const customer = user.role === "customer";
   const pages = customer
-    ? ["Home", "History", "Learn", "Account"]
-    : ["Area Radar", "Sites", "History", "Account"];
+    ? ["Home", "History", "Support", "Learn", "Account"]
+    : ["Area Radar", "Sites", "History", "Requests", "Account"];
+  const accountType = customer ? user.account_type || "home" : "home";
   const active = pages.includes(page) ? page : pages[0];
   const current = scope.sites.find((site) => site.site_id === siteId);
   const record = records[siteId];
@@ -540,14 +556,26 @@ export default function ConnectedApp() {
                       : active === "History"
                         ? "Every reading has a story"
                         : active === "Learn"
-                          ? "A little energy know-how"
-                          : "Your workspace, your way"}
+                          ? "Learn a little, earn a little"
+                          : active === "Support"
+                            ? "We’re here to help"
+                            : active === "Requests"
+                              ? "Customer conversations"
+                              : "Your workspace, your way"}
                 <span className="yellow-dot">.</span>
               </h1>
               <p>
                 {active === "Area Radar"
                   ? "Source coverage across your authorized scope. Equipment health remains unassessed."
-                  : "A shared view of your installation, with its source and quality always in sight."}
+                  : active === "Learn"
+                    ? "Short interactive lessons. Pass the mini test to earn a small reward."
+                    : active === "Support"
+                      ? "One request, sent to the right team."
+                      : customer
+                        ? accountType === "business"
+                          ? "What your business produces, uses and sends to the grid, in plain words."
+                          : "What your home produces, uses and sends to the grid, in plain words."
+                        : "A shared view of the installation, with its source and quality always in sight."}
               </p>
             </div>
             {scope.sites.length > 0 && (
@@ -572,7 +600,8 @@ export default function ConnectedApp() {
             <section className="card empty">
               Loading your authorized installations…
             </section>
-          ) : !scope.sites.length && active !== "Account" ? (
+          ) : !scope.sites.length &&
+            !["Account", "Learn", "Requests"].includes(active) ? (
             <section className="card empty">
               <House size={36} />
               <h2>No installations assigned yet.</h2>
@@ -597,6 +626,10 @@ export default function ConnectedApp() {
                   record={record}
                   onHistory={() => navigate("History")}
                   retry={retry}
+                  customer={customer}
+                  accountType={accountType}
+                  navigate={navigate}
+                  onError={expire}
                 />
               )}
               {active === "History" &&
@@ -615,14 +648,31 @@ export default function ConnectedApp() {
                     Waiting for source data…
                   </section>
                 ))}
-              {active === "Learn" && <Learn />}
+              {active === "Learn" && <LearnPage api={api} onError={expire} />}
+              {active === "Support" && current && (
+                <SupportPage
+                  key={siteId}
+                  api={api}
+                  site={current}
+                  onError={expire}
+                />
+              )}
+              {active === "Requests" && (
+                <StaffRequests api={api} onError={expire} />
+              )}
               {active === "Account" && (
                 <section className="card connected-account">
                   <div className="avatar">
                     {user.username.slice(0, 2).toUpperCase()}
                   </div>
                   <h2>{user.username}</h2>
-                  <Pill>{roles[user.role]}</Pill>
+                  <Pill>
+                    {customer
+                      ? accountType === "business"
+                        ? "Business customer"
+                        : "Home customer"
+                      : roles[user.role]}
+                  </Pill>
                   <div className="list-row">
                     <b>Installation access</b>
                     <span>
@@ -639,7 +689,8 @@ export default function ConnectedApp() {
                     <span>{when(session.expires_at)}</span>
                   </div>
                   <p className="muted">
-                    Your administrator manages your password and access. Source
+                    Your administrator manages your password, access and
+                    account type (home or business). Source
                     labels distinguish synthetic replay from live readings.
                   </p>
                   <button className="btn secondary" onClick={logout}>
@@ -683,7 +734,18 @@ export default function ConnectedApp() {
   );
 }
 
-function SiteHome({ site, record, onHistory, retry }) {
+function SiteHome({
+  site,
+  record,
+  onHistory,
+  retry,
+  customer,
+  accountType,
+  navigate,
+  onError,
+}) {
+  const w = words(accountType);
+  const today = useEnergy(api, site, record, "Today", onError);
   const info = sourceInfo(record);
   const data = record?.data;
   const primary = primaryReadings(data, record?.provider);
@@ -714,7 +776,7 @@ function SiteHome({ site, record, onHistory, retry }) {
         <section className="energy-hero">
           <div className="section-head">
             <div>
-              <div className="eyebrow">YOUR HOME, CONNECTED</div>
+              <div className="eyebrow">{w.eyebrow}</div>
               <h2>{site.alias}</h2>
             </div>
             <Pill tone="dark">
@@ -744,7 +806,7 @@ function SiteHome({ site, record, onHistory, retry }) {
             <div className="scene-home">
               <House size={22} />
               <span>
-                Home consumption
+                {w.consumption}
                 <b>
                   {home?.value == null ? "Unavailable" : number(home.value)}{" "}
                   <small>{home?.value != null && home.unit}</small>
@@ -780,16 +842,13 @@ function SiteHome({ site, record, onHistory, retry }) {
           <span className="opportunity-icon">
             <BarChart3 size={25} />
           </span>
-          <div className="eyebrow">GET TO KNOW YOUR ENERGY</div>
-          <h2>
-            See the detail.
-            <br />
-            Understand the day.
-          </h2>
-          <p>
-            Explore source measurements, reporting coverage, and the history
-            behind each reading.
-          </p>
+          <div className="eyebrow">TODAY, IN PLAIN WORDS</div>
+          <FriendlyEnergy
+            kwh={today.series ? total(today.series.export) : null}
+            subject="Today’s export"
+            accountType={accountType}
+            loading={today.loading}
+          />
           <button className="btn dark" onClick={onHistory}>
             Explore history <ArrowRight size={17} />
           </button>
@@ -810,14 +869,16 @@ function SiteHome({ site, record, onHistory, retry }) {
                 <Icon size={20} />
                 <Pill>{reading.state.replaceAll("_", " ")}</Pill>
               </div>
-              <h3>{reading.name}</h3>
+              <h3>
+                {index === 1 && customer ? w.consumption : reading.name}
+              </h3>
               <div
                 className={`metric-value ${reading.value == null ? "missing-value" : ""}`}
               >
                 {number(reading.value)}{" "}
                 <small>{reading.value != null && reading.unit}</small>
               </div>
-              <p>{reading.detail}</p>
+              {!customer && <p>{reading.detail}</p>}
               <small>
                 {reading.time ? when(reading.time) : "No reading supplied"}
               </small>
@@ -830,7 +891,32 @@ function SiteHome({ site, record, onHistory, retry }) {
           Loading installation telemetry…
         </section>
       )}
-      {data && (
+      {customer && data && (
+        <>
+          <div className="lower-grid">
+            <HomeEnergyChart
+              api={api}
+              site={site}
+              record={record}
+              accountType={accountType}
+              onError={onError}
+            />
+            <CareCard
+              record={record}
+              accountType={accountType}
+              onLearn={() => navigate("Learn")}
+              onSupport={() => navigate("Support")}
+            />
+          </div>
+          <ContractAndForecast
+            api={api}
+            site={site}
+            accountType={accountType}
+            onError={onError}
+          />
+        </>
+      )}
+      {!customer && data && (
         <section className="card connected-readings">
           <div className="section-head">
             <div>
@@ -888,7 +974,7 @@ function SiteHome({ site, record, onHistory, retry }) {
           </div>
         </section>
       )}
-      {record?.provider && data && (
+      {!customer && record?.provider && data && (
         <section className="card mt">
           <h3>Source reporting health</h3>
           <p className="muted">
@@ -1418,36 +1504,6 @@ function HistoryChart({ points, displayUnit }) {
         </text>
       </svg>
       <span>{displayUnit}</span>
-    </div>
-  );
-}
-
-function Learn() {
-  return (
-    <div className="connected-learning">
-      {[
-        [
-          Sun,
-          "Generation and grid exchange",
-          "Solar production is generated at your installation. Grid import is energy taken from the network; export is sent back. DC production and AC inverter output describe different measurement boundaries.",
-        ],
-        [
-          Activity,
-          "A reading needs context",
-          "Check its source, timestamp and coverage. A stale reading may retain its last value. A missing reading is unavailable, and a recent feed alone does not establish that equipment is healthy.",
-        ],
-        [
-          CalendarDays,
-          "Choosing a task window",
-          "A useful flexible-load recommendation needs your task profile, forecasts and contract assumptions. Planning and support workflows are available in the separate fictional workflow demo.",
-        ],
-      ].map(([Icon, title, text]) => (
-        <section className="card" key={title}>
-          <Icon size={30} />
-          <h2>{title}</h2>
-          <p>{text}</p>
-        </section>
-      ))}
     </div>
   );
 }

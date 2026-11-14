@@ -1,0 +1,141 @@
+{
+  "reward_note": "Simulated bill credit for this demonstration. It is not money and cannot be withdrawn.",
+  "lessons": [
+    {
+      "id": "follow-the-energy",
+      "title": "Follow the energy",
+      "summary": "Where your solar power goes, in three taps.",
+      "minutes": 1,
+      "reward_ron": 2,
+      "steps": [
+        {
+          "title": "Your panels make it",
+          "text": "Sunlight on your panels becomes electricity. The amount changes through the day: low in the morning, highest around midday, zero at night."
+        },
+        {
+          "title": "Your building uses it first",
+          "text": "Whatever is running right now (fridge, lights, oven) takes solar power first. That part never touches your bill."
+        },
+        {
+          "title": "The grid balances the rest",
+          "text": "Extra solar is exported to the grid. When you need more than the panels give, the grid supplies the difference. That is import."
+        }
+      ],
+      "example": "4.8 kW from the panels and 1.6 kW used inside leaves 3.2 kW exported.",
+      "questions": [
+        {
+          "text": "Your panels produce 5 kW and you are using 2 kW. What happens to the other 3 kW?",
+          "options": ["It is lost", "It is exported to the grid", "It is imported from the grid"],
+          "answer": 1
+        },
+        {
+          "text": "At night your panels produce nothing. Where does your electricity come from (with no battery)?",
+          "options": ["From the grid", "From the panels anyway", "From the inverter"],
+          "answer": 0
+        }
+      ]
+    },
+    {
+      "id": "kw-and-kwh",
+      "title": "kW and kWh without the headache",
+      "summary": "Speed versus distance, but for electricity.",
+      "minutes": 1,
+      "reward_ron": 2,
+      "steps": [
+        {
+          "title": "kW is how fast",
+          "text": "Kilowatts (kW) tell you how much power is flowing right now, like the speed on a car's dashboard."
+        },
+        {
+          "title": "kWh is how much",
+          "text": "Kilowatt-hours (kWh) tell you how much energy was used or produced over time, like the distance you drove. Your bill counts kWh."
+        },
+        {
+          "title": "Multiply to convert",
+          "text": "Power multiplied by time gives energy. A 2 kW oven running for 3 hours uses 6 kWh."
+        }
+      ],
+      "example": "A big-screen TV draws about 0.1 kW, so 1 kWh runs it for roughly 10 hours.",
+      "questions": [
+        {
+          "text": "A 1 kW heater runs for 4 hours. How much energy does it use?",
+          "options": ["1 kWh", "4 kWh", "0.25 kWh"],
+          "answer": 1
+        },
+        {
+          "text": "Which unit does your electricity bill charge for?",
+          "options": ["kW", "Volts", "kWh"],
+          "answer": 2
+        }
+      ]
+    },
+    {
+      "id": "sunny-time-slot",
+      "title": "Give sunshine a time slot",
+      "summary": "Why timing a task can lower your bill.",
+      "minutes": 1,
+      "reward_ron": 2,
+      "steps": [
+        {
+          "title": "Exported energy earns less",
+          "text": "In most contracts the price you receive for exported energy is lower than the price you pay to import it."
+        },
+        {
+          "title": "So use your own solar",
+          "text": "Running a flexible task (dishwasher, washing, EV charging) while the sun is shining uses energy you would otherwise export cheaply."
+        },
+        {
+          "title": "The benefit is the difference",
+          "text": "For every kWh you move into a sunny window you avoid the import price and give up the export price. The gap between them is what you keep."
+        }
+      ],
+      "example": "Import 1.30 RON/kWh and export 0.55 RON/kWh: moving 6 kWh into solar hours is worth about 6 × 0.75 = 4.50 RON.",
+      "questions": [
+        {
+          "text": "When is the best time to run a flexible appliance if you have solar panels?",
+          "options": ["Late evening", "While the panels are producing a surplus", "It never matters"],
+          "answer": 1
+        },
+        {
+          "text": "Import costs 1.20 RON/kWh and export pays 0.50 RON/kWh. What is each shifted kWh worth?",
+          "options": ["0.70 RON", "1.70 RON", "0.50 RON"],
+          "answer": 0
+        }
+      ]
+    },
+    {
+      "id": "right-kind-of-help",
+      "title": "Stay safe, get the right help",
+      "summary": "What to do when something looks wrong.",
+      "minutes": 1,
+      "reward_ron": 2,
+      "steps": [
+        {
+          "title": "Danger comes first",
+          "text": "Smoke, fire, burning smells or sparks are emergencies. Move away and call the emergency services. Do not wait for an app."
+        },
+        {
+          "title": "Look, do not touch",
+          "text": "Never open the inverter, touch damaged cables or climb onto the roof to inspect panels. Describe what you can see from a safe place."
+        },
+        {
+          "title": "One request, the right team",
+          "text": "Choose the closest request type in Support. Production issues go to solar maintenance, billing questions go to your supplier, and unclear cases are reviewed by a person."
+        }
+      ],
+      "example": "\"Production dropped since Tuesday and the display shows a warning\" is a perfect support request.",
+      "questions": [
+        {
+          "text": "You smell burning near the inverter. What do you do first?",
+          "options": ["Open the inverter to check", "Move away and call the emergency services", "Send a support request and wait"],
+          "answer": 1
+        },
+        {
+          "text": "Your production looks lower than usual. What is a safe way to help the technician?",
+          "options": ["Climb onto the roof to inspect the panels", "Unplug the inverter cables", "Describe what you see from a safe place"],
+          "answer": 2
+        }
+      ]
+    }
+  ]
+}

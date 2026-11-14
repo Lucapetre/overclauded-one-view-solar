@@ -3,12 +3,20 @@
 
 export type Area = { "area_id": string; "alias": string; "topology_mode": "simulated" | "authorized" | "unknown"; };
 export type AreaSummary = { "area": Area; "monitored_sites": number; "recent_sites": number; "stale_sites": number; "unavailable_sites": number; "unassessed_sites": number; "incident_status"?: "not_evaluated"; "sites": Array<EnergySnapshot>; };
+export type Contract = { "supplier": string; "pricing"?: "fixed"; "import_price_ron_kwh": number; "export_price_ron_kwh": number; "installed_kwp"?: number | null; };
+export type ContractView = { "site_id": string; "contract": Contract | null; "updated_at": string | null; };
 export type EnergyHistory = { "site_id": string; "display_timezone"?: "Europe/Bucharest"; "start": string; "end": string; "resolution": "raw" | "15m" | "1h" | "1d"; "points": Array<HistoryPoint>; };
 export type EnergySnapshot = { "site_id": string; "display_timezone"?: "Europe/Bucharest"; "interval_start": string | null; "interval_end": string | null; "received_at": string | null; "freshness": Freshness; "provenance": PublicProvenance | null; "measurements": { [key: string]: Measurement; }; "quality_flags": Array<string>; "vendor_codes": Array<string>; };
 export type ErrorEnvelope = { "code": string; "message": string; "request_id": string; };
 export type Freshness = { "status": "fresh" | "stale" | "future" | "unavailable" | "unknown_clock"; "age_seconds": number | null; "clock": "wall" | "replay" | "unconfigured"; "evaluated_at": string | null; };
 export type HistoryPoint = { "interval_start": string; "interval_end": string; "measurements": { [key: string]: Measurement; }; "coverage": { [key: string]: number; }; "energy_kwh": { [key: string]: number | null; }; "source_modes": Array<"live" | "replay" | "synthetic">; "quality_flags": Array<string>; "sample_count": number; "source_interval_seconds": Array<number>; };
 export type IngestResult = { "record_id": string; "status": "accepted" | "duplicate"; "quality_flags": Array<string>; };
+export type Lesson = { "id": string; "title": string; "summary": string; "minutes": number; "reward_ron": number; "steps": Array<LessonStep>; "example": string; "questions": Array<LessonQuestion>; "completed": boolean; };
+export type LessonAnswers = { "answers": Array<number>; };
+export type LessonCatalog = { "lessons": Array<Lesson>; "total_reward_ron": number; "reward_note": string; };
+export type LessonQuestion = { "text": string; "options": Array<string>; };
+export type LessonResult = { "lesson_id": string; "passed": boolean; "correct": number; "total": number; "reward_ron": number; "already_completed": boolean; "total_reward_ron": number; };
+export type LessonStep = { "title": string; "text": string; };
 export type Login = { "username": string; "password": string; };
 export type Measurement = { "value": number | null; "unit": "kW" | "%" | "V" | "degC"; "requirement": "mandatory" | "optional"; "availability"?: "available" | "missing" | "unsupported" | "invalid"; "origin"?: "measured" | "derived"; "boundary": "ac" | "dc" | "not_applicable"; "quality_flags"?: Array<string>; };
 export type Metric = "pv_power" | "home_load" | "grid_import" | "grid_export" | "battery_charge" | "battery_discharge" | "battery_soc" | "voltage" | "temperature";
@@ -20,10 +28,15 @@ export type ProviderObservations = { "site": ProviderSite; "total": number; "lim
 export type ProviderSite = { "site_id": string; "site_key": string; "provider": string; "account_id": string; "native_site_id": string; "display_name": string; "provider_profile_id": string; "capabilities": { [key: string]: string; }; "source_mode": "synthetic" | "replay"; "as_of_utc": string; };
 export type ProviderSourceHealth = { "endpoint_key": string; "device_key": string; "cadence_s": number | null; "latest_source_ms": number | null; "latest_received_ms": number | null; "latest_source_age_s": number | null; "stale_threshold_s": number | null; "freshness_status": string; "access_status": string; "notes": string | null; };
 export type PublicProvenance = { "source_mode": "live" | "replay" | "synthetic"; "source_id": string; "source_date": string; };
+export type RequestType = { "id": string; "label": string; "routed_to": string; };
 export type SessionView = { "user": User; "csrf_token": string; "expires_at": string; };
 export type Site = { "site_id": string; "alias": string; "area_id": string | null; "topology_mode": "simulated" | "authorized" | "unknown"; "reporting_interval_seconds": number; "stale_after_seconds": number; "capabilities": Array<Metric>; "measurement_requirements": { [key: string]: "mandatory" | "optional"; }; };
+export type SupportReply = { "author": string; "kind": "customer" | "staff"; "text": string; "created_at": string; };
+export type SupportReplyCreate = { "text": string; };
+export type SupportRequest = { "request_id": string; "site_id": string; "site_alias": string; "requested_by": string; "request_type": string; "request_label": string; "priority": "standard" | "immediate_danger"; "routed_to": string; "description": string; "status": "awaiting_review" | "answered"; "created_at": string; "updated_at": string; "replies": Array<SupportReply>; };
+export type SupportRequestCreate = { "site_id": string; "request_type": string; "description": string; "immediate_danger"?: boolean; };
 export type TelemetryRecord = { "schema_version": "1.0"; "record_id": string; "site_id": string; "device_id": string; "source_id": string; "interval_start": string; "interval_end": string; "received_at": string; "source_mode": "live" | "replay" | "synthetic"; "raw_record_ref": string; "measurements": { [key: string]: Measurement; }; "quality_flags"?: Array<string>; "vendor_codes"?: Array<string>; };
-export type User = { "user_id": string; "username": string; "role": "customer" | "dispatcher" | "technician" | "supervisor"; };
+export type User = { "user_id": string; "username": string; "role": "customer" | "dispatcher" | "technician" | "supervisor"; "account_type"?: "home" | "business"; };
 
 export type ApiRoutes = {
   "/health": {
@@ -67,6 +80,26 @@ export type ApiRoutes = {
   };
   "/api/v1/areas/{area_id}/summary": {
     get: { response: AreaSummary; body: never; query: {  }; params: { "area_id": string; } };
+  };
+  "/api/v1/sites/{site_id}/contract": {
+    get: { response: ContractView; body: never; query: {  }; params: { "site_id": string; } };
+    post: { response: ContractView; body: Contract; query: {  }; params: { "site_id": string; } };
+  };
+  "/api/v1/support/request-types": {
+    get: { response: Array<RequestType>; body: never; query: {  }; params: {  } };
+  };
+  "/api/v1/support/requests": {
+    get: { response: Array<SupportRequest>; body: never; query: {  }; params: {  } };
+    post: { response: SupportRequest; body: SupportRequestCreate; query: {  }; params: {  } };
+  };
+  "/api/v1/support/requests/{request_id}/replies": {
+    post: { response: SupportRequest; body: SupportReplyCreate; query: {  }; params: { "request_id": string; } };
+  };
+  "/api/v1/lessons": {
+    get: { response: LessonCatalog; body: never; query: {  }; params: {  } };
+  };
+  "/api/v1/lessons/{lesson_id}/complete": {
+    post: { response: LessonResult; body: LessonAnswers; query: {  }; params: { "lesson_id": string; } };
   };
   "/internal/v1/telemetry": {
     post: { response: IngestResult; body: TelemetryRecord; query: {  }; params: {  } };

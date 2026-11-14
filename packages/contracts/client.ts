@@ -10,6 +10,12 @@ import type {
   ProviderSite,
   SessionView,
   Site,
+  Contract,
+  ContractView,
+  LessonCatalog,
+  LessonResult,
+  RequestType,
+  SupportRequest,
 } from "./index";
 
 export class SolarApiError extends Error {
@@ -117,6 +123,44 @@ export class SolarClient {
 
   providerFrames(siteId: string, options: ProviderHistoryQuery, signal?: AbortSignal): Promise<ProviderFrames> {
     return this.providerHistory(siteId, "frames", options, signal);
+  }
+
+  contract(siteId: string, signal?: AbortSignal): Promise<ContractView> {
+    return this.request(`/api/v1/sites/${encodeURIComponent(siteId)}/contract`, { signal });
+  }
+
+  saveContract(siteId: string, contract: Contract): Promise<ContractView> {
+    return this.write(`/api/v1/sites/${encodeURIComponent(siteId)}/contract`, contract);
+  }
+
+  requestTypes(signal?: AbortSignal): Promise<RequestType[]> {
+    return this.request("/api/v1/support/request-types", { signal });
+  }
+
+  supportRequests(signal?: AbortSignal): Promise<SupportRequest[]> {
+    return this.request("/api/v1/support/requests", { signal });
+  }
+
+  createSupportRequest(body: { site_id: string; request_type: string; description: string; immediate_danger?: boolean }): Promise<SupportRequest> {
+    return this.write("/api/v1/support/requests", body);
+  }
+
+  replyToSupportRequest(requestId: string, text: string): Promise<SupportRequest> {
+    return this.write(`/api/v1/support/requests/${encodeURIComponent(requestId)}/replies`, { text });
+  }
+
+  lessons(signal?: AbortSignal): Promise<LessonCatalog> {
+    return this.request("/api/v1/lessons", { signal });
+  }
+
+  completeLesson(lessonId: string, answers: number[]): Promise<LessonResult> {
+    return this.write(`/api/v1/lessons/${encodeURIComponent(lessonId)}/complete`, { answers });
+  }
+
+  /** State changes need the session's CSRF token; restore it after a page reload. */
+  private async write<T>(path: string, body: unknown): Promise<T> {
+    if (!this.csrfToken) await this.me();
+    return this.request<T>(path, { method: "POST", body: JSON.stringify(body) });
   }
 
   private providerHistory<T>(siteId: string, kind: "observations" | "frames", options: ProviderHistoryQuery, signal?: AbortSignal): Promise<T> {

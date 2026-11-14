@@ -88,7 +88,13 @@ def register_site(database: Database, registration: SiteRegistration):
         )
 
 
-def create_user(database: Database, username: str, password: str, role: str):
+def create_user(
+    database: Database,
+    username: str,
+    password: str,
+    role: str,
+    account_type: str = "home",
+):
     if not 1 <= len(username) <= 96:
         raise ApiError(
             422,
@@ -106,10 +112,29 @@ def create_user(database: Database, username: str, password: str, role: str):
                 "Username already exists. Sign in with the existing password or use set-password to change it",
             )
         validate_password(password)
-        user = User(user_id=uuid.uuid4().hex, username=username, role=role)
+        if account_type not in ("home", "business") or (
+            account_type == "business" and role != "customer"
+        ):
+            raise ApiError(
+                422,
+                "invalid_account",
+                "Account type is home or business, and business applies to customers only",
+            )
+        user = User(
+            user_id=uuid.uuid4().hex,
+            username=username,
+            role=role,
+            account_type=account_type,
+        )
         connection.execute(
-            "INSERT INTO users VALUES (?,?,?,?)",
-            (user.user_id, user.username, hash_password(password), user.role),
+            "INSERT INTO users(user_id,username,password_hash,role,account_type) VALUES (?,?,?,?,?)",
+            (
+                user.user_id,
+                user.username,
+                hash_password(password),
+                user.role,
+                user.account_type,
+            ),
         )
         database.audit(
             connection,
@@ -148,6 +173,35 @@ def set_password(database: Database, username: str, password: str):
             connection,
             "local-admin",
             "user.password.changed",
+            row["user_id"],
+            "local-provisioning",
+        )
+
+
+def set_account_type(database: Database, username: str, account_type: str):
+    """Local administrator change between a home and a business customer account."""
+    with database.connect() as connection:
+        row = connection.execute(
+            "SELECT user_id,role FROM users WHERE username=?", (username,)
+        ).fetchone()
+        if not row:
+            raise ApiError(
+                404,
+                "not_found",
+                "User not found. Create the account with create-user first",
+            )
+        if row["role"] != "customer":
+            raise ApiError(
+                422, "invalid_account", "Only customer accounts have an account type"
+            )
+        connection.execute(
+            "UPDATE users SET account_type=? WHERE user_id=?",
+            (account_type, row["user_id"]),
+        )
+        database.audit(
+            connection,
+            "local-admin",
+            f"user.account_type.{account_type}",
             row["user_id"],
             "local-provisioning",
         )

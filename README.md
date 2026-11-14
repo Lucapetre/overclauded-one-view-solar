@@ -183,6 +183,22 @@ For file delivery, import one JSON object or an array. Each record commits separ
 
 For a separate phase 1 process, set a secret `SOLAR_INGEST_KEY` in the backend environment and send records to `POST /internal/v1/telemetry` with `X-Ingest-Key`. HTTP ingestion is disabled when the key is unset. Customer and operations sessions never grant pipeline-write access. Keep the key out of frontend code and use HTTPS for remote traffic.
 
+## Customer features API
+
+Migration `003_customer_features.sql` adds a customer account type, supply contracts, support requests and lesson rewards. All routes need a session; state changes are `POST` with `X-CSRF-Token`, and every site is checked against the caller's scope.
+
+| Method/path | Behavior |
+| --- | --- |
+| `GET /api/v1/me` | `user.account_type` is `home` or `business` |
+| `GET` / `POST /api/v1/sites/{site_id}/contract` | Read the site's fixed-price contract; customers with access may save it |
+| `GET /api/v1/support/request-types` | The 13 request types and the team each is sent to |
+| `GET` / `POST /api/v1/support/requests` | Customers see and create their own requests; staff see requests for sites in scope |
+| `POST /api/v1/support/requests/{id}/replies` | Customer follow-up or staff reply |
+| `GET /api/v1/lessons` | Lessons without the answer key, with completion and total reward |
+| `POST /api/v1/lessons/{id}/complete` | Checks the answers on the server; rewards once per account and lesson |
+
+Lesson rewards are a simulated bill credit, not money. Create a business customer with `python -m backend create-user bistro --role customer --account-type business`, or switch an existing customer with `python -m backend set-account-type <username> business`. `seed-demo` adds the `business-customer` account on `central-03`.
+
 ## Frontend API
 
 | Method and path | Response |

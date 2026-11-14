@@ -10,6 +10,7 @@ export default defineConfig({
       allow: [
         fileURLToPath(new URL(".", import.meta.url)),
         fileURLToPath(new URL("../packages/contracts", import.meta.url)),
+        fileURLToPath(new URL("../backend/fixtures", import.meta.url)),
       ],
       deny: [
         ".env",

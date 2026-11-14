@@ -28,6 +28,17 @@ Connected mode accepts backend usernames such as `alice`, with their configured 
 - `database/fixtures.json`: the same fictional seed used by the frontend.
 - `BACKEND_HANDOFF.md`: API, authorization, migration and implementation boundaries.
 
+## Customer features
+
+- **Plain-language energy**: today's export is translated into everyday equivalents (`src/friendly.js`), with separate wording for home and business accounts. Unknown energy is never shown as zero.
+- **Energy chart periods**: Today, Weekly, Monthly and Yearly totals in kWh (`src/periods.js`). The connected app adds up measured history; the demo uses synthetic totals.
+- **Production forecast**: `src/forecast.js` combines a live Open-Meteo weather forecast for Bucharest (sunshine, temperature, humidity; season through day length) with the installed capacity. Only that fixed city location is sent to the weather service. The formula and its assumptions are shown in the card.
+- **Contract**: the customer saves supplier, fixed import/export prices and installed kWp; forecast values (and the demo planner) then use those prices instead of assumptions.
+- **Looking after your home/business**: source reporting health in plain words, replacing the technical tables on the customer home (staff keep them under Sites).
+- **Support**: connected customers send typed requests (13 request types) and follow-ups; staff reply under Requests. Text only, no video upload in connected mode.
+- **Lessons**: short card-based lessons with a mini test. Passing earns a simulated bill credit once per lesson; in connected mode the server checks the answers.
+- **Business accounts**: the backend account type (`home` or `business`) drives wording and comparisons. The demo adds `bistro@solarlenes.demo` (Bistro Soare, S04).
+
 ## Browser-only workflow demo sign-in
 
 Open `/demo/` to use the following fictional accounts. They are separate from backend users and grant no API access. Planning, support uploads/replies and dispatch in this mode remain local simulations.
@@ -40,6 +51,7 @@ Every seeded account uses the public development password `SolarDemo2026!`. The 
 | elena@solarlenes.demo | Client | S02 |
 | david@solarlenes.demo | Client | S09 |
 | sofia@solarlenes.demo | Client | S17 |
+| bistro@solarlenes.demo | Client (business) | S04 |
 | ceo@solarlenes.demo | Overall manager | All 24 sites, users and audit |
 | manager@solarlenes.demo | Area manager | North, S01–S08 |
 | dispatch@solarlenes.demo | PPC dispatcher | North, dispatch approval |
@@ -56,7 +68,7 @@ Every seeded account uses the public development password `SolarDemo2026!`. The 
 
 1. Enter as Alex. Home shows synthetic energy flows, daily totals and a supported shortfall alert.
 2. Plan a 6 kWh EV charge. The 13:00–15:00 suggestion estimates 4.50 RON; half solar estimates 2.25 RON. Edit the task and deadline, try another window, accept or cancel.
-3. In Support, choose a request type and submit a synthetic description. Choose urgent review to create a P1 ticket; the immediate-danger option creates a P0 PPC-triage report and reminds the customer to contact emergency services. Optional MP4/WebM clips are decoded in the browser and checked against 30 MB / 60 seconds.
+3. In Support, choose a request type and submit a synthetic description. The immediate-danger option creates a P0 PPC-triage report and reminds the customer to contact emergency services. Optional MP4/WebM clips are decoded in the browser and checked against 30 MB / 60 seconds.
 4. Sign out and enter as Ioana. Open Virtual Visits to see Solar Care requests (the selected request type and priority are shown), reply, then sign in as the client to see the response. Grid, electrician, and billing requests appear only in their matching scoped worker queues; dispatchers/managers see their area's request queue.
 5. Enter as the overall manager. Inspect all 24 sites: markers link each site to its demo inverter, and hovering/clicking a marker shows any linked client and inverter model. Filter radar and cases, confirm ownership, propose a qualified crew from a case, then confirm in Teams. Review the audit trail.
 6. Account → Demo controls restores the initial dataset and clears local media. Reset is available only in the overall-manager interface.
