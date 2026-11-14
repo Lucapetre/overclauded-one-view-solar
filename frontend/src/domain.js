@@ -1,10 +1,10 @@
+import siteProfiles from "../../backend/fixtures/site_profiles.json" with { type: "json" };
 export const roles = {
   client: "Client",
   ceo: "Overall manager",
   manager: "Area manager",
   dispatcher: "PPC dispatcher",
   technician: "O&M technician",
-  support: "Supplier support",
 };
 export const users = [
   {
@@ -68,7 +68,7 @@ export const users = [
     name: "Ioana Dima",
     email: "ioana@solarlenes.demo",
     role: "technician",
-    sites: ["S01", "S02", "S03"],
+    sites: [],
     area: "North",
     crew: "Solar Care",
   },
@@ -77,7 +77,7 @@ export const users = [
     name: "Mihai Petrescu",
     email: "mihai@solarlenes.demo",
     role: "technician",
-    sites: ["S09", "S10"],
+    sites: [],
     area: "Central",
     crew: "Grid Response",
   },
@@ -86,33 +86,9 @@ export const users = [
     name: "Ana Tudor",
     email: "ana@solarlenes.demo",
     role: "technician",
-    sites: ["S17", "S18"],
+    sites: [],
     area: "South",
     crew: "Field Service",
-  },
-  {
-    id: "u11",
-    name: "Victor Ene",
-    email: "support@solarlenes.demo",
-    role: "support",
-    sites: Array.from({ length: 8 }, (_, i) => `S${String(i + 1).padStart(2, "0")}`),
-    area: "North",
-  },
-  {
-    id: "u12",
-    name: "Irina Matei",
-    email: "support.central@solarlenes.demo",
-    role: "support",
-    sites: Array.from({ length: 8 }, (_, i) => `S${String(i + 9).padStart(2, "0")}`),
-    area: "Central",
-  },
-  {
-    id: "u13",
-    name: "Paul Dumitru",
-    email: "support.south@solarlenes.demo",
-    role: "support",
-    sites: Array.from({ length: 8 }, (_, i) => `S${String(i + 17).padStart(2, "0")}`),
-    area: "South",
   },
   {
     id: "u14",
@@ -140,22 +116,54 @@ export const users = [
     business: true,
   },
 ];
-export const sites = Array.from({ length: 24 }, (_, i) => ({
-  id: `S${String(i + 1).padStart(2, "0")}`,
-  name:
-    i === 0
-      ? "The Green House"
-      : i === 3
-        ? "Bistro Soare"
-        : `Solar home ${String(i + 1).padStart(2, "0")}`,
-  business: i === 3,
-  area: ["North", "Central", "South"][Math.floor(i / 8)],
-  feeder: `DEMO-F${Math.floor(i / 8) + 1}`,
-  capacity: 6 + (i % 3),
-  battery: i % 4 === 1,
-  stale: [5, 7, 14, 22].includes(i),
-  pv: 3.6 + (i % 5) * 0.3,
-}));
+// Site placement, capacity and billing profiles come from the shared synthetic fixture.
+// Profile area north/central/south + number 1–8 maps to demo sites S01–S08 / S09–S16 / S17–S24.
+export const AREAS = ["North", "Central", "South"];
+export const siteFixture = siteProfiles;
+export const defaultTariff = siteProfiles.default_tariff;
+const businessNames = {
+  S04: "Bistro Soare",
+  S06: "Pipera Office Park",
+  S08: "Bucureștii Noi Warehouse",
+  S11: "Old Town Bistro",
+  S15: "Militari Factory",
+  S21: "Berceni Factory",
+  S24: "Progresul Supermarket",
+};
+export function profileFor(siteId) {
+  const index = Number(siteId.slice(1)) - 1;
+  const area = AREAS[Math.floor(index / 8)]?.toLowerCase();
+  return siteProfiles.profiles.find(
+    (p) => p.area === area && p.number === (index % 8) + 1,
+  );
+}
+export const sites = Array.from({ length: 24 }, (_, i) => {
+  const id = `S${String(i + 1).padStart(2, "0")}`;
+  const profile = profileFor(id);
+  const business = profile.segment === "business";
+  return {
+    id,
+    name:
+      i === 0
+        ? "The Green House"
+        : business
+          ? businessNames[id] || `${profile.zone} ${profile.business_type}`
+          : `Solar home ${String(i + 1).padStart(2, "0")}`,
+    business,
+    segment: profile.segment,
+    businessType: profile.business_type || null,
+    zone: profile.zone,
+    latitude: profile.latitude,
+    longitude: profile.longitude,
+    area: AREAS[Math.floor(i / 8)],
+    feeder: `DEMO-F${Math.floor(i / 8) + 1}`,
+    capacity: profile.installed_kwp,
+    battery: i % 4 === 1,
+    stale: [5, 7, 14, 22].includes(i),
+    pv: 3.6 + (i % 5) * 0.3,
+    profile,
+  };
+});
 export const requestTypes = [
   {
     id: "solar",
@@ -224,22 +232,22 @@ export const requestTypes = [
     id: "meter",
     label: "Meter reading or prosumer settlement",
     family: "Billing",
-    owner: "Supplier support",
-    routeTo: "Supplier Support",
+    owner: "PPC dispatch",
+    routeTo: "PPC Triage",
   },
   {
     id: "billing",
     label: "Billing or contract question",
     family: "Billing",
-    owner: "Supplier support",
-    routeTo: "Supplier Support",
+    owner: "PPC dispatch",
+    routeTo: "PPC Triage",
   },
   {
     id: "upgrade",
     label: "Extend the system (panels, battery, EV charger)",
     family: "Other",
-    owner: "Supplier support",
-    routeTo: "Supplier Support",
+    owner: "PPC dispatch",
+    routeTo: "PPC Triage",
   },
   {
     id: "other",
@@ -252,53 +260,75 @@ export const requestTypes = [
 export function routeRequest(id) {
   return requestTypes.find((request) => request.id === id) || requestTypes.at(-1);
 }
+// Schematic 0–1 position inside a Bucharest bounding box (kept for the SQLite handoff).
+export const BUCHAREST_BOUNDS = {
+  south: 44.33,
+  north: 44.54,
+  west: 25.94,
+  east: 26.25,
+};
+export function inverterModel(manufacturer, kw) {
+  if (manufacturer === "Huawei") return `SUN2000-${kw}KTL-M1`;
+  if (manufacturer === "Fronius")
+    return kw <= 8 ? `Primo ${kw}.0-1` : `Tauro ${kw}-3`;
+  return `SE${kw}K`;
+}
 export const inverters = sites.map((site, i) => {
-  const index = i % 8;
-  const group = Math.floor(i / 8);
-  const x = [110, 420, 195][group] + (index % 4) * 48;
-  const y = [120, 140, 280][group] + Math.floor(index / 4) * 54;
   const manufacturer = ["Huawei", "Fronius", "SolarEdge"][i % 3];
-  const model =
-    manufacturer === "Huawei"
-      ? `SUN2000-${site.capacity}KTL-M1`
-      : manufacturer === "Fronius"
-        ? `Primo ${site.capacity}.0-1`
-        : `SE${site.capacity}K`;
+  const b = BUCHAREST_BOUNDS;
   return {
     id: `INV-${site.id}`,
     site: site.id,
     manufacturer,
-    model,
+    model: inverterModel(manufacturer, site.capacity),
     serial: `DEMO-${site.id}-2024`,
     ratedKw: site.capacity,
-    mapX: x / 720,
-    mapY: y / 380,
+    mapX: (site.longitude - b.west) / (b.east - b.west),
+    mapY: (b.north - site.latitude) / (b.north - b.south),
   };
 });
+// Each area has one crew that covers that area's technical incident families.
+// Billing questions are answered by the PPC dispatcher, never by a crew.
+export const TECHNICAL_FAMILIES = [
+  "Production",
+  "Temperature",
+  "Telemetry",
+  "Voltage",
+  "Area event",
+  "Local issue",
+  "Unknown code",
+  "Other",
+];
 export const crews = [
   {
+    id: "C1",
     name: "Solar Care",
     area: "North",
     owner: "Solar O&M",
-    skills: ["Production", "Temperature", "Unknown code", "Local issue"],
+    skills: [...TECHNICAL_FAMILIES],
     shift: "08:00–18:00",
-    members: "Ioana Dima · 2 technicians",
+    lead: "u8",
+    members: ["Ioana Dima", "Tudor Lazăr", "Bianca Neagu"],
   },
   {
+    id: "C2",
     name: "Grid Response",
     area: "Central",
     owner: "Grid operator",
-    skills: ["Voltage", "Area event"],
+    skills: [...TECHNICAL_FAMILIES],
     shift: "08:00–18:00",
-    members: "Mihai Petrescu · 3 technicians",
+    lead: "u9",
+    members: ["Mihai Petrescu", "Cristian Pop", "Raluca Stoica", "Emil Badea"],
   },
   {
+    id: "C3",
     name: "Field Service",
     area: "South",
     owner: "Customer electrician",
-    skills: ["Local issue"],
+    skills: [...TECHNICAL_FAMILIES],
     shift: "08:00–18:00",
-    members: "Ana Tudor · 2 technicians",
+    lead: "u10",
+    members: ["Ana Tudor", "Sorin Vasile", "Diana Cazacu"],
   },
 ];
 const base = [
@@ -416,12 +446,18 @@ export function seed() {
       ],
     })),
     inverters: inverters.map((inverter) => ({ ...inverter })),
+    // One source of truth for crews: every staff view reads db.crews.
+    crews: crews.map((crew) => ({
+      ...crew,
+      skills: [...crew.skills],
+      members: [...crew.members],
+    })),
     visits: [],
     plans: [],
     preferences: {},
     contracts: {},
+    // { id, kind: "dispatch"|"meeting", incident, site, area, crew, status, assignedBy, assignedAt, ... }
     assignments: [],
-    audit: [],
     users: users.map((x) => ({ ...x, active: true })),
   };
 }
@@ -430,19 +466,21 @@ export function canSee(user, siteId) {
   const site = sites.find((x) => x.id === siteId);
   return (
     user.role === "ceo" ||
-    (["manager", "dispatcher"].includes(user.role) &&
+    // Area staff see their area; a technician's area is the area of his crew.
+    (["manager", "dispatcher", "technician"].includes(user.role) &&
       site?.area === user.area) ||
     user.sites.includes(siteId)
   );
 }
-export const canDispatch = (u) =>
+// Only the PPC dispatcher assigns crews; managers read the assignment report.
+export const canDispatch = (u) => u?.role === "dispatcher";
+export const canConfirmOwner = (u) =>
   ["ceo", "manager", "dispatcher"].includes(u?.role);
 export const canReview = (u) =>
   ["ceo", "manager", "dispatcher", "technician"].includes(u?.role);
 export function canReviewRequest(user, visit) {
   if (!user || !canSee(user, visit.site)) return false;
   if (user.role === "technician") return visit.routedTo === user.crew;
-  if (user.role === "support") return visit.routedTo === "Supplier Support";
   return ["ceo", "manager", "dispatcher"].includes(user.role);
 }
 export function rank(incidents) {
@@ -525,12 +563,19 @@ export function recommend(
       b.saving - a.saving || Math.abs(a.start - 13) - Math.abs(b.start - 13),
   );
 }
+export const ACTIVE_DISPATCH = ["Assigned", "Team sent"];
+/** Crew area matches the site area, the family is in its skills and it has no active dispatch. */
 export function eligible(crew, incident, assignments) {
   return (
     crew.area === sites.find((s) => s.id === incident.site)?.area &&
-    crew.owner === (incident.confirmedOwner || incident.owner) &&
+    incident.family !== "Billing" &&
     crew.skills.includes(incident.family) &&
-    !assignments.some((a) => a.crew === crew.name && a.status === "Confirmed")
+    !assignments.some(
+      (a) =>
+        a.crew === crew.name &&
+        (a.kind || "dispatch") === "dispatch" &&
+        ACTIVE_DISPATCH.includes(a.status),
+    )
   );
 }
 export const timeLabel = (n) => {

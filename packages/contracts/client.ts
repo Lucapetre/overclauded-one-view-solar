@@ -16,6 +16,13 @@ import type {
   LessonResult,
   RequestType,
   SupportRequest,
+  AutoDispatchResult,
+  CapacityView,
+  Incident,
+  IncidentDetail,
+  OpsMap,
+  RevenueView,
+  TeamsView,
 } from "./index";
 
 export class SolarApiError extends Error {
@@ -32,7 +39,10 @@ export class SolarClient {
 
   private async request<T>(path: string, options: RequestInit = {}): Promise<T> {
     const headers = new Headers(options.headers);
-    if (options.body !== undefined) headers.set("Content-Type", "application/json");
+    // JSON by default; an explicit Content-Type (e.g. a raw video upload) is respected.
+    if (options.body !== undefined && !headers.has("Content-Type")) {
+      headers.set("Content-Type", "application/json");
+    }
     if (options.method === "POST" && this.csrfToken) {
       headers.set("X-CSRF-Token", this.csrfToken);
     }
@@ -155,6 +165,70 @@ export class SolarClient {
 
   completeLesson(lessonId: string, answers: number[]): Promise<LessonResult> {
     return this.write(`/api/v1/lessons/${encodeURIComponent(lessonId)}/complete`, { answers });
+  }
+
+  /** Raw MP4 or WebM body (not multipart), at most 30 MB; not allowed on danger reports. */
+  async uploadSupportVideo(requestId: string, file: Blob, filename: string): Promise<SupportRequest> {
+    if (!this.csrfToken) await this.me();
+    const type = file.type || (filename.toLowerCase().endsWith(".webm") ? "video/webm" : "video/mp4");
+    const query = new URLSearchParams({ filename });
+    return this.request(`/api/v1/support/requests/${encodeURIComponent(requestId)}/media?${query}`, {
+      method: "POST", body: file, headers: { "Content-Type": type },
+    });
+  }
+
+  /** Same-origin URL for a <video src>; the session cookie authorizes it. */
+  supportMediaUrl(mediaId: string): string {
+    return `${this.baseUrl}/api/v1/support/media/${encodeURIComponent(mediaId)}`;
+  }
+
+  opsMap(signal?: AbortSignal): Promise<OpsMap> {
+    return this.request("/api/v1/ops/map", { signal });
+  }
+
+  opsIncidents(status: "open" | "all" = "open", signal?: AbortSignal): Promise<Incident[]> {
+    return this.request(`/api/v1/ops/incidents?${new URLSearchParams({ status })}`, { signal });
+  }
+
+  opsIncident(incidentId: string, signal?: AbortSignal): Promise<IncidentDetail> {
+    return this.request(`/api/v1/ops/incidents/${encodeURIComponent(incidentId)}`, { signal });
+  }
+
+  resolveIncident(incidentId: string): Promise<IncidentDetail> {
+    return this.write(`/api/v1/ops/incidents/${encodeURIComponent(incidentId)}/resolve`, {});
+  }
+
+  /** Dispatcher only. Without a crew the first eligible available crew (by name) is chosen. */
+  assignIncident(incidentId: string, crewId?: string): Promise<IncidentDetail> {
+    return this.write(`/api/v1/ops/incidents/${encodeURIComponent(incidentId)}/assign`, crewId ? { crew_id: crewId } : {});
+  }
+
+  /** Dispatcher only: assign open incidents in severity order until crews run out. */
+  autoDispatch(): Promise<AutoDispatchResult> {
+    return this.write("/api/v1/ops/dispatch/auto", {});
+  }
+
+  /** Technician only. */
+  sendTeam(incidentId: string): Promise<IncidentDetail> {
+    return this.write(`/api/v1/ops/incidents/${encodeURIComponent(incidentId)}/send-team`, {});
+  }
+
+  /** Technician only. Timezone-aware ISO 8601 times; at most 4 hours. */
+  scheduleMeeting(incidentId: string, start: string, end: string): Promise<IncidentDetail> {
+    return this.write(`/api/v1/ops/incidents/${encodeURIComponent(incidentId)}/meeting`, { start, end });
+  }
+
+  opsTeams(signal?: AbortSignal): Promise<TeamsView> {
+    return this.request("/api/v1/ops/teams", { signal });
+  }
+
+  /** Supervisor only; a synthetic monthly estimate, not invoices. */
+  opsRevenue(signal?: AbortSignal): Promise<RevenueView> {
+    return this.request("/api/v1/ops/revenue", { signal });
+  }
+
+  opsCapacity(signal?: AbortSignal): Promise<CapacityView> {
+    return this.request("/api/v1/ops/capacity", { signal });
   }
 
   /** State changes need the session's CSRF token; restore it after a page reload. */

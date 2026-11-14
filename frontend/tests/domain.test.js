@@ -1,6 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  roles,
+  requestTypes,
   users,
   seed,
   sites,
@@ -61,9 +63,24 @@ test("site access is role and assignment scoped", () => {
   assert.equal(sites.filter((s) => canSee(users[4], s.id)).length, 24);
   assert.equal(sites.filter((s) => canSee(users[5], s.id)).length, 8);
   assert.equal(canSee(users[7], "S17"), false);
+  // A technician sees his crew's whole area, not only listed sites.
+  assert.equal(sites.filter((s) => canSee(users[7], s.id)).length, 8);
   assert.equal(canDispatch(users[7]), false);
   assert.equal(canReview(users[7]), true);
-  assert.equal(canReview(users[10]), false);
+  // Only the PPC dispatcher assigns crews; managers are read-only.
+  assert.equal(canDispatch(users[6]), true);
+  assert.equal(canDispatch(users[4]), false);
+  assert.equal(canDispatch(users[5]), false);
+});
+test("supplier support role and accounts are removed", () => {
+  assert.equal("support" in roles, false);
+  assert.equal(users.some((u) => u.role === "support"), false);
+  assert.equal(users.some((u) => ["u11", "u12", "u13"].includes(u.id)), false);
+  assert.equal(users.length, 13);
+  assert.equal(
+    requestTypes.some((r) => r.routeTo === "Supplier Support"),
+    false,
+  );
 });
 test("safety precedes money and missing data stays unknown", () => {
   const db = seed(),
@@ -73,28 +90,36 @@ test("safety precedes money and missing data stays unknown", () => {
   assert.equal(missing.value, null);
   assert.equal(missing.tier, "P3");
 });
-test("qualified crews cannot receive overlapping confirmed work", () => {
+test("qualified crews cannot receive overlapping active dispatch work", () => {
   const i = seed().incidents[0];
   assert.equal(eligible(crews[0], i, []), true);
   assert.equal(eligible(crews[1], i, []), false);
   assert.equal(
-    eligible(crews[0], i, [{ crew: "Solar Care", status: "Confirmed" }]),
+    eligible(crews[0], i, [{ crew: "Solar Care", kind: "dispatch", status: "Assigned" }]),
     false,
   );
+  assert.equal(
+    eligible(crews[0], i, [{ crew: "Solar Care", kind: "meeting", status: "Scheduled" }]),
+    true,
+  );
+  assert.equal(eligible(crews[0], { ...i, family: "Billing" }, []), false);
 });
 test("customer request types route to the matching worker team", () => {
   assert.equal(routeRequest("solar").routeTo, "Solar Care");
   assert.equal(routeRequest("grid").routeTo, "Grid Response");
-  assert.equal(routeRequest("billing").routeTo, "Supplier Support");
+  assert.equal(routeRequest("billing").routeTo, "PPC Triage");
+  assert.equal(routeRequest("meter").routeTo, "PPC Triage");
+  assert.equal(routeRequest("upgrade").routeTo, "PPC Triage");
   assert.equal(routeRequest("unknown").routeTo, "PPC Triage");
 });
 test("request inboxes are filtered by worker route and site scope", () => {
   const solarRequest = { site: "S01", routedTo: "Solar Care" };
-  const billingRequest = { site: "S01", routedTo: "Supplier Support" };
+  const billingRequest = { site: "S01", routedTo: "PPC Triage" };
   assert.equal(canReviewRequest(users[7], solarRequest), true);
   assert.equal(canReviewRequest(users[7], billingRequest), false);
-  assert.equal(canReviewRequest(users[10], billingRequest), true);
-  assert.equal(canReviewRequest(users[11], billingRequest), false);
+  // The North dispatcher answers billing questions; Central's does not see North.
+  assert.equal(canReviewRequest(users[6], billingRequest), true);
+  assert.equal(canReviewRequest(users[10], billingRequest), false);
 });
 test("each synthetic site has one inverter plotted for its linked clients", () => {
   const db = seed();

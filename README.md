@@ -102,8 +102,14 @@ The seed command generates passwords and writes them to the ignored, mode-0600 f
 | `customer` | Own site `north-01` |
 | `other-customer` | Own site `south-01` |
 | `dispatcher` | Eight north-area sites and the north area summary |
-| `technician` | Assigned sites `north-01` and `north-02` |
-| `supervisor` | All three explicitly granted demo areas |
+| `technician` | Assigned sites `north-01` and `north-02`; member of crew Solar Care (north incidents) |
+| `supervisor` | All three explicitly granted demo areas (overall manager) |
+| `business-customer` | Own business site `central-03` |
+| `technician-central` | Member of crew Grid Response (central incidents) |
+| `technician-south` | Member of crew Field Service (south incidents) |
+| `area-manager` | Supervisor role with only the north area granted |
+
+The seed also loads the synthetic site profiles in `backend/fixtures/site_profiles.json` (map position, segment, installed kWp and a monthly billing profile), three crews and eight synthetic incidents described as demo policy rules, never as equipment diagnoses.
 
 Submit credentials to `POST /api/v1/auth/login` using the documentation's Try it out action. The browser stores the HttpOnly session cookie; subsequent requests use it automatically. `GET /api/v1/me` returns the current account and CSRF token. Logout requires that token in `X-CSRF-Token`.
 
@@ -159,6 +165,13 @@ Run `create-user` once for each username. If `alice` already exists, sign in wit
 .venv/bin/python -m backend set-password alice
 ```
 
+Field crews work in one area and cover a list of incident families (`Production`, `Temperature`, `Telemetry`, `Voltage`, `Area event`, `Local issue`, `Billing`, `Other`). Only technician accounts can join a crew; a technician's operations zone is the area of each crew he belongs to:
+
+```sh
+.venv/bin/python -m backend create-crew "Night Crew" --area north --skills "Production,Telemetry,Local issue" --shift 18:00-23:00
+.venv/bin/python -m backend add-crew-member "Night Crew" alice-tech
+```
+
 Repeating `grant-site` is safe. CLI account errors report the database path so commands using different `SOLAR_DATABASE` settings or working directories can be distinguished.
 
 ### Deliver records
@@ -199,6 +212,43 @@ Migration `003_customer_features.sql` adds a customer account type, supply contr
 
 Lesson rewards are a simulated bill credit, not money. Create a business customer with `python -m backend create-user bistro --role customer --account-type business`, or switch an existing customer with `python -m backend set-account-type <username> business`. `seed-demo` adds the `business-customer` account on `central-03`.
 
+Each support request also opens a linked operations incident (`P0` for immediate danger, otherwise `P2`). The response carries `incident_id`, any scheduled `meeting` (`start`, `end`, `crew_name`) and an attached `media` video. Meter and billing questions are routed to the `Dispatch desk`.
+
+### Support videos
+
+| Method/path | Behavior |
+| --- | --- |
+| `POST /api/v1/support/requests/{id}/media?filename=…` | Owning customer only, with `X-CSRF-Token`. The body is the raw file (not multipart) with `Content-Type: video/mp4` or `video/webm`. Returns the updated request (201) |
+| `GET /api/v1/support/media/{media_id}` | Streams the video inline to the owning customer or to staff who can see the request; otherwise 404. Supports HTTP Range |
+
+One video per request (409 `media_exists`), at most 30 MB (413 `media_too_large`; only this route has the larger body limit). Other types return 415; content whose magic bytes do not match the declared type (`ftyp` at offset 4 for MP4, `1A 45 DF A3` for WebM) returns 422 `invalid_media`. Immediate-danger requests refuse videos (422 `media_not_allowed`): people must not film danger. Files are stored under `SOLAR_MEDIA_DIR` (default `.local/media`, never inside the frontend build) with random server-generated names; the client file name is only shown, after sanitizing to a basename of at most 120 characters. The 60-second duration limit is checked only in the browser. There is no virus scanning or transcoding.
+
+## Operations API
+
+Migration `004_operations.sql` adds synthetic site profiles, crews, incidents with an append-only incident log, assignments and support media. All routes need a non-customer session (customers get 403 `operations_required`); state changes are `POST` with `X-CSRF-Token`. Objects outside the caller's scope return 404.
+
+| Method/path | Roles | Behavior |
+| --- | --- | --- |
+| `GET /api/v1/ops/map` | staff | Profiled sites in scope with position, zone, segment, kWp, freshness, open incident count and worst tier |
+| `GET /api/v1/ops/incidents?status=open\|all` | staff | Ordered by tier (`P0` first), then oldest first, with the active assignment |
+| `GET /api/v1/ops/incidents/{id}` | staff | The incident and its full log, oldest first |
+| `POST /api/v1/ops/incidents/{id}/assign` | dispatcher | Body `{crew_id?}`; without a crew, the first eligible available crew by name |
+| `POST /api/v1/ops/dispatch/auto` | dispatcher | Assigns open unassigned incidents in severity order until crews run out; returns `assigned` and `skipped` |
+| `POST /api/v1/ops/incidents/{id}/send-team` | technician | Sends the technician's crew on site |
+| `POST /api/v1/ops/incidents/{id}/meeting` | technician | Body `{start, end}`, timezone-aware, at most 4 hours; shown to the customer on the linked request |
+| `POST /api/v1/ops/incidents/{id}/resolve` | dispatcher, supervisor, technician of the assigned crew | Completes the assignment and frees the crew |
+| `GET /api/v1/ops/teams` | staff | Crews with members, availability, active assignment and per-tier report; `unassigned_incidents`; the assignment report by incident |
+| `GET /api/v1/ops/revenue` | supervisor | Monthly synthetic revenue estimate for the granted areas |
+| `GET /api/v1/ops/capacity` | staff | Installed kWp per area in scope, for the browser's weather-based forecast |
+
+Scope: supervisors and dispatchers see their granted areas and sites. A technician sees the areas of his crews plus explicit grants; telemetry access (`/api/v1/sites`) is unchanged. A supervisor with every area is the overall manager; one with a single area is an area manager. Both read the same tables, so they see identical crew data for a shared area. Managers only read the assignment report; only dispatchers assign.
+
+Assignments: a crew is eligible when it works in the incident's area and its skills include the incident's family. An incident has at most one active assignment. A crew with an active on-site dispatch is unavailable; meetings do not block a crew, but a crew's meetings may not overlap (409 `meeting_overlap`). Other conflicts return 409 `already_assigned`, `crew_unavailable`, `no_available_crew` or `assigned_to_other_crew`; an ineligible crew returns 422 `crew_not_eligible`. `Billing` incidents have no crew: the dispatcher answers them through the request replies and resolves them.
+
+Incident log: every state change appends an entry with the actor, action and detail: `opened`, `assigned`, `auto_assigned`, `team_sent`, `meeting_scheduled`, `resolved`, `customer_follow_up`, `staff_reply` and `customer_video`. This log replaces a separate audit view.
+
+Revenue is an estimate, not invoices: per site and month, `energy_sales = monthly_import_kwh × import_price`, `export_payments = monthly_export_kwh × export_price` (paid to the prosumer), `service_fees = service_fee_ron` and `net_revenue = energy_sales + service_fees − export_payments`. Prices come from the site's saved contract, otherwise the fixture's default tariff (1.30 / 0.55 RON/kWh). The response splits totals by segment (with `share_of_net`) and area, lists business accounts by net revenue and gives an annualized net figure. Money is rounded to 2 decimals.
+
 ## Frontend API
 
 | Method and path | Response |
@@ -214,7 +264,7 @@ Lesson rewards are a simulated bill credit, not money. Create a business custome
 | `GET /api/v1/areas/{area_id}/summary` | Scoped site snapshots and reporting coverage denominator |
 | `GET /health` | Database readiness |
 
-All object queries enforce grants on the server. Inaccessible and nonexistent sites return the same 404 envelope. Customer area access returns 403. Operations roles do not receive implicit global access. Area coverage counts only sites visible to that account; financial and incident totals are outside this phase. `incident_status` is explicitly `not_evaluated`.
+All object queries enforce grants on the server. Inaccessible and nonexistent sites return the same 404 envelope. Customer area access returns 403. Operations roles do not receive implicit global access. Area coverage counts only sites visible to that account; area summaries carry no financial or incident totals (see the Operations API for those). `incident_status` is explicitly `not_evaluated`.
 
 Latest responses include every known metric. Missing supported metrics have `value: null` and `availability: missing`; unsupported metrics use `unsupported`. Stale readings retain their values and timestamps. Freshness is evaluated against wall time for live input and the configured replay clock for replay/synthetic input. An unset replay clock returns `unknown_clock`; future data returns `future`. Neither state is counted as recent.
 

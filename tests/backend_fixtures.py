@@ -19,7 +19,11 @@ def database(tmp_path):
 
 @pytest.fixture
 def client(database):
-    settings = Settings(database_path=database.path, ingest_key="test-pipeline-key")
+    settings = Settings(
+        database_path=database.path,
+        ingest_key="test-pipeline-key",
+        media_dir=database.path.parent / "media",
+    )
     with TestClient(create_app(settings)) as client:
         yield client
 

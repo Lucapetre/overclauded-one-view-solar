@@ -2,14 +2,30 @@
 // ISO 8601 timestamps are strings. All API numeric units are explicit.
 
 export type Area = { "area_id": string; "alias": string; "topology_mode": "simulated" | "authorized" | "unknown"; };
+export type AreaCapacity = { "area_id": string; "alias": string; "sites": number; "installed_kwp": number; };
+export type AreaRevenue = { "energy_sales_ron": number; "export_payments_ron": number; "service_fees_ron": number; "net_revenue_ron": number; "sites": number; "area_id": string; "alias": string; "business_sites": number; "business_net_revenue_ron": number; };
 export type AreaSummary = { "area": Area; "monitored_sites": number; "recent_sites": number; "stale_sites": number; "unavailable_sites": number; "unassessed_sites": number; "incident_status"?: "not_evaluated"; "sites": Array<EnergySnapshot>; };
+export type AssignRequest = { "crew_id"?: string | null; };
+export type AssignmentReportRow = { "assignment_id": string; "incident_id": string; "incident_title": string; "tier": "P0" | "P1" | "P2" | "P3"; "site_alias": string; "area_id": string | null; "crew_name": string; "kind": "dispatch" | "meeting"; "status": "assigned" | "team_sent" | "meeting_scheduled" | "completed" | "cancelled"; "created_by": string; "created_at": string; "scheduled_start": string | null; "scheduled_end": string | null; "completed_at": string | null; };
+export type AssignmentSummary = { "assignment_id": string; "crew_id": string; "crew_name": string; "kind": "dispatch" | "meeting"; "status": "assigned" | "team_sent" | "meeting_scheduled" | "completed" | "cancelled"; "scheduled_start": string | null; "scheduled_end": string | null; };
+export type AutoAssigned = { "incident_id": string; "crew_name": string; "tier": "P0" | "P1" | "P2" | "P3"; };
+export type AutoDispatchResult = { "assigned": Array<AutoAssigned>; "skipped": Array<AutoSkipped>; };
+export type AutoSkipped = { "incident_id": string; "tier": "P0" | "P1" | "P2" | "P3"; "reason": "no_eligible_crew" | "no_available_crew"; };
+export type BusinessAccount = { "energy_sales_ron": number; "export_payments_ron": number; "service_fees_ron": number; "net_revenue_ron": number; "site_id": string; "alias": string; "area_id": string | null; "zone": string; "business_type": string | null; "installed_kwp": number; "monthly_import_kwh": number; "monthly_export_kwh": number; "import_price_ron_kwh": number; "export_price_ron_kwh": number; "price_source": "contract" | "default_tariff"; };
+export type CapacityView = { "areas": Array<AreaCapacity>; "total_installed_kwp": number; };
 export type Contract = { "supplier": string; "pricing"?: "fixed"; "import_price_ron_kwh": number; "export_price_ron_kwh": number; "installed_kwp"?: number | null; };
 export type ContractView = { "site_id": string; "contract": Contract | null; "updated_at": string | null; };
+export type Crew = { "crew_id": string; "name": string; "area_id": string; "area_alias": string; "skills": Array<string>; "shift": string; "members": Array<string>; "available": boolean; "active_assignment": CrewActiveAssignment | null; "report": CrewReport; };
+export type CrewActiveAssignment = { "assignment_id": string; "incident_id": string; "incident_title": string; "tier": "P0" | "P1" | "P2" | "P3"; "site_id": string; "site_alias": string; "kind": "dispatch" | "meeting"; "status": "assigned" | "team_sent" | "meeting_scheduled" | "completed" | "cancelled"; "scheduled_start": string | null; "scheduled_end": string | null; };
+export type CrewReport = { "assigned_total": number; "completed_total": number; "open_by_tier": TierCounts; "completed_by_tier": TierCounts; };
 export type EnergyHistory = { "site_id": string; "display_timezone"?: "Europe/Bucharest"; "start": string; "end": string; "resolution": "raw" | "15m" | "1h" | "1d"; "points": Array<HistoryPoint>; };
 export type EnergySnapshot = { "site_id": string; "display_timezone"?: "Europe/Bucharest"; "interval_start": string | null; "interval_end": string | null; "received_at": string | null; "freshness": Freshness; "provenance": PublicProvenance | null; "measurements": { [key: string]: Measurement; }; "quality_flags": Array<string>; "vendor_codes": Array<string>; };
 export type ErrorEnvelope = { "code": string; "message": string; "request_id": string; };
 export type Freshness = { "status": "fresh" | "stale" | "future" | "unavailable" | "unknown_clock"; "age_seconds": number | null; "clock": "wall" | "replay" | "unconfigured"; "evaluated_at": string | null; };
 export type HistoryPoint = { "interval_start": string; "interval_end": string; "measurements": { [key: string]: Measurement; }; "coverage": { [key: string]: number; }; "energy_kwh": { [key: string]: number | null; }; "source_modes": Array<"live" | "replay" | "synthetic">; "quality_flags": Array<string>; "sample_count": number; "source_interval_seconds": Array<number>; };
+export type Incident = { "incident_id": string; "site_id": string; "site_alias": string; "area_id": string | null; "zone": string | null; "segment": "home" | "business" | null; "title": string; "family": "Production" | "Temperature" | "Telemetry" | "Voltage" | "Area event" | "Local issue" | "Billing" | "Other"; "tier": "P0" | "P1" | "P2" | "P3"; "status": "new" | "assigned" | "team_sent" | "meeting_scheduled" | "resolved"; "source": "synthetic_replay" | "customer_request"; "evidence": string; "created_at": string; "updated_at": string; "support_request_id": string | null; "assignment": AssignmentSummary | null; };
+export type IncidentDetail = { "incident_id": string; "site_id": string; "site_alias": string; "area_id": string | null; "zone": string | null; "segment": "home" | "business" | null; "title": string; "family": "Production" | "Temperature" | "Telemetry" | "Voltage" | "Area event" | "Local issue" | "Billing" | "Other"; "tier": "P0" | "P1" | "P2" | "P3"; "status": "new" | "assigned" | "team_sent" | "meeting_scheduled" | "resolved"; "source": "synthetic_replay" | "customer_request"; "evidence": string; "created_at": string; "updated_at": string; "support_request_id": string | null; "assignment": AssignmentSummary | null; "log": Array<IncidentLogEntry>; };
+export type IncidentLogEntry = { "actor": string; "action": string; "detail": string; "created_at": string; };
 export type IngestResult = { "record_id": string; "status": "accepted" | "duplicate"; "quality_flags": Array<string>; };
 export type Lesson = { "id": string; "title": string; "summary": string; "minutes": number; "reward_ron": number; "steps": Array<LessonStep>; "example": string; "questions": Array<LessonQuestion>; "completed": boolean; };
 export type LessonAnswers = { "answers": Array<number>; };
@@ -18,8 +34,12 @@ export type LessonQuestion = { "text": string; "options": Array<string>; };
 export type LessonResult = { "lesson_id": string; "passed": boolean; "correct": number; "total": number; "reward_ron": number; "already_completed": boolean; "total_reward_ron": number; };
 export type LessonStep = { "title": string; "text": string; };
 export type Login = { "username": string; "password": string; };
+export type MapCenter = { "latitude": number; "longitude": number; "zoom": number; };
+export type MapSite = { "site_id": string; "alias": string; "area_id": string | null; "latitude": number; "longitude": number; "zone": string; "character": string; "segment": "home" | "business"; "business_type": string | null; "installed_kwp": number; "freshness_status": "fresh" | "stale" | "unavailable" | "future" | "unknown_clock"; "open_incidents": number; "worst_tier": "P0" | "P1" | "P2" | "P3" | null; };
 export type Measurement = { "value": number | null; "unit": "kW" | "%" | "V" | "degC"; "requirement": "mandatory" | "optional"; "availability"?: "available" | "missing" | "unsupported" | "invalid"; "origin"?: "measured" | "derived"; "boundary": "ac" | "dc" | "not_applicable"; "quality_flags"?: Array<string>; };
+export type MeetingRequest = { "start": string; "end": string; };
 export type Metric = "pv_power" | "home_load" | "grid_import" | "grid_export" | "battery_charge" | "battery_discharge" | "battery_soc" | "voltage" | "temperature";
+export type OpsMap = { "center": MapCenter; "note": string; "sites": Array<MapSite>; };
 export type ProviderFrame = { "provider": string; "account_id": string; "site_id": string; "site_key": string; "endpoint_key": string; "device_id": string | null; "channel": string | null; "metric_name": string; "aggregation": string; "frame_start_utc": string; "frame_end_utc": string; "frame_start_local": string; "value": number | null; "unit": string; "n_obs": number; "original_cadence_s"?: number | null; "coverage_ratio": number; "value_origin": string; "frame_status": string; };
 export type ProviderFrames = { "site": ProviderSite; "total": number; "limit": number; "offset": number; "items": Array<ProviderFrame>; };
 export type ProviderLatest = { "site": ProviderSite; "frames": Array<ProviderFrame>; "source_health": Array<ProviderSourceHealth>; "display_timezone"?: "Europe/Bucharest"; };
@@ -29,13 +49,21 @@ export type ProviderSite = { "site_id": string; "site_key": string; "provider": 
 export type ProviderSourceHealth = { "endpoint_key": string; "device_key": string; "cadence_s": number | null; "latest_source_ms": number | null; "latest_received_ms": number | null; "latest_source_age_s": number | null; "stale_threshold_s": number | null; "freshness_status": string; "access_status": string; "notes": string | null; };
 export type PublicProvenance = { "source_mode": "live" | "replay" | "synthetic"; "source_id": string; "source_date": string; };
 export type RequestType = { "id": string; "label": string; "routed_to": string; };
+export type RevenueBySegment = { "home": SegmentRevenue; "business": SegmentRevenue; };
+export type RevenueTotals = { "energy_sales_ron": number; "export_payments_ron": number; "service_fees_ron": number; "net_revenue_ron": number; "sites": number; };
+export type RevenueView = { "period": "monthly"; "basis": string; "currency": "RON"; "totals": RevenueTotals; "by_segment": RevenueBySegment; "by_area": Array<AreaRevenue>; "business_accounts": Array<BusinessAccount>; "annualized_net_revenue_ron": number; };
+export type SegmentRevenue = { "energy_sales_ron": number; "export_payments_ron": number; "service_fees_ron": number; "net_revenue_ron": number; "sites": number; "share_of_net": number; };
 export type SessionView = { "user": User; "csrf_token": string; "expires_at": string; };
 export type Site = { "site_id": string; "alias": string; "area_id": string | null; "topology_mode": "simulated" | "authorized" | "unknown"; "reporting_interval_seconds": number; "stale_after_seconds": number; "capabilities": Array<Metric>; "measurement_requirements": { [key: string]: "mandatory" | "optional"; }; };
+export type SupportMedia = { "media_id": string; "filename": string; "content_type": "video/mp4" | "video/webm"; "size_bytes": number; };
+export type SupportMeeting = { "start": string; "end": string; "crew_name": string; };
 export type SupportReply = { "author": string; "kind": "customer" | "staff"; "text": string; "created_at": string; };
 export type SupportReplyCreate = { "text": string; };
-export type SupportRequest = { "request_id": string; "site_id": string; "site_alias": string; "requested_by": string; "request_type": string; "request_label": string; "priority": "standard" | "immediate_danger"; "routed_to": string; "description": string; "status": "awaiting_review" | "answered"; "created_at": string; "updated_at": string; "replies": Array<SupportReply>; };
+export type SupportRequest = { "request_id": string; "site_id": string; "site_alias": string; "requested_by": string; "request_type": string; "request_label": string; "priority": "standard" | "immediate_danger"; "routed_to": string; "description": string; "status": "awaiting_review" | "answered"; "created_at": string; "updated_at": string; "replies": Array<SupportReply>; "incident_id": string | null; "meeting": SupportMeeting | null; "media": SupportMedia | null; };
 export type SupportRequestCreate = { "site_id": string; "request_type": string; "description": string; "immediate_danger"?: boolean; };
+export type TeamsView = { "crews": Array<Crew>; "unassigned_incidents": number; "assignments": Array<AssignmentReportRow>; };
 export type TelemetryRecord = { "schema_version": "1.0"; "record_id": string; "site_id": string; "device_id": string; "source_id": string; "interval_start": string; "interval_end": string; "received_at": string; "source_mode": "live" | "replay" | "synthetic"; "raw_record_ref": string; "measurements": { [key: string]: Measurement; }; "quality_flags"?: Array<string>; "vendor_codes"?: Array<string>; };
+export type TierCounts = { "P0": number; "P1": number; "P2": number; "P3": number; };
 export type User = { "user_id": string; "username": string; "role": "customer" | "dispatcher" | "technician" | "supervisor"; "account_type"?: "home" | "business"; };
 
 export type ApiRoutes = {
@@ -94,6 +122,45 @@ export type ApiRoutes = {
   };
   "/api/v1/support/requests/{request_id}/replies": {
     post: { response: SupportRequest; body: SupportReplyCreate; query: {  }; params: { "request_id": string; } };
+  };
+  "/api/v1/support/requests/{request_id}/media": {
+    post: { response: SupportRequest; body: never; query: { "filename"?: string; }; params: { "request_id": string; } };
+  };
+  "/api/v1/support/media/{media_id}": {
+    get: { response: unknown; body: never; query: {  }; params: { "media_id": string; } };
+  };
+  "/api/v1/ops/map": {
+    get: { response: OpsMap; body: never; query: {  }; params: {  } };
+  };
+  "/api/v1/ops/incidents": {
+    get: { response: Array<Incident>; body: never; query: { "status"?: "open" | "all"; }; params: {  } };
+  };
+  "/api/v1/ops/incidents/{incident_id}": {
+    get: { response: IncidentDetail; body: never; query: {  }; params: { "incident_id": string; } };
+  };
+  "/api/v1/ops/incidents/{incident_id}/assign": {
+    post: { response: IncidentDetail; body: AssignRequest; query: {  }; params: { "incident_id": string; } };
+  };
+  "/api/v1/ops/incidents/{incident_id}/send-team": {
+    post: { response: IncidentDetail; body: never; query: {  }; params: { "incident_id": string; } };
+  };
+  "/api/v1/ops/incidents/{incident_id}/meeting": {
+    post: { response: IncidentDetail; body: MeetingRequest; query: {  }; params: { "incident_id": string; } };
+  };
+  "/api/v1/ops/incidents/{incident_id}/resolve": {
+    post: { response: IncidentDetail; body: never; query: {  }; params: { "incident_id": string; } };
+  };
+  "/api/v1/ops/dispatch/auto": {
+    post: { response: AutoDispatchResult; body: never; query: {  }; params: {  } };
+  };
+  "/api/v1/ops/teams": {
+    get: { response: TeamsView; body: never; query: {  }; params: {  } };
+  };
+  "/api/v1/ops/revenue": {
+    get: { response: RevenueView; body: never; query: {  }; params: {  } };
+  };
+  "/api/v1/ops/capacity": {
+    get: { response: CapacityView; body: never; query: {  }; params: {  } };
   };
   "/api/v1/lessons": {
     get: { response: LessonCatalog; body: never; query: {  }; params: {  } };

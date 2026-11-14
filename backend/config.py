@@ -34,5 +34,10 @@ class Settings:
             if origin.strip()
         )
     )
+    # Support videos; kept outside the served frontend build.
+    media_dir: Path = field(
+        default_factory=lambda: Path(os.getenv("SOLAR_MEDIA_DIR", ".local/media"))
+    )
     session_hours: int = 8
     max_request_bytes: int = 262144
+    max_media_bytes: int = 30 * 1024 * 1024

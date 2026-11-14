@@ -46,6 +46,19 @@ class SupportReply(Model):
     created_at: datetime
 
 
+class SupportMeeting(Model):
+    start: datetime
+    end: datetime
+    crew_name: str
+
+
+class SupportMedia(Model):
+    media_id: str
+    filename: str
+    content_type: Literal["video/mp4", "video/webm"]
+    size_bytes: int
+
+
 class SupportRequest(Model):
     request_id: str
     site_id: str
@@ -60,6 +73,9 @@ class SupportRequest(Model):
     created_at: datetime
     updated_at: datetime
     replies: list[SupportReply]
+    incident_id: str | None
+    meeting: SupportMeeting | None
+    media: SupportMedia | None
 
 
 class LessonStep(Model):

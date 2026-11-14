@@ -15,6 +15,8 @@ from backend.customer_models import (
     LessonCatalog,
     LessonResult,
     RequestType,
+    SupportMedia,
+    SupportMeeting,
     SupportReply,
     SupportRequest,
     SupportRequestCreate,
@@ -22,6 +24,7 @@ from backend.customer_models import (
 from backend.db import stamp
 from backend.errors import ApiError
 from backend.models import User
+from backend.ops import log_incident, open_incident, request_meeting
 from backend.security import accessible_sites, authorized_site
 
 REQUEST_TYPES = [
@@ -40,13 +43,29 @@ REQUEST_TYPES = [
         ("grid", "Grid connection or voltage", "Grid response"),
         ("outage", "Power cut or frequent disconnections", "Grid response"),
         ("electrical", "Electrical issue inside the building", "Field service"),
-        ("meter", "Meter reading or prosumer settlement", "Supplier support"),
-        ("billing", "Billing or contract question", "Supplier support"),
+        ("meter", "Meter reading or prosumer settlement", "Dispatch desk"),
+        ("billing", "Billing or contract question", "Dispatch desk"),
         ("upgrade", "Extend the system (panels, battery, EV charger)", "Sales advice"),
         ("other", "Other or not sure", "Triage"),
     )
 ]
 _TYPES = {item.id: item for item in REQUEST_TYPES}
+# Incident family opened for each request type; Billing has no crew and stays with dispatch.
+REQUEST_FAMILIES = {
+    "solar": "Production",
+    "device-warning": "Temperature",
+    "inverter-offline": "Production",
+    "battery": "Local issue",
+    "panel-damage": "Local issue",
+    "monitoring": "Telemetry",
+    "grid": "Voltage",
+    "outage": "Area event",
+    "electrical": "Local issue",
+    "meter": "Billing",
+    "billing": "Billing",
+    "upgrade": "Other",
+    "other": "Other",
+}
 MAX_OPEN_REQUESTS = 50
 
 
@@ -100,9 +119,13 @@ def save_contract(
 
 def _requests(connection, user: User, where: str, parameters: tuple):
     rows = connection.execute(
-        "SELECT r.*, s.alias AS site_alias, u.username AS requested_by "
+        "SELECT r.*, s.alias AS site_alias, u.username AS requested_by, "
+        "i.incident_id, m.media_id, m.filename AS media_filename, "
+        "m.content_type AS media_content_type, m.size_bytes AS media_size_bytes "
         "FROM support_requests r JOIN sites s ON s.site_id=r.site_id "
-        "JOIN users u ON u.user_id=r.user_id WHERE "
+        "JOIN users u ON u.user_id=r.user_id "
+        "LEFT JOIN incidents i ON i.support_request_id=r.request_id "
+        "LEFT JOIN support_media m ON m.request_id=r.request_id WHERE "
         + where
         + " ORDER BY r.created_at DESC LIMIT 200",
         parameters,
@@ -115,6 +138,11 @@ def _requests(connection, user: User, where: str, parameters: tuple):
             (row["request_id"],),
         ).fetchall()
         kind = _TYPES.get(row["request_type"])
+        meeting = (
+            request_meeting(connection, row["incident_id"])
+            if row["incident_id"]
+            else None
+        )
         result.append(
             SupportRequest(
                 **{
@@ -135,6 +163,16 @@ def _requests(connection, user: User, where: str, parameters: tuple):
                 },
                 request_label=kind.label if kind else row["request_type"],
                 replies=[SupportReply(**dict(reply)) for reply in replies],
+                incident_id=row["incident_id"],
+                meeting=SupportMeeting(**dict(meeting)) if meeting else None,
+                media=SupportMedia(
+                    media_id=row["media_id"],
+                    filename=row["media_filename"],
+                    content_type=row["media_content_type"],
+                    size_bytes=row["media_size_bytes"],
+                )
+                if row["media_id"]
+                else None,
             )
         )
     return result
@@ -184,7 +222,8 @@ def create_request(
     identifier = uuid.uuid4().hex
     now = stamp()
     connection.execute(
-        "INSERT INTO support_requests VALUES (?,?,?,?,?,?,?,?,?,?)",
+        "INSERT INTO support_requests(request_id,site_id,user_id,request_type,priority,"
+        "routed_to,description,status,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
         (
             identifier,
             payload.site_id,
@@ -199,9 +238,25 @@ def create_request(
             now,
         ),
     )
+    danger = payload.immediate_danger
+    incident = open_incident(
+        connection,
+        site_id=payload.site_id,
+        title=f"Customer request: {kind.label}",
+        family=REQUEST_FAMILIES.get(kind.id, "Other"),
+        tier="P0" if danger else "P2",
+        source="customer_request",
+        evidence=description,
+        actor=user.username,
+        detail=f"Opened from {'an immediate danger' if danger else 'a standard'} "
+        f"support request by {user.username}",
+        support_request_id=identifier,
+        now=now,
+    )
     database.audit(
         connection, user.user_id, "support.request.created", identifier, request_id
     )
+    database.audit(connection, user.user_id, "incident.opened", incident, request_id)
     return _requests(connection, user, "r.request_id=?", (identifier,))[0]
 
 
@@ -227,6 +282,23 @@ def add_reply(
         "UPDATE support_requests SET status=?, updated_at=? WHERE request_id=?",
         ("awaiting_review" if kind == "customer" else "answered", now, identifier),
     )
+    incident = connection.execute(
+        "SELECT incident_id FROM incidents WHERE support_request_id=?", (identifier,)
+    ).fetchone()
+    if incident:
+        log_incident(
+            connection,
+            incident["incident_id"],
+            user.username,
+            "customer_follow_up" if kind == "customer" else "staff_reply",
+            f"{'Customer follow-up' if kind == 'customer' else 'Staff reply'} "
+            f"by {user.username}: {text[:300]}",
+            now,
+        )
+        connection.execute(
+            "UPDATE incidents SET updated_at=? WHERE incident_id=?",
+            (now, incident["incident_id"]),
+        )
     database.audit(
         connection, user.user_id, f"support.reply.{kind}", identifier, request_id
     )

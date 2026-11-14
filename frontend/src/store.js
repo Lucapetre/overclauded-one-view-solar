@@ -1,5 +1,8 @@
 import { seed } from "./domain";
-const KEY = "solarlenes-demo-v1";
+// v2: crews live in the db, assignments carry kind/area/assignedBy, no supplier-support
+// role and no audit page. Older v1 state is ignored so it cannot break the new screens.
+const KEY = "solarlenes-demo-v2";
+const list = (value, fallback) => (Array.isArray(value) ? value : fallback);
 export function readDB() {
   let stored;
   try {
@@ -17,10 +20,14 @@ export function readDB() {
       ...user,
       ...previousUsers.find((saved) => saved.id === user.id),
     })),
-    inverters: Array.isArray(stored.inverters)
-      ? stored.inverters
-      : defaults.inverters,
-    visits: (stored.visits || []).map((visit) => ({
+    inverters: list(stored.inverters, defaults.inverters),
+    crews: list(stored.crews, defaults.crews),
+    incidents: list(stored.incidents, defaults.incidents),
+    assignments: list(stored.assignments, defaults.assignments),
+    plans: list(stored.plans, defaults.plans),
+    contracts: stored.contracts || {},
+    preferences: stored.preferences || {},
+    visits: list(stored.visits, []).map((visit) => ({
       requestType: "other",
       priority: "standard",
       routedTo: "PPC Triage",
@@ -39,15 +46,6 @@ export function mutate(fn) {
   fn(db);
   saveDB(db);
   return db;
-}
-export function audit(db, user, action, subject) {
-  db.audit.unshift({
-    id: crypto.randomUUID(),
-    actor: user.name,
-    action,
-    subject,
-    time: new Date().toISOString(),
-  });
 }
 const mediaDB = () =>
   new Promise((resolve, reject) => {

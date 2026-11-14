@@ -1,0 +1,36 @@
+{
+  "note": "SYNTHETIC. Fictional installations placed near real Bucharest neighbourhoods for demonstration. Coordinates, capacities and billing profiles are invented; no real customer or address is represented.",
+  "center": { "latitude": 44.4268, "longitude": 26.1025, "zoom": 12 },
+  "areas": {
+    "north": { "label": "North Bucharest", "latitude": 44.482, "longitude": 26.085 },
+    "central": { "label": "Central and West Bucharest", "latitude": 44.43, "longitude": 26.075 },
+    "south": { "label": "South Bucharest", "latitude": 44.392, "longitude": 26.105 }
+  },
+  "default_tariff": { "import_price_ron_kwh": 1.3, "export_price_ron_kwh": 0.55 },
+  "profiles": [
+    { "area": "north", "number": 1, "zone": "Băneasa", "character": "residential", "segment": "home", "latitude": 44.4955, "longitude": 26.079, "installed_kwp": 6, "monthly_import_kwh": 210, "monthly_export_kwh": 380, "service_fee_ron": 25 },
+    { "area": "north", "number": 2, "zone": "Aviației", "character": "residential", "segment": "home", "latitude": 44.484, "longitude": 26.099, "installed_kwp": 7, "monthly_import_kwh": 260, "monthly_export_kwh": 410, "service_fee_ron": 25 },
+    { "area": "north", "number": 3, "zone": "Floreasca", "character": "residential", "segment": "home", "latitude": 44.464, "longitude": 26.103, "installed_kwp": 8, "monthly_import_kwh": 300, "monthly_export_kwh": 450, "service_fee_ron": 25 },
+    { "area": "north", "number": 4, "zone": "Dorobanți", "character": "commercial", "segment": "business", "business_type": "Restaurant", "latitude": 44.4585, "longitude": 26.0935, "installed_kwp": 15, "monthly_import_kwh": 3200, "monthly_export_kwh": 260, "service_fee_ron": 180 },
+    { "area": "north", "number": 5, "zone": "Bucureștii Noi", "character": "residential", "segment": "home", "latitude": 44.49, "longitude": 26.042, "installed_kwp": 6, "monthly_import_kwh": 190, "monthly_export_kwh": 340, "service_fee_ron": 25 },
+    { "area": "north", "number": 6, "zone": "Pipera business park", "character": "commercial", "segment": "business", "business_type": "Office building", "latitude": 44.481, "longitude": 26.121, "installed_kwp": 60, "monthly_import_kwh": 9800, "monthly_export_kwh": 900, "service_fee_ron": 420 },
+    { "area": "north", "number": 7, "zone": "Colentina", "character": "residential", "segment": "home", "latitude": 44.464, "longitude": 26.142, "installed_kwp": 7, "monthly_import_kwh": 240, "monthly_export_kwh": 400, "service_fee_ron": 25 },
+    { "area": "north", "number": 8, "zone": "Bucureștii Noi industrial platform", "character": "industrial", "segment": "business", "business_type": "Warehouse", "latitude": 44.486, "longitude": 26.029, "installed_kwp": 80, "monthly_import_kwh": 7400, "monthly_export_kwh": 2600, "service_fee_ron": 480 },
+    { "area": "central", "number": 1, "zone": "Drumul Taberei", "character": "residential", "segment": "home", "latitude": 44.4215, "longitude": 26.034, "installed_kwp": 6, "monthly_import_kwh": 220, "monthly_export_kwh": 360, "service_fee_ron": 25 },
+    { "area": "central", "number": 2, "zone": "Militari", "character": "residential", "segment": "home", "latitude": 44.435, "longitude": 26.023, "installed_kwp": 7, "monthly_import_kwh": 250, "monthly_export_kwh": 420, "service_fee_ron": 25 },
+    { "area": "central", "number": 3, "zone": "Old Town", "character": "historic", "segment": "business", "business_type": "Bistro", "latitude": 44.4318, "longitude": 26.101, "installed_kwp": 12, "monthly_import_kwh": 2600, "monthly_export_kwh": 180, "service_fee_ron": 160 },
+    { "area": "central", "number": 4, "zone": "Cotroceni", "character": "historic", "segment": "home", "latitude": 44.435, "longitude": 26.065, "installed_kwp": 5, "monthly_import_kwh": 280, "monthly_export_kwh": 250, "service_fee_ron": 25 },
+    { "area": "central", "number": 5, "zone": "Titan", "character": "residential", "segment": "home", "latitude": 44.423, "longitude": 26.164, "installed_kwp": 6, "monthly_import_kwh": 200, "monthly_export_kwh": 370, "service_fee_ron": 25 },
+    { "area": "central", "number": 6, "zone": "Pantelimon", "character": "residential", "segment": "home", "latitude": 44.442, "longitude": 26.179, "installed_kwp": 7, "monthly_import_kwh": 230, "monthly_export_kwh": 430, "service_fee_ron": 25 },
+    { "area": "central", "number": 7, "zone": "Militari industrial platform", "character": "industrial", "segment": "business", "business_type": "Factory", "latitude": 44.431, "longitude": 25.999, "installed_kwp": 120, "monthly_import_kwh": 14000, "monthly_export_kwh": 3000, "service_fee_ron": 600 },
+    { "area": "central", "number": 8, "zone": "Dristor", "character": "residential", "segment": "home", "latitude": 44.419, "longitude": 26.14, "installed_kwp": 8, "monthly_import_kwh": 310, "monthly_export_kwh": 440, "service_fee_ron": 25 },
+    { "area": "south", "number": 1, "zone": "Berceni", "character": "residential", "segment": "home", "latitude": 44.389, "longitude": 26.119, "installed_kwp": 6, "monthly_import_kwh": 215, "monthly_export_kwh": 365, "service_fee_ron": 25 },
+    { "area": "south", "number": 2, "zone": "Tineretului", "character": "residential", "segment": "home", "latitude": 44.409, "longitude": 26.105, "installed_kwp": 7, "monthly_import_kwh": 245, "monthly_export_kwh": 395, "service_fee_ron": 25 },
+    { "area": "south", "number": 3, "zone": "Rahova", "character": "residential", "segment": "home", "latitude": 44.413, "longitude": 26.066, "installed_kwp": 8, "monthly_import_kwh": 290, "monthly_export_kwh": 445, "service_fee_ron": 25 },
+    { "area": "south", "number": 4, "zone": "Ghencea", "character": "residential", "segment": "home", "latitude": 44.412, "longitude": 26.042, "installed_kwp": 6, "monthly_import_kwh": 205, "monthly_export_kwh": 350, "service_fee_ron": 25 },
+    { "area": "south", "number": 5, "zone": "Berceni industrial platform", "character": "industrial", "segment": "business", "business_type": "Factory", "latitude": 44.367, "longitude": 26.133, "installed_kwp": 150, "monthly_import_kwh": 12500, "monthly_export_kwh": 2800, "service_fee_ron": 600 },
+    { "area": "south", "number": 6, "zone": "Giurgiului", "character": "residential", "segment": "home", "latitude": 44.393, "longitude": 26.093, "installed_kwp": 7, "monthly_import_kwh": 235, "monthly_export_kwh": 405, "service_fee_ron": 25 },
+    { "area": "south", "number": 7, "zone": "Vitan", "character": "residential", "segment": "home", "latitude": 44.41, "longitude": 26.135, "installed_kwp": 6, "monthly_import_kwh": 225, "monthly_export_kwh": 355, "service_fee_ron": 25 },
+    { "area": "south", "number": 8, "zone": "Progresul commercial strip", "character": "commercial", "segment": "business", "business_type": "Supermarket", "latitude": 44.376, "longitude": 26.098, "installed_kwp": 40, "monthly_import_kwh": 6800, "monthly_export_kwh": 700, "service_fee_ron": 320 }
+  ]
+}

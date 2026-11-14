@@ -56,6 +56,9 @@ def test_support_request_conversation_and_scope(client, signed_in):
     session = signed_in()
     kinds = client.get("/api/v1/support/request-types").json()
     assert len(kinds) >= 12 and kinds[-1]["id"] == "other"
+    teams = {kind["id"]: kind["routed_to"] for kind in kinds}
+    assert teams["billing"] == teams["meter"] == "Dispatch desk"
+    assert "Supplier support" not in teams.values()
     body = {
         "site_id": "north-01",
         "request_type": "battery",
@@ -70,6 +73,9 @@ def test_support_request_conversation_and_scope(client, signed_in):
         "Solar maintenance",
         "awaiting_review",
     )
+    # Every request opens a linked operations incident; no meeting or video yet.
+    assert request["incident_id"] and request["meeting"] is None
+    assert request["media"] is None
     danger = post(client, session, REQUESTS, {**body, "immediate_danger": True}).json()
     assert (danger["priority"], danger["routed_to"]) == ("immediate_danger", "Triage")
     for wrong in (

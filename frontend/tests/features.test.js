@@ -130,7 +130,8 @@ test("request types are extended and the business account is separate", () => {
   const business = users.filter((user) => user.business);
   assert.deepEqual(business.map((user) => user.sites), [["S04"]]);
   assert.ok(sites.find((site) => site.id === "S04").business);
-  assert.equal(sites.filter((site) => site.business).length, 1);
+  // Seven business sites from the shared fixture; only Bistro Soare has a demo login.
+  assert.equal(sites.filter((site) => site.business).length, 7);
 });
 
 test("backend and demo request types and lessons stay aligned", () => {

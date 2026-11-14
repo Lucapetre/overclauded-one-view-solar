@@ -1,15 +1,18 @@
 // Connected (API-backed) customer features: energy totals, care card, support, lessons, contract.
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   AlertTriangle,
   ArrowUpRight,
   BookOpen,
+  CalendarDays,
   CheckCircle2,
   ChevronRight,
   LifeBuoy,
   MessageSquare,
+  Paperclip,
   Send,
   ShieldCheck,
+  Video,
 } from "lucide-react";
 import { poll } from "../../packages/contracts/client";
 import { errorMessage, matchesSeries, primaryReadings, when } from "./telemetry";
@@ -21,6 +24,9 @@ import {
   LessonDeck,
 } from "./features";
 import { words } from "./friendly";
+import { durationProblem, humanSize, videoProblem } from "./video";
+import { friendlyError, keepIfSame, shortId } from "./opsData";
+import { meetingLabel } from "./bucharestTime";
 
 export function asOf(record) {
   const value = record?.provider
@@ -396,7 +402,7 @@ function useRequests(api, onError) {
       poll(
         (signal) => api.supportRequests(signal),
         (value) => {
-          setRequests(value);
+          setRequests((previous) => keepIfSame(previous, value));
           setError(null);
         },
         (failure) => {
@@ -408,7 +414,204 @@ function useRequests(api, onError) {
   return [requests, error, () => setTick((value) => value + 1)];
 }
 
-function Conversation({ api, request, staff, onChanged }) {
+/**
+ * Video duration in seconds, read from metadata in a detached <video> element.
+ * Rejects on decode failure or after `timeoutMs`. Some recorders (MediaRecorder
+ * WebM) report an infinite duration until the end is sought, so we seek once.
+ */
+export function readVideoDuration(file, timeoutMs = 8000) {
+  return new Promise((resolve, reject) => {
+    const video = document.createElement("video");
+    const url = URL.createObjectURL(file);
+    let done = false;
+    const finish = (settle, value) => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      video.removeAttribute("src");
+      video.load();
+      URL.revokeObjectURL(url);
+      settle(value);
+    };
+    const timer = setTimeout(
+      () => finish(reject, new Error("timeout")),
+      timeoutMs,
+    );
+    video.preload = "metadata";
+    video.muted = true;
+    video.onloadedmetadata = () => {
+      if (video.duration === Infinity) {
+        video.ondurationchange = () => {
+          if (Number.isFinite(video.duration)) finish(resolve, video.duration);
+        };
+        video.currentTime = 1e9;
+      } else finish(resolve, video.duration);
+    };
+    video.onerror = () => finish(reject, new Error("decode"));
+    video.src = url;
+  });
+}
+
+/** A picked video file with its validation state (type, size, then duration). */
+function useVideoPick() {
+  const [state, setState] = useState({
+    file: null,
+    problem: null,
+    checking: false,
+  });
+  const token = useRef(0);
+  const pick = useCallback(async (file) => {
+    const mine = ++token.current;
+    if (!file) {
+      setState({ file: null, problem: null, checking: false });
+      return;
+    }
+    const problem = videoProblem(file);
+    if (problem) {
+      setState({ file, problem, checking: false });
+      return;
+    }
+    setState({ file, problem: null, checking: true });
+    let result;
+    try {
+      result = durationProblem(await readVideoDuration(file));
+    } catch (error) {
+      result =
+        error?.message === "timeout"
+          ? "We could not check this video's length in time. Try again or choose another file."
+          : "This video could not be read in your browser. Try an MP4 or WebM file.";
+    }
+    if (mine === token.current)
+      setState({ file, problem: result, checking: false });
+  }, []);
+  return [state, pick];
+}
+
+function VideoInput({ id, state, onPick, disabled }) {
+  return (
+    <div className="video-field">
+      <label htmlFor={id}>
+        Short video (optional) · MP4 or WebM, up to 30 MB and 60 seconds
+      </label>
+      <input
+        id={id}
+        type="file"
+        accept="video/mp4,video/webm,.mp4,.webm"
+        disabled={disabled}
+        onChange={(event) => onPick(event.target.files?.[0] || null)}
+      />
+      {state.file && !state.problem && (
+        <small className="video-status">
+          {state.checking
+            ? "Checking the video…"
+            : `Ready: ${state.file.name} · ${humanSize(state.file.size)}`}
+        </small>
+      )}
+      {state.problem && <p className="error">{state.problem}</p>}
+    </div>
+  );
+}
+
+export function SupportVideo({ api, media }) {
+  return (
+    <figure className="support-video">
+      <video
+        controls
+        preload="metadata"
+        src={api.supportMediaUrl(media.media_id)}
+        className="video-preview"
+      />
+      <figcaption>
+        <Video size={13} /> {media.filename} · {humanSize(media.size_bytes)}
+      </figcaption>
+    </figure>
+  );
+}
+
+/** Retry attaching a video to an existing request of the customer's. */
+function AttachVideo({ api, request, onChanged, onError }) {
+  const [open, setOpen] = useState(false),
+    [video, pick] = useVideoPick(),
+    [busy, setBusy] = useState(false),
+    [error, setError] = useState(null);
+  if (!open)
+    return (
+      <button className="text-btn" onClick={() => setOpen(true)}>
+        <Paperclip size={14} /> Attach a video
+      </button>
+    );
+  async function upload() {
+    setBusy(true);
+    setError(null);
+    try {
+      await api.uploadSupportVideo(
+        request.request_id,
+        video.file,
+        video.file.name,
+      );
+      setOpen(false);
+      pick(null);
+      onChanged();
+    } catch (failure) {
+      if (!onError(failure)) setError(friendlyError(failure));
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <div className="attach-video">
+      <VideoInput
+        id={`attach-${request.request_id}`}
+        state={video}
+        onPick={pick}
+        disabled={busy}
+      />
+      <p className="small-note">
+        Record only from a safe place. Do not open equipment, touch damaged
+        parts or climb.
+      </p>
+      {error && (
+        <p className="error">The video could not be attached: {error}</p>
+      )}
+      {busy && (
+        <p className="video-status" role="status">
+          Uploading video…
+        </p>
+      )}
+      <div className="button-row">
+        <button
+          className="btn secondary"
+          disabled={
+            !video.file || video.checking || Boolean(video.problem) || busy
+          }
+          onClick={upload}
+        >
+          {busy ? "Uploading video…" : "Upload video"}
+        </button>
+        <button
+          className="text-btn"
+          disabled={busy}
+          onClick={() => {
+            pick(null);
+            setOpen(false);
+          }}
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function Conversation({
+  api,
+  request,
+  staff,
+  onChanged,
+  onError,
+  onOpenIncident,
+  focused,
+}) {
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
@@ -422,14 +625,22 @@ function Conversation({ api, request, staff, onChanged }) {
       setText("");
       onChanged();
     } catch (failure) {
-      setError(failure);
+      if (!onError?.(failure)) setError(failure);
     } finally {
       setBusy(false);
     }
   }
   const danger = request.priority === "immediate_danger";
+  const ref = useRef(null);
+  useEffect(() => {
+    if (focused) ref.current?.scrollIntoView({ block: "center" });
+  }, [focused]);
   return (
-    <div className="request-card">
+    <div
+      className={`request-card ${focused ? "focused" : ""}`}
+      ref={ref}
+      id={`request-${request.request_id}`}
+    >
       <div className="section-head">
         <div className="detail-meta">
           <span className={`pill ${request.status === "answered" ? "green" : ""}`}>
@@ -444,6 +655,32 @@ function Conversation({ api, request, staff, onChanged }) {
         {staff ? ` · ${request.site_alias} · from ${request.requested_by}` : ""}
       </p>
       <p>{request.description}</p>
+      {request.meeting && (
+        <div className="meeting-note">
+          <CalendarDays size={14} />{" "}
+          {staff ? "Customer meeting booked" : "A technician meeting is booked"}{" "}
+          for <b>{meetingLabel(request.meeting.start, request.meeting.end)}</b>{" "}
+          with {request.meeting.crew_name}.
+        </div>
+      )}
+      {request.media && <SupportVideo api={api} media={request.media} />}
+      {!staff && !request.media && !danger && (
+        <AttachVideo
+          api={api}
+          request={request}
+          onChanged={onChanged}
+          onError={onError}
+        />
+      )}
+      {staff && request.incident_id && onOpenIncident && (
+        <button
+          className="text-btn"
+          onClick={() => onOpenIncident(request.incident_id)}
+        >
+          Open incident {shortId(request.incident_id)}{" "}
+          <ArrowUpRight size={14} />
+        </button>
+      )}
       {request.replies.map((reply, index) => (
         <div className="reply" key={index}>
           <b>
@@ -489,7 +726,14 @@ export function SupportPage({ api, site, onError }) {
   const [danger, setDanger] = useState(false);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState(null);
+  const [phase, setPhase] = useState(null);
+  const [video, pickVideo] = useVideoPick();
+  const [inputKey, setInputKey] = useState(0);
   const [requests, listError, refresh] = useRequests(api, onError);
+  const clearVideo = () => {
+    pickVideo(null);
+    setInputKey((value) => value + 1);
+  };
   useEffect(() => {
     const controller = new AbortController();
     api
@@ -507,10 +751,14 @@ export function SupportPage({ api, site, onError }) {
   async function submit(event) {
     event.preventDefault();
     if (!description.trim()) return;
+    const file = danger ? null : video.file;
+    if (file && (video.checking || video.problem)) return;
     setBusy(true);
     setNotice(null);
+    setPhase("Sending your request…");
+    let created;
     try {
-      const created = await api.createSupportRequest({
+      created = await api.createSupportRequest({
         site_id: site.site_id,
         request_type: requestType,
         description,
@@ -518,13 +766,34 @@ export function SupportPage({ api, site, onError }) {
       });
       setDescription("");
       setDanger(false);
-      setNotice({ ok: `Request sent to ${created.routed_to}. You will see the reply here.` });
+      setNotice({
+        ok: `Request sent to ${created.routed_to}. You will see the reply here.`,
+      });
       refresh();
     } catch (failure) {
       if (!onError(failure)) setNotice({ error: errorMessage(failure) });
-    } finally {
       setBusy(false);
+      setPhase(null);
+      return;
     }
+    if (file) {
+      setPhase(`Uploading video… (${humanSize(file.size)})`);
+      try {
+        await api.uploadSupportVideo(created.request_id, file, file.name);
+        setNotice({
+          ok: `Request and video sent to ${created.routed_to}. You will see the reply here.`,
+        });
+      } catch (failure) {
+        if (!onError(failure))
+          setNotice({
+            error: `Your request was sent, but the video could not be attached: ${friendlyError(failure)} You can try again with “Attach a video” on this request in your support history.`,
+          });
+      }
+      clearVideo();
+      refresh();
+    }
+    setBusy(false);
+    setPhase(null);
   }
   const mine = requests?.filter((request) => request.site_id === site.site_id);
   return (
@@ -542,7 +811,10 @@ export function SupportPage({ api, site, onError }) {
           <input
             type="checkbox"
             checked={danger}
-            onChange={(event) => setDanger(event.target.checked)}
+            onChange={(event) => {
+              setDanger(event.target.checked);
+              if (event.target.checked) clearVideo();
+            }}
           />
           There is smoke, fire, or immediate danger
         </label>
@@ -584,15 +856,40 @@ export function SupportPage({ api, site, onError }) {
               placeholder="For example: the display has shown a warning since this morning…"
             />
           </label>
+          {danger ? (
+            <p className="small-note">
+              Video is turned off for danger reports. Do not film a dangerous
+              situation.
+            </p>
+          ) : (
+            <VideoInput
+              key={inputKey}
+              id="support-video"
+              state={video}
+              onPick={pickVideo}
+              disabled={busy}
+            />
+          )}
           <p className="small-note">
-            Describe only what you can see from a safe place. Do not open
-            equipment, touch damaged parts or climb to inspect panels.
+            Describe or record only what you can see from a safe place. Do not
+            open equipment, touch damaged parts or climb to inspect panels.
           </p>
           {notice?.error && <p className="error">{notice.error}</p>}
+          {phase && (
+            <p className="video-status" role="status">
+              {phase}
+            </p>
+          )}
           {notice?.ok && <div className="info-box">{notice.ok}</div>}
           <button
             className="btn yellow full"
-            disabled={busy || !requestType}
+            disabled={
+              busy ||
+              !requestType ||
+              (!danger &&
+                Boolean(video.file) &&
+                (video.checking || Boolean(video.problem)))
+            }
           >
             {busy
               ? "Sending…"
@@ -612,6 +909,7 @@ export function SupportPage({ api, site, onError }) {
             api={api}
             request={request}
             onChanged={refresh}
+            onError={onError}
           />
         ))}
         {mine && !mine.length && (
@@ -626,11 +924,14 @@ export function SupportPage({ api, site, onError }) {
   );
 }
 
-export function StaffRequests({ api, onError }) {
+export function StaffRequests({ api, onError, focusId, onOpenIncident }) {
   const [requests, error, refresh] = useRequests(api, onError);
-  const [waiting, setWaiting] = useState(true);
+  const [waiting, setWaiting] = useState(!focusId);
   const visible = requests?.filter(
-    (request) => !waiting || request.status === "awaiting_review",
+    (request) =>
+      !waiting ||
+      request.status === "awaiting_review" ||
+      request.request_id === focusId,
   );
   // Danger reports first, then oldest waiting first.
   visible?.sort(
@@ -664,6 +965,9 @@ export function StaffRequests({ api, onError }) {
           request={request}
           staff
           onChanged={refresh}
+          onError={onError}
+          onOpenIncident={onOpenIncident}
+          focused={request.request_id === focusId}
         />
       ))}
       {visible && !visible.length && (

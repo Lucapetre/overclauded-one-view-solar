@@ -45,6 +45,8 @@ import {
   Mail,
   Play,
   FileText,
+  Coins,
+  Truck,
 } from "lucide-react";
 import {
   roles,
@@ -54,20 +56,40 @@ import {
   requestTypes,
   defaultPrices,
   routeRequest,
-  crews,
   canSee,
   canDispatch,
+  canConfirmOwner,
   canReview,
   canReviewRequest,
-  rank,
   recommend,
-  eligible,
   timeLabel,
+  defaultTariff,
 } from "./domain";
+import {
+  activeDispatch,
+  assignCrew,
+  autoAssign,
+  cancelAssignment,
+  crewBusy,
+  eligibleCrews,
+  isOpen,
+  logIncident,
+  meetingsFor,
+  resolveIncident,
+  routeVisit,
+  scheduleMeeting,
+  sendTeam,
+  skipReason,
+  teamsReport,
+  technicianArea,
+  visibleIncidents,
+} from "./dispatch";
+import { revenueReport } from "./revenue";
+import { BucharestMap } from "./map";
+import { AssignmentReport, CrewSummary, FleetForecast, RevenueView } from "./ops";
 import {
   readDB,
   mutate,
-  audit,
   resetDB,
   putMedia,
   getMedia,
@@ -94,9 +116,18 @@ const icons = {
   Incidents: Tickets,
   "Virtual Visits": Video,
   Teams: Users,
-  Users: ShieldCheck,
-  Audit: Clock,
+  Revenue: Coins,
 };
+/** Menu per role (owner's sheet "2 — Workers PPC"). */
+export function navsFor(user) {
+  if (!user || user.role === "client")
+    return ["Home", "Plan", "Support", "Learn", "Account"];
+  if (user.role === "ceo" || user.role === "manager")
+    return ["Area Radar", "Incidents", "Teams", "Revenue", "Account"];
+  if (user.role === "dispatcher")
+    return ["Area Radar", "Incidents", "Virtual Visits", "Teams", "Account"];
+  return ["Incidents", "Virtual Visits", "Account"];
+}
 function Pill({ children, tone = "" }) {
   return <span className={"pill " + tone}>{children}</span>;
 }
@@ -195,30 +226,13 @@ export default function DemoApp() {
   const visibleSites = sites.filter((s) => canSee(user, s.id)),
     current =
       visibleSites.find((s) => s.id === siteId) || visibleSites[0] || sites[0];
-  const navs = client
-    ? ["Home", "Plan", "Support", "Learn", "Account"]
-    : user.role === "support"
-      ? ["Virtual Visits", "Account"]
-      : [
-          "Area Radar",
-          "Incidents",
-          "Virtual Visits",
-          "Teams",
-          ...(user.role === "ceo" ? ["Users", "Audit"] : []),
-          "Account",
-        ];
+  const navs = navsFor(user);
   const active = navs.includes(page) ? page : navs[0];
-  const incidents = rank(db.incidents.filter((i) => canSee(user, i.site)));
+  const incidents = visibleIncidents(db, user);
   function onLogin(u) {
     sessionStorage.setItem("solar-session", u.id);
     setUserId(u.id);
-    setPage(
-      u.role === "client"
-        ? "Home"
-        : u.role === "support"
-          ? "Virtual Visits"
-          : "Area Radar",
-    );
+    setPage(navsFor(u)[0]);
     setSiteId(u.sites[0] || "S01");
     setLogin(false);
     notify(`Welcome, ${u.name.split(" ")[0]}.`);
@@ -289,7 +303,7 @@ export default function DemoApp() {
               to use energy.
             </h3>
             <p>Small shifts. Better energy days.</p>
-            <button onClick={() => nav(client ? "Learn" : "Area Radar")}>
+            <button onClick={() => nav(client ? "Learn" : navs[0])}>
               Explore your workspace <ArrowUpRight size={16} />
             </button>
           </div>
@@ -427,6 +441,10 @@ export default function DemoApp() {
                   ? "Your home is making the most of today’s sunshine."
                   : active === "Area Radar"
                     ? "A clear view of your monitored installations. A human behind every decision."
+                    : active === "Revenue"
+                      ? "Estimated from synthetic billing profiles and tariffs. Not invoices."
+                      : active === "Teams"
+                        ? "Who is assigned to which incident, and which crews are free."
                     : active === "Plan"
                       ? "Find a better time for the energy you already use."
                       : "Everything you need, connected in one place."}
@@ -465,8 +483,9 @@ export default function DemoApp() {
           {active === "Incidents" && <Incidents {...ctx} />}
           {active === "Virtual Visits" && <Visits {...ctx} />}
           {active === "Teams" && <Teams {...ctx} />}
-          {active === "Users" && user?.role === "ceo" && <UserAdmin {...ctx} />}
-          {active === "Audit" && user?.role === "ceo" && <Audit db={db} />}
+          {active === "Revenue" && ["ceo", "manager"].includes(user?.role) && (
+            <Revenue {...ctx} />
+          )}
           {active === "Account" && (
             <Account {...ctx} logout={logout} setLogin={setLogin} />
           )}
@@ -503,9 +522,7 @@ export default function DemoApp() {
       {selected && (
         <IncidentDetail
           {...ctx}
-          incident={db.incidents.find(
-            (i) => i.id === selected && canSee(user, i.site),
-          )}
+          incident={incidents.find((i) => i.id === selected)}
           onClose={() => setSelected(null)}
         />
       )}
@@ -769,7 +786,6 @@ function Home({
             }
             mutate((d) => {
               d.contracts = { ...d.contracts, [current.id]: value };
-              audit(d, user, "Saved energy contract", current.id);
             });
             notify("Contract saved. Estimates now use your prices.");
           }}
@@ -1008,7 +1024,6 @@ function Login({ db, onLogin, onClose }) {
             "manager",
             "dispatcher",
             "technician",
-            "support",
           ].map((role) => {
             const u = db.users.find((u) => u.role === role && u.active);
             return (
@@ -1126,7 +1141,6 @@ function Plan({ db, user, current, notify, requireLogin }) {
           status: "Accepted",
           created: new Date().toISOString(),
         });
-        audit(d, user, "Accepted energy advice", current.id);
       });
       setOffer(null);
       notify(
@@ -1391,7 +1405,6 @@ function Plan({ db, user, current, notify, requireLogin }) {
                     requireLogin(() => {
                       mutate((d) => {
                         d.plans.find((x) => x.id === p.id).status = "Cancelled";
-                        audit(d, user, "Cancelled recommendation", p.id);
                       });
                       notify("Plan cancelled; reserved capacity released.");
                     })
@@ -1458,7 +1471,10 @@ function Support({ db, user, current, notify, requireLogin, setSelected }) {
       const request = routeRequest(requestType);
       const priority = danger ? "immediate_danger" : "standard";
       const owner = danger ? "Unassigned review" : request.owner;
-      const routedTo = danger ? "PPC Triage" : request.routeTo;
+      // Crew-routed types go to the crew of this site's area; the rest to PPC Triage.
+      const routedTo = danger
+        ? "PPC Triage"
+        : routeVisit(requestType, current.id, db.crews);
       mutate((d) => {
         const incidentId = "I" + Date.now();
         d.incidents.unshift({
@@ -1481,7 +1497,7 @@ function Support({ db, user, current, notify, requireLogin, setSelected }) {
           age: 0,
           timeline: [
             {
-              text: "Customer submitted a report",
+              text: `Customer submitted a report: ${request.label} · routed to ${routedTo}`,
               actor: user.name,
               time: new Date().toISOString(),
             },
@@ -1502,7 +1518,6 @@ function Support({ db, user, current, notify, requireLogin, setSelected }) {
           replies: [],
           created: new Date().toISOString(),
         });
-        audit(d, user, "Submitted support request", incidentId);
       });
       setDescription("");
       setRequestType("solar");
@@ -1650,6 +1665,14 @@ function Support({ db, user, current, notify, requireLogin, setSelected }) {
                   · Routed to {v.routedTo || "PPC Triage"}
                 </p>
                 <p>{v.description}</p>
+                {meetingsFor(db, v.incident)
+                  .filter((m) => m.status === "Scheduled")
+                  .map((m) => (
+                    <div className="meeting-note" key={m.id}>
+                      <CalendarDays size={14} /> Meeting booked with{" "}
+                      {m.crew}: <b>{m.date}</b>, {m.start}–{m.end} EET
+                    </div>
+                  ))}
                 {v.replies.map((r, i) => (
                   <div className="reply" key={i}>
                     <b>
@@ -1677,14 +1700,14 @@ function Support({ db, user, current, notify, requireLogin, setSelected }) {
                         });
                         row.status = "Awaiting review";
                         const i = d.incidents.find((x) => x.id === v.incident);
-                        i.status = "Reviewing";
-                        i.revision++;
-                        i.timeline.push({
-                          text: "Customer added a follow-up",
-                          actor: user.name,
-                          time: new Date().toISOString(),
-                        });
-                        audit(d, user, "Added support follow-up", v.incident);
+                        if (i) {
+                          if (!activeDispatch(d, i.id)) i.status = "Reviewing";
+                          logIncident(
+                            i,
+                            `Customer added a follow-up: ${followup[v.id].trim()}`,
+                            user.name,
+                          );
+                        }
                       });
                       setFollowup({ ...followup, [v.id]: "" });
                       notify("Follow-up added to the technician queue.");
@@ -1776,15 +1799,56 @@ function Radar({ db, user, visibleSites, incidents, setSelected, notify }) {
   const [area, setArea] = useState("All"),
     [family, setFamily] = useState("All"),
     [owner, setOwner] = useState("All"),
+    [focus, setFocus] = useState(null),
     [participation, setParticipation] = useState(50);
-  let filtered = visibleSites.filter(
+  // Area staff only ever get their own area: no "All areas" choice leaks others.
+  const areas = ["North", "Central", "South"].filter((a) =>
+    visibleSites.some((s) => s.area === a),
+  );
+  const open = incidents.filter((i) => isOpen(i));
+  const filtered = visibleSites.filter(
     (s) =>
       (area === "All" || s.area === area) &&
       (family === "All" ||
-        incidents.some((i) => i.site === s.id && i.family === family)) &&
-      (owner === "All" ||
-        incidents.some((i) => i.site === s.id && i.owner === owner)),
+        open.some((i) => i.site === s.id && i.family === family)) &&
+      (owner === "All" || open.some((i) => i.site === s.id && i.owner === owner)),
   );
+  const mapSites = filtered.map((s) => {
+    const incident = open.find((i) => i.site === s.id);
+    const inverter =
+      db.inverters?.find((item) => item.site === s.id) ||
+      inverters.find((item) => item.site === s.id);
+    const customers =
+      db.users
+        .filter((a) => a.role === "client" && a.sites.includes(s.id))
+        .map((a) => a.name)
+        .join(", ") || "No demo client linked";
+    return {
+      id: s.id,
+      name: s.name,
+      latitude: s.latitude,
+      longitude: s.longitude,
+      zone: s.zone,
+      segment: s.segment,
+      businessType: s.businessType,
+      kwp: s.capacity,
+      status: incident ? "incident" : s.stale ? "stale" : "ok",
+      tier: incident?.tier || null,
+      area: s.area,
+      detail: `Client: ${customers} · Inverter: ${inverter ? `${inverter.manufacturer} ${inverter.model}` : "not mapped"}${incident ? ` · ${incident.id} ${incident.title}` : ""}${incident && s.stale ? " · telemetry stale" : ""}`,
+    };
+  });
+  const forecastAreas = areas.map((a) => {
+    const list = visibleSites.filter((s) => s.area === a);
+    return {
+      name: a,
+      sites: list.length,
+      kwp: list.reduce((sum, s) => sum + s.capacity, 0),
+    };
+  });
+  const acceptedPower = db.plans
+    .filter((p) => p.status === "Accepted" && canSee(user, p.site))
+    .reduce((a, p) => a + p.power, 0);
   return (
     <>
       <div className="stat-grid">
@@ -1793,7 +1857,7 @@ function Radar({ db, user, visibleSites, incidents, setSelected, notify }) {
           label="Monitored installations"
           value={visibleSites.length}
           unit="sites"
-          detail="Within your account scope"
+          detail={`${visibleSites.filter((s) => s.business).length} business · ${areas.join(", ")}`}
         />
         <Stat
           icon={Activity}
@@ -1805,7 +1869,7 @@ function Radar({ db, user, visibleSites, incidents, setSelected, notify }) {
         <Stat
           icon={AlertTriangle}
           label="Open incidents"
-          value={incidents.filter((i) => i.status !== "Closed").length}
+          value={open.length}
           unit="cases"
           detail="Safety tier takes priority"
         />
@@ -1825,32 +1889,40 @@ function Radar({ db, user, visibleSites, incidents, setSelected, notify }) {
         <section className="card radar">
           <div className="section-head">
             <div>
-              <h3>Installation coverage radar</h3>
-              <p>24 synthetic sites · 3 simulated areas</p>
+              <h3>Installation map · Bucharest</h3>
+              <p>
+                {visibleSites.length} synthetic sites ·{" "}
+                {areas.length === 1
+                  ? `${areas[0]} area only`
+                  : `${areas.length} simulated areas`}{" "}
+                · zoom and pan the street map
+              </p>
             </div>
             <Pill tone="green">
               <Radio size={12} />
               Replay 13:00
             </Pill>
           </div>
-          <div className="filters">
-            <select
-              aria-label="Filter area"
-              value={area}
-              onChange={(e) => setArea(e.target.value)}
-            >
-              <option value="All">All available areas</option>
-              {[...new Set(visibleSites.map((s) => s.area))].map((a) => (
-                <option key={a}>{a}</option>
-              ))}
-            </select>
+          <div className="filters ops-radar-filters">
+            {areas.length > 1 && (
+              <select
+                aria-label="Filter area"
+                value={area}
+                onChange={(e) => setArea(e.target.value)}
+              >
+                <option value="All">All available areas</option>
+                {areas.map((a) => (
+                  <option key={a}>{a}</option>
+                ))}
+              </select>
+            )}
             <select
               aria-label="Filter incident family"
               value={family}
               onChange={(e) => setFamily(e.target.value)}
             >
               <option value="All">All incident types</option>
-              {[...new Set(incidents.map((i) => i.family))].map((f) => (
+              {[...new Set(open.map((i) => i.family))].map((f) => (
                 <option key={f}>{f}</option>
               ))}
             </select>
@@ -1860,204 +1932,71 @@ function Radar({ db, user, visibleSites, incidents, setSelected, notify }) {
               onChange={(e) => setOwner(e.target.value)}
             >
               <option value="All">All service owners</option>
-              {[...new Set(incidents.map((i) => i.owner))].map((o) => (
+              {[...new Set(open.map((i) => i.owner))].map((o) => (
                 <option key={o}>{o}</option>
               ))}
             </select>
           </div>
-          <div className="radar-map">
-            <svg
-              viewBox="0 0 720 380"
-              role="img"
-              aria-label="Synthetic installation map with three areas"
-            >
-              <defs>
-                <pattern
-                  id="dots"
-                  width="18"
-                  height="18"
-                  patternUnits="userSpaceOnUse"
-                >
-                  <circle cx="2" cy="2" r=".8" fill="#cbd3cb" />
-                </pattern>
-              </defs>
-              <rect width="720" height="380" fill="url(#dots)" />
-              <path
-                d="M95 60 L270 35 350 120 304 235 105 260 45 165Z"
-                fill="#e8eee5"
-                stroke="#c5d1c2"
-              />
-              <path
-                d="M350 120 L520 48 655 135 600 270 442 287 304 235Z"
-                fill="#efede1"
-                stroke="#d5cfb4"
-              />
-              <path
-                d="M105 260 L304 235 442 287 600 270 572 345 245 365Z"
-                fill="#e5eae8"
-                stroke="#c4ceca"
-              />
-              <path
-                d="M60 190 Q260 110 360 210 T680 190"
-                stroke="#fff"
-                strokeWidth="14"
-                fill="none"
-              />
-              <path
-                d="M250 35 Q240 180 330 350"
-                stroke="#fff"
-                strokeWidth="9"
-                fill="none"
-              />
-              {["North", "Central", "South"].map((a, i) => (
-                <text
-                  key={a}
-                  x={[110, 475, 300][i]}
-                  y={[85, 95, 340][i]}
-                  className="map-label"
-                >
-                  {a.toUpperCase()} / DEMO-F{i + 1}
-                </text>
-              ))}
-              {filtered.map((s) => {
-                const n = +s.id.slice(1) - 1,
-                  group = Math.floor(n / 8),
-                  j = n % 8;
-                const fallbackX = [110, 420, 195][group] + (j % 4) * 48,
-                  fallbackY = [120, 140, 280][group] + Math.floor(j / 4) * 54,
-                  inverter =
-                    db.inverters?.find((item) => item.site === s.id) ||
-                    inverters.find((item) => item.site === s.id),
-                  x = inverter ? inverter.mapX * 720 : fallbackX,
-                  y = inverter ? inverter.mapY * 380 : fallbackY,
-                  customers = db.users
-                    .filter(
-                      (account) =>
-                        account.role === "client" &&
-                        account.sites.includes(s.id),
-                    )
-                    .map((account) => account.name)
-                    .join(", ") || "No demo client linked";
-                const incident = incidents.find(
-                    (i) => i.site === s.id && i.status !== "Closed",
-                  ),
-                  color = s.stale
-                    ? "#9aa29a"
-                    : incident?.tier === "P1" || incident?.tier === "P0"
-                      ? "#df785a"
-                      : incident
-                        ? "#d2ad22"
-                        : "#4a8b6c";
-                return (
-                  <g
-                    key={s.id}
-                    role="button"
-                    tabIndex="0"
-                    aria-label={`${s.id} ${s.name}; client: ${customers}; inverter: ${inverter?.model || "not mapped"}${s.stale ? "; telemetry stale" : ""}`}
-                    onKeyDown={(e) =>
-                      e.key === "Enter" &&
-                      (incident
-                        ? setSelected(incident.id)
-                        : notify(
-                            `${s.id} · ${customers} · ${inverter?.model || "No inverter mapped"} · no supported alerts among monitored inputs.`,
-                          ))
-                    }
-                    onClick={() =>
-                      incident
-                        ? setSelected(incident.id)
-                        : notify(
-                            `${s.id} · ${customers} · ${inverter?.model || "No inverter mapped"} · ${s.stale ? "stale telemetry" : "no supported alerts among monitored inputs"}.`,
-                          )
-                    }
-                    style={{ cursor: "pointer" }}
-                  >
-                    <title>
-                      {`${s.name} · Client: ${customers} · Inverter: ${inverter?.manufacturer || ""} ${inverter?.model || "not mapped"} · ${inverter?.serial || "synthetic"}`}
-                    </title>
-                    <circle cx={x} cy={y} r="15" fill={color} opacity=".12" />
-                    <circle
-                      cx={x}
-                      cy={y}
-                      r="6"
-                      fill={color}
-                      stroke="white"
-                      strokeWidth="2"
-                    />
-                    <text x={x + 10} y={y + 4}>
-                      {s.id}
-                    </text>
-                  </g>
+          <BucharestMap
+            sites={mapSites}
+            selectedId={focus}
+            actionLabel="Open incident or site summary"
+            onSelect={(id) => {
+              setFocus(id);
+              const incident = open.find((i) => i.site === id);
+              const site = mapSites.find((s) => s.id === id);
+              if (incident) setSelected(incident.id);
+              else
+                notify(
+                  `${id} ${site?.name} · ${site?.detail} · ${visibleSites.find((s) => s.id === id)?.stale ? "stale telemetry" : "no supported alerts among monitored inputs"}.`,
                 );
-              })}
-            </svg>
-            <div className="map-legend">
-              <span>
-                <i style={{ background: "#4a8b6c" }} />
-                No supported alert
-              </span>
-              <span>
-                <i style={{ background: "#d2ad22" }} />
-                Review
-              </span>
-              <span>
-                <i style={{ background: "#df785a" }} />
-                Urgent
-              </span>
-              <span>
-                <i style={{ background: "#9aa29a" }} />
-                Stale
-              </span>
-            </div>
-          </div>
+            }}
+          />
           <p className="small-note">
-            A coverage diagram, not a validated network digital twin. Nearby
-            points do not establish shared feeder membership. Unmonitored
+            A coverage map, not a validated network digital twin. Nearby points
+            do not establish shared feeder membership. Unmonitored
             infrastructure has no health status.
           </p>
         </section>
         <div>
-          {["North", "Central", "South"]
-            .filter((a) => visibleSites.some((s) => s.area === a))
-            .map((a) => {
-              const ss = visibleSites.filter((s) => s.area === a);
-              return (
-                <section className="card area-card" key={a}>
-                  <div className="section-head">
-                    <h3>{a} area</h3>
-                    <MapPin size={18} />
-                  </div>
-                  <strong>
-                    {ss.filter((s) => !s.stale).length}
-                    <span> / {ss.length} recent feeds</span>
-                  </strong>
-                  <div className="coverage">
-                    <i
-                      style={{
-                        width:
-                          (100 * ss.filter((s) => !s.stale).length) /
-                            ss.length +
-                          "%",
-                      }}
-                    />
-                  </div>
-                  <p>
-                    {
-                      incidents.filter(
-                        (i) =>
-                          ss.some((s) => s.id === i.site) &&
-                          i.status !== "Closed",
-                      ).length
-                    }{" "}
-                    open incidents · Simulated feeder
-                  </p>
+          {areas.map((a) => {
+            const ss = visibleSites.filter((s) => s.area === a);
+            return (
+              <section className="card area-card" key={a}>
+                <div className="section-head">
+                  <h3>{a} area</h3>
+                  <MapPin size={18} />
+                </div>
+                <strong>
+                  {ss.filter((s) => !s.stale).length}
+                  <span> / {ss.length} recent feeds</span>
+                </strong>
+                <div className="coverage">
+                  <i
+                    style={{
+                      width:
+                        (100 * ss.filter((s) => !s.stale).length) / ss.length +
+                        "%",
+                    }}
+                  />
+                </div>
+                <p>
+                  {open.filter((i) => ss.some((s) => s.id === i.site)).length}{" "}
+                  open incidents · {ss.filter((s) => s.business).length}{" "}
+                  business sites ·{" "}
+                  {ss.reduce((sum, s) => sum + s.capacity, 0)} kWp
+                </p>
+                {areas.length > 1 && (
                   <button className="text-btn" onClick={() => setArea(a)}>
                     Inspect area <ArrowUpRight size={15} />
                   </button>
-                </section>
-              );
-            })}
+                )}
+              </section>
+            );
+          })}
         </div>
       </div>
+      <FleetForecast areas={forecastAreas} />
       <section className="card mt">
         <div className="section-head">
           <div>
@@ -2081,28 +2020,11 @@ function Radar({ db, user, visibleSites, incidents, setSelected, notify }) {
         <div className="scenario-stats">
           <span>
             Expected added demand
-            <b>
-              {(
-                (db.plans
-                  .filter(
-                    (p) => p.status === "Accepted" && canSee(user, p.site),
-                  )
-                  .reduce((a, p) => a + p.power, 0) *
-                  participation) /
-                100
-              ).toFixed(1)}{" "}
-              kW
-            </b>
+            <b>{((acceptedPower * participation) / 100).toFixed(1)} kW</b>
           </span>
           <span>
             Full-participation task power
-            <b>
-              {db.plans
-                .filter((p) => p.status === "Accepted" && canSee(user, p.site))
-                .reduce((a, p) => a + p.power, 0)
-                .toFixed(1)}{" "}
-              kW
-            </b>
+            <b>{acceptedPower.toFixed(1)} kW</b>
           </span>
           <span>
             Simulated envelope per area<b>6 kW / occupied slot</b>
@@ -2117,7 +2039,38 @@ function Radar({ db, user, visibleSites, incidents, setSelected, notify }) {
     </>
   );
 }
-function Incidents({ incidents, setSelected }) {
+function CrewBanner({ db, user, setSelected }) {
+  const crew = db.crews.find((c) => c.name === user.crew);
+  if (!crew) return null;
+  const busy = crewBusy(db, crew.name);
+  const meetings = db.assignments.filter(
+    (a) => a.kind === "meeting" && a.crew === crew.name && a.status === "Scheduled",
+  );
+  return (
+    <section className="card ops-crew-banner">
+      <span className="crew-icon">
+        <Users size={20} />
+      </span>
+      <span>
+        <b>{crew.name}</b> · {crew.area} area · {crew.members.length} members
+      </span>
+      <Pill tone={busy ? "orange" : "green"}>
+        {busy ? `● ${busy.status} · ${busy.incident}` : "✓ Available"}
+      </Pill>
+      {busy && (
+        <button className="text-btn" onClick={() => setSelected(busy.incident)}>
+          Open {busy.incident} <ArrowUpRight size={14} />
+        </button>
+      )}
+      <span className="muted">
+        {meetings.length
+          ? `Meetings: ${meetings.map((m) => `${m.incident} ${m.date} ${m.start}–${m.end}`).join(" · ")}`
+          : "No customer meetings booked"}
+      </span>
+    </section>
+  );
+}
+function Incidents({ db, user, incidents, setSelected }) {
   const [q, setQ] = useState(""),
     [tier, setTier] = useState("All");
   const list = incidents.filter(
@@ -2128,10 +2081,20 @@ function Incidents({ incidents, setSelected }) {
         .includes(q.toLowerCase()),
   );
   return (
+    <>
+    {user?.role === "technician" && (
+      <CrewBanner db={db} user={user} setSelected={setSelected} />
+    )}
     <section className="card">
       <div className="section-head">
         <div>
-          <h3>Every case, in the right order</h3>
+          <h3>
+            {user?.role === "technician"
+              ? `Every case in the ${technicianArea(db, user)} area, in the right order`
+              : user?.role === "ceo"
+                ? "Every case, in the right order"
+                : `Every case in the ${user?.area} area, in the right order`}
+          </h3>
           <p>
             Safety first, then age. Financial value never overrides urgency.
           </p>
@@ -2165,6 +2128,7 @@ function Incidents({ incidents, setSelected }) {
               <th>Priority / case</th>
               <th>Installation</th>
               <th>Suspected owner</th>
+              <th>Crew</th>
               <th>Age</th>
               <th>Customer value</th>
               <th>Status</th>
@@ -2195,8 +2159,12 @@ function Incidents({ incidents, setSelected }) {
                     </div>
                   </div>
                 </td>
-                <td>{i.site}</td>
+                <td>
+                  {i.site}
+                  <small>{sites.find((s) => s.id === i.site)?.name}</small>
+                </td>
                 <td>{i.owner}</td>
+                <td>{activeDispatch(db, i.id)?.crew || "—"}</td>
                 <td>{i.age} min</td>
                 <td>
                   {i.value === null
@@ -2221,41 +2189,94 @@ function Incidents({ incidents, setSelected }) {
         <div className="empty">No matching cases in your scope.</div>
       )}
     </section>
+    </>
   );
 }
+const CASE_STATES = [
+  "New",
+  "Acknowledged",
+  "Reviewing",
+  "Awaiting customer",
+  "Awaiting owner",
+  "Crew assigned",
+  "Team sent",
+  "Meeting booked",
+  "Monitoring",
+  "Resolved",
+  "Closed",
+];
 function IncidentDetail({ incident: i, onClose, user, db, notify }) {
   const [status, setStatus] = useState(i?.status || "New"),
     [owner, setOwner] = useState(i?.confirmedOwner || i?.owner || ""),
     [reason, setReason] = useState(""),
-    [crew, setCrew] = useState("");
+    [crew, setCrew] = useState(""),
+    [meeting, setMeeting] = useState({
+      date: "2026-11-16",
+      start: "10:00",
+      end: "11:00",
+    }),
+    [note, setNote] = useState("");
+  useEffect(() => {
+    if (i) setStatus(i.status);
+  }, [i?.status]);
   if (!i) return null;
   const staff = canReview(user),
-    dispatch = canDispatch(user);
+    confirmOwner = canConfirmOwner(user),
+    dispatcher = canDispatch(user),
+    technician = user?.role === "technician";
+  const active = activeDispatch(db, i.id),
+    meetings = meetingsFor(db, i.id),
+    myCrew = technician ? db.crews.find((c) => c.name === user.crew) : null,
+    myBusy = myCrew ? crewBusy(db, myCrew.name) : null,
+    open = isOpen(i);
+  function run(action, success) {
+    try {
+      mutate(action);
+      notify(success);
+      return true;
+    } catch (error) {
+      notify(error.message);
+      return false;
+    }
+  }
   function update() {
     if (["Resolved", "Closed"].includes(status) && !reason.trim()) {
       notify("Add an outcome reason before resolving or closing.");
       return;
     }
     const revision = i.revision;
-    mutate((d) => {
+    run((d) => {
       const row = d.incidents.find((x) => x.id === i.id);
-      if (row.revision !== revision) {
-        notify("Case changed. Reopen it to review the latest version.");
-        return;
+      if (row.revision !== revision)
+        throw Error("Case changed. Reopen it to review the latest version.");
+      const time = new Date().toISOString();
+      if (confirmOwner && owner && owner !== row.confirmedOwner) {
+        row.confirmedOwner = owner;
+        logIncident(row, `Service owner confirmed: ${owner}`, user.name, time);
       }
-      row.status = status;
-      if (dispatch) row.confirmedOwner = owner;
-      row.revision++;
-      row.timeline.push({
-        text: `${status}${reason ? ": " + reason : ""}${dispatch ? " · Owner: " + owner : ""}`,
-        actor: user.name,
-        time: new Date().toISOString(),
-      });
-      audit(d, user, "Updated incident: " + status, i.id);
-    });
-    notify("Case updated with an audit entry.");
+      if (status !== row.status || reason.trim()) {
+        const from = row.status;
+        row.status = status;
+        logIncident(
+          row,
+          `Status ${from === status ? "kept" : "changed"}: ${status}${reason.trim() ? " · " + reason.trim() : ""}`,
+          user.name,
+          time,
+        );
+      }
+      // Closing the case ends any active crew work, so the crew is free again.
+      if (["Resolved", "Closed"].includes(status)) {
+        const a = activeDispatch(d, i.id);
+        if (a) {
+          a.status = "Completed";
+          a.completedAt = time;
+          logIncident(row, `Crew released: ${a.crew}`, user.name, time);
+        }
+      }
+    }, "Case updated. The change is in the incident log.");
     setReason("");
   }
+  const crewOptions = eligibleCrews(db, i);
   return (
     <Modal title={i.id + " · " + i.title} onClose={onClose} wide>
       <div className="detail-meta">
@@ -2264,9 +2285,14 @@ function IncidentDetail({ incident: i, onClose, user, db, notify }) {
         </Pill>
         <Pill>{i.status}</Pill>
         <span>
-          {i.site} · {sites.find((s) => s.id === i.site)?.area} · revision{" "}
-          {i.revision}
+          {i.site} · {sites.find((s) => s.id === i.site)?.name} ·{" "}
+          {sites.find((s) => s.id === i.site)?.area} · revision {i.revision}
         </span>
+        {active && (
+          <Pill tone="yellow">
+            <Truck size={12} /> {active.crew} · {active.status}
+          </Pill>
+        )}
       </div>
       {["P0", "P1"].includes(i.tier) && (
         <div className="danger-box">
@@ -2305,6 +2331,18 @@ function IncidentDetail({ incident: i, onClose, user, db, notify }) {
           </span>
         </div>
       )}
+      {meetings.some((m) => m.status === "Scheduled") && (
+        <div className="ops-meetings">
+          {meetings
+            .filter((m) => m.status === "Scheduled")
+            .map((m) => (
+              <div className="meeting-note" key={m.id}>
+                <CalendarDays size={14} /> Customer meeting · {m.crew}:{" "}
+                <b>{m.date}</b>, {m.start}–{m.end} EET (demo booking)
+              </div>
+            ))}
+        </div>
+      )}
       <div className="two-col compact">
         <div>
           <h3>Impact & next step</h3>
@@ -2325,7 +2363,7 @@ function IncidentDetail({ incident: i, onClose, user, db, notify }) {
           </p>
         </div>
         <div>
-          <h3>Shared timeline</h3>
+          <h3>Incident log</h3>
           <div className="timeline">
             {i.timeline.map((t, k) => (
               <div key={k}>
@@ -2342,6 +2380,120 @@ function IncidentDetail({ incident: i, onClose, user, db, notify }) {
           </div>
         </div>
       </div>
+      {technician && myCrew && (
+        <div className="ops-actions">
+          <h3>Your crew · {myCrew.name}</h3>
+          <p className="small-note">
+            {myBusy
+              ? `${myCrew.name} is ${myBusy.status.toLowerCase()} on ${myBusy.incident}.`
+              : `${myCrew.name} is available.`}{" "}
+            Demo actions only: no real team, customer or calendar is contacted.
+          </p>
+          {i.family === "Billing" ? (
+            <div className="info-box">
+              Billing questions are answered by the PPC dispatcher; no crew visit
+              is needed.
+            </div>
+          ) : (
+            open && (
+              <div className="button-row">
+                <button
+                  className="btn yellow"
+                  disabled={
+                    active?.status === "Team sent" ||
+                    (myBusy && myBusy.incident !== i.id) ||
+                    (active && active.crew !== myCrew.name)
+                  }
+                  onClick={() =>
+                    run(
+                      (d) => sendTeam(d, user, i.id),
+                      `${myCrew.name} marked as on the way to ${i.site}. The crew is now unavailable.`,
+                    )
+                  }
+                >
+                  <Truck size={16} /> Send the team
+                </button>
+              </div>
+            )
+          )}
+          {open && (
+            <form
+              className="ops-meeting-form mt"
+              onSubmit={(e) => {
+                e.preventDefault();
+                run(
+                  (d) => scheduleMeeting(d, user, i.id, meeting),
+                  "Meeting booked. The customer sees it on their request.",
+                );
+              }}
+            >
+              <label>
+                Meeting date
+                <input
+                  type="date"
+                  required
+                  value={meeting.date}
+                  onChange={(e) =>
+                    setMeeting({ ...meeting, date: e.target.value })
+                  }
+                />
+              </label>
+              <label>
+                Start
+                <input
+                  type="time"
+                  required
+                  value={meeting.start}
+                  onChange={(e) =>
+                    setMeeting({ ...meeting, start: e.target.value })
+                  }
+                />
+              </label>
+              <label>
+                End
+                <input
+                  type="time"
+                  required
+                  value={meeting.end}
+                  onChange={(e) =>
+                    setMeeting({ ...meeting, end: e.target.value })
+                  }
+                />
+              </label>
+              <button className="btn secondary">
+                <CalendarDays size={16} /> Allocate meeting
+              </button>
+            </form>
+          )}
+          {active && active.crew === myCrew.name && (
+            <div className="mt">
+              <label>
+                Resolution note (optional)
+                <input
+                  maxLength={300}
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  placeholder="What was checked or agreed (synthetic)…"
+                />
+              </label>
+              <button
+                className="btn dark"
+                onClick={() => {
+                  if (
+                    run(
+                      (d) => resolveIncident(d, user, i.id, note),
+                      `Marked resolved. ${myCrew.name} is available again.`,
+                    )
+                  )
+                    setNote("");
+                }}
+              >
+                <CheckCircle2 size={16} /> Mark resolved
+              </button>
+            </div>
+          )}
+        </div>
+      )}
       {staff && (
         <div className="review-panel">
           <h3>Human review</h3>
@@ -2352,21 +2504,12 @@ function IncidentDetail({ incident: i, onClose, user, db, notify }) {
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
               >
-                {[
-                  "New",
-                  "Acknowledged",
-                  "Reviewing",
-                  "Awaiting customer",
-                  "Awaiting owner",
-                  "Monitoring",
-                  "Resolved",
-                  "Closed",
-                ].map((s) => (
+                {CASE_STATES.map((s) => (
                   <option key={s}>{s}</option>
                 ))}
               </select>
             </label>
-            {dispatch && (
+            {confirmOwner && (
               <label>
                 Confirm service owner
                 <select
@@ -2377,7 +2520,7 @@ function IncidentDetail({ incident: i, onClose, user, db, notify }) {
                     "Solar O&M",
                     "Grid operator",
                     "Customer electrician",
-                    "Supplier support",
+                    "PPC dispatch",
                     "Unassigned review",
                   ].map((o) => (
                     <option key={o}>{o}</option>
@@ -2398,62 +2541,80 @@ function IncidentDetail({ incident: i, onClose, user, db, notify }) {
           <button className="btn yellow" onClick={update}>
             Save review <Check size={17} />
           </button>
-          {dispatch && (
+          {dispatcher && (
             <>
-              <h3 className="mt">Propose a qualified crew</h3>
-              <label>
-                Crew
-                <select value={crew} onChange={(e) => setCrew(e.target.value)}>
-                  <option value="">Choose an eligible crew</option>
-                  {crews
-                    .filter((c) => eligible(c, i, db.assignments))
-                    .map((c) => (
-                      <option key={c.name}>{c.name}</option>
-                    ))}
-                </select>
-              </label>
-              <p className="small-note">
-                Matched by owner, qualification, area, 13:00–15:00 shift and
-                availability. A proposal is not a dispatch.
-              </p>
-              <button
-                className="btn secondary"
-                disabled={!crew}
-                onClick={() => {
-                  if (
-                    !eligible(
-                      crews.find((c) => c.name === crew),
-                      i,
-                      readDB().assignments,
-                    )
-                  ) {
-                    notify("Crew is no longer available.");
-                    return;
-                  }
-                  mutate((d) => {
-                    if (
-                      d.assignments.some(
-                        (a) => a.incident === i.id && a.status !== "Cancelled",
+              <h3 className="mt">Assign a crew</h3>
+              {i.family === "Billing" ? (
+                <div className="info-box">
+                  Billing questions are never given to a crew. Answer the
+                  customer in Virtual Visits.
+                </div>
+              ) : active ? (
+                <div className="list-row">
+                  <span>
+                    <b>{active.crew}</b> · {active.status}
+                    <small>
+                      Assigned by {active.assignedBy} ·{" "}
+                      {new Date(active.assignedAt).toLocaleString("en-GB", {
+                        timeZone: "Europe/Bucharest",
+                      })}{" "}
+                      EET
+                    </small>
+                  </span>
+                  <button
+                    className="text-btn"
+                    onClick={() =>
+                      run(
+                        (d) => cancelAssignment(d, user, active.id),
+                        "Assignment cancelled; the crew is available again.",
                       )
-                    )
-                      return;
-                    d.assignments.push({
-                      id: crypto.randomUUID(),
-                      crew,
-                      incident: i.id,
-                      site: i.site,
-                      status: "Proposed",
-                      window: "14 Nov · 13:00–15:00 EET",
-                    });
-                    d.incidents.find((x) => x.id === i.id).status =
-                      "Dispatch proposed";
-                    audit(d, user, "Proposed crew " + crew, i.id);
-                  });
-                  notify("Proposal added to Teams for human confirmation.");
-                }}
-              >
-                Propose assignment
-              </button>
+                    }
+                  >
+                    Cancel assignment
+                  </button>
+                </div>
+              ) : !open ? (
+                <p className="small-note">This case is closed.</p>
+              ) : (
+                <>
+                  <label>
+                    Crew
+                    <select
+                      value={crew}
+                      onChange={(e) => setCrew(e.target.value)}
+                    >
+                      <option value="">
+                        {crewOptions.length
+                          ? "Choose an available crew"
+                          : "No eligible crew is free"}
+                      </option>
+                      {crewOptions.map((c) => (
+                        <option key={c.name}>{c.name}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <p className="small-note">
+                    {crewOptions.length
+                      ? "Eligible: same area as the site, the incident type in the crew's skills, and no active dispatch."
+                      : skipReason(db, i)}
+                  </p>
+                  <button
+                    className="btn secondary"
+                    disabled={!crew}
+                    onClick={() => {
+                      if (
+                        run(
+                          (d) => assignCrew(d, user, i.id, crew),
+                          `${crew} assigned to ${i.id}. Demo only: no team was contacted.`,
+                        )
+                      )
+                        setCrew("");
+                    }}
+                  >
+                    Assign crew
+                  </button>
+                </>
+              )}
             </>
           )}
         </div>
@@ -2492,9 +2653,7 @@ function Visits({ db, user, notify, setSelected }) {
     [outcome, setOutcome] = useState("Clarification requested");
   const visits = db.visits.filter((v) => canReviewRequest(user, v)),
     visit = visits.find((v) => v.id === selected),
-    canRespond =
-      canReview(user) ||
-      (user.role === "support" && visit?.routedTo === "Supplier Support");
+    canRespond = canReview(user);
   return (
     <div className="two-col">
       <section className="card">
@@ -2566,15 +2725,13 @@ function Visits({ db, user, notify, setSelected }) {
               Routed to: {visit.routedTo || "PPC Triage"}
             </div>
             <p>{visit.description}</p>
-            {visit.media && user.role !== "support" && <Media id={visit.id} />}
-            {user.role !== "support" && (
-              <button
-                className="text-btn"
-                onClick={() => setSelected(visit.incident)}
-              >
-                View shared incident <ArrowUpRight size={16} />
-              </button>
-            )}
+            {visit.media && <Media id={visit.id} />}
+            <button
+              className="text-btn"
+              onClick={() => setSelected(visit.incident)}
+            >
+              View shared incident <ArrowUpRight size={16} />
+            </button>
             {visit.replies.map((r, i) => (
               <div className="reply" key={i}>
                 <b>{r.author}</b>
@@ -2595,22 +2752,19 @@ function Visits({ db, user, notify, setSelected }) {
                       time: new Date().toISOString(),
                     });
                     v.status = outcome;
-                    if (user.role !== "support") {
-                      let i = d.incidents.find((x) => x.id === v.incident);
-                      i.status =
-                        outcome === "Clarification requested"
-                          ? "Awaiting customer"
-                          : outcome === "Remote resolution proposed"
-                            ? "Monitoring"
-                            : "Awaiting owner";
-                      i.revision++;
-                      i.timeline.push({
-                        text: outcome + ": " + reply,
-                        actor: user.name,
-                        time: new Date().toISOString(),
-                      });
+                    let i = d.incidents.find((x) => x.id === v.incident);
+                    if (i) {
+                      // An active crew keeps its status; the reply is still logged.
+                      if (!activeDispatch(d, i.id))
+                        i.status =
+                          outcome === "Clarification requested"
+                            ? "Awaiting customer"
+                            : outcome === "Remote resolution proposed" ||
+                                outcome === "Answered by PPC"
+                              ? "Monitoring"
+                              : "Awaiting owner";
+                      logIncident(i, `Reply to customer · ${outcome}: ${reply}`, user.name);
                     }
-                    audit(d, user, "Replied to virtual visit", visit.incident);
                   });
                   setReply("");
                   notify("Reply saved. The client can see it in Support.");
@@ -2635,13 +2789,10 @@ function Visits({ db, user, notify, setSelected }) {
                     onChange={(e) => setOutcome(e.target.value)}
                   >
                     {[
-                      ...(user.role === "support"
-                        ? ["Supplier response sent", "Clarification requested"]
-                        : [
-                            "Clarification requested",
-                            "Remote resolution proposed",
-                            "Escalation proposed",
-                          ]),
+                      "Clarification requested",
+                      "Remote resolution proposed",
+                      "Escalation proposed",
+                      ...(user.role === "dispatcher" ? ["Answered by PPC"] : []),
                     ].map((s) => (
                       <option key={s}>{s}</option>
                     ))}
@@ -2657,8 +2808,7 @@ function Visits({ db, user, notify, setSelected }) {
               </form>
             ) : (
               <div className="info-box">
-                Supplier support can read assigned request text. Technical media
-                review and repair decisions require a technical role.
+                Replies need a dispatcher or technician account.
               </div>
             )}
           </>
@@ -2673,290 +2823,241 @@ function Visits({ db, user, notify, setSelected }) {
     </div>
   );
 }
-function Teams({ db, user, notify }) {
-  const cs = crews.filter(
-      (c) =>
-        user.role === "ceo" ||
-        (user.role === "technician"
-          ? c.name === user.crew
-          : c.area === user.area),
-    ),
-    assignments = db.assignments.filter((a) => canSee(user, a.site));
+function Teams({ db, user, notify, setSelected }) {
+  // Overall manager, area manager and dispatcher all read the same db rows.
+  const report = teamsReport(db, user);
+  const dispatcher = canDispatch(user);
+  const [result, setResult] = useState(null),
+    [choice, setChoice] = useState({});
+  const queue = visibleIncidents(db, user).filter(
+    (i) => isOpen(i) && !activeDispatch(db, i.id),
+  );
+  const active = db.assignments.filter(
+    (a) =>
+      report.areas.includes(a.area) &&
+      ["Assigned", "Team sent", "Scheduled"].includes(a.status),
+  );
+  const label = (id) => {
+    const i = db.incidents.find((x) => x.id === id);
+    return i ? `${i.tier} · ${i.id} · ${i.title}` : id;
+  };
+  function run(action, success) {
+    try {
+      mutate(action);
+      notify(success);
+      return true;
+    } catch (error) {
+      notify(error.message);
+      return false;
+    }
+  }
   return (
     <>
-      <div className="learn-grid">
-        {cs.map((c) => (
-          <section className="card crew-card" key={c.name}>
-            <div className="section-head">
-              <span className="crew-icon">
-                <Users size={26} />
-              </span>
-              <Pill
-                tone={
-                  db.assignments.some(
-                    (a) => a.crew === c.name && a.status === "Confirmed",
-                  )
-                    ? "orange"
-                    : "green"
-                }
-              >
-                {db.assignments.some(
-                  (a) => a.crew === c.name && a.status === "Confirmed",
-                )
-                  ? "Assigned"
-                  : "Available"}
-              </Pill>
-            </div>
-            <h2>{c.name}</h2>
-            <p>{c.members}</p>
-            <div className="list-row">
-              <MapPin size={17} />
-              {c.area} area · {c.owner}
-            </div>
-            <div className="list-row">
-              <Clock size={17} />
-              {c.shift} EET
-            </div>
-            <div className="skill-tags">
-              {c.skills.map((s) => (
-                <Pill key={s}>{s}</Pill>
-              ))}
-            </div>
-          </section>
-        ))}
-      </div>
-      <section className="card mt">
-        <h3>Assignments awaiting your decision</h3>
-        <p className="muted">
-          Crew proposals are filtered by qualifications, service owner, shift
-          and availability.
-        </p>
-        {!assignments.length && (
-          <div className="empty">
-            <CalendarDays size={32} />
-            <p>Propose an eligible crew from an incident to begin.</p>
+      <section className="card">
+        <div className="section-head">
+          <div>
+            <h3>Assignment report by incident</h3>
+            <p>
+              {report.areas.length === 3
+                ? "All areas"
+                : `${report.areas.join(", ")} area`}{" "}
+              · safety tier first, then age · synthetic incidents and crews
+            </p>
+          </div>
+          <Pill>{report.rows.length} rows</Pill>
+        </div>
+        {!dispatcher && (
+          <div className="info-box">
+            Read-only report. Only the PPC dispatcher assigns crews; technicians
+            send their team, book customer meetings and resolve their cases.
           </div>
         )}
-        {assignments.map((a) => (
-          <div className="assignment-row" key={a.id}>
+        <AssignmentReport rows={report.rows} onOpen={setSelected} />
+      </section>
+      <section className="mt">
+        <div className="section-head">
+          <h3>Crews</h3>
+          <Pill>{report.crews.length}</Pill>
+        </div>
+        <CrewSummary crews={report.crews} />
+      </section>
+      {dispatcher && (
+        <section className="card mt ops-tools">
+          <div className="section-head">
             <div>
-              <b>
-                {a.crew} → {a.incident}
-              </b>
-              <small>
-                {a.site} · {a.window}
-              </small>
+              <div className="eyebrow">DISPATCHER TOOLS</div>
+              <h3>Assign available crews</h3>
+              <p>
+                Eligible: crew area matches the site, the incident type is in
+                its skills, and it has no active dispatch. Billing questions are
+                never given to a crew.
+              </p>
             </div>
-            <Pill>{a.status}</Pill>
-            {canDispatch(user) && a.status === "Proposed" && (
-              <button
-                className="btn yellow"
-                onClick={() => {
-                  const latest = readDB(),
-                    incident = latest.incidents.find(
-                      (i) => i.id === a.incident,
-                    );
-                  if (!incident.confirmedOwner) {
-                    notify("Confirm the service owner in the incident review before dispatch.");
-                    return;
+            <button
+              className="btn yellow"
+              onClick={() => {
+                let outcome = null;
+                if (
+                  run(
+                    (d) => {
+                      outcome = autoAssign(d, user);
+                    },
+                    "Severity assignment finished. See the summary below.",
+                  )
+                )
+                  setResult(outcome);
+              }}
+            >
+              Assign by severity <ArrowRight size={16} />
+            </button>
+          </div>
+          {result && (
+            <div className="info-box ops-result" role="status">
+              <b>
+                Assigned {result.assigned.length} · skipped{" "}
+                {result.skipped.length}
+              </b>
+              {result.assigned.length > 0 && (
+                <ul>
+                  {result.assigned.map((a) => (
+                    <li key={a.id}>
+                      ✓ {label(a.incident)} → <b>{a.crew}</b>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {result.skipped.length > 0 && (
+                <ul>
+                  {result.skipped.map((s) => (
+                    <li key={s.incident}>
+                      – {label(s.incident)}: {s.reason}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {!result.assigned.length && !result.skipped.length && (
+                <p>No open, unassigned incidents in your area.</p>
+              )}
+            </div>
+          )}
+          <h3 className="mt">Open incidents without a crew</h3>
+          {!queue.length && (
+            <div className="empty">
+              <CalendarDays size={28} />
+              <p>Every open incident in your area has a crew.</p>
+            </div>
+          )}
+          {queue.map((i) => {
+            const options = eligibleCrews(db, i);
+            return (
+              <div className="ops-assign-row" key={i.id}>
+                <div>
+                  <b>
+                    <Pill
+                      tone={
+                        ["P0", "P1"].includes(i.tier)
+                          ? "orange"
+                          : i.tier === "P2"
+                            ? "yellow"
+                            : ""
+                      }
+                    >
+                      {i.tier}
+                    </Pill>{" "}
+                    {i.id} · {i.title}
+                  </b>
+                  <small>
+                    {i.site} {sites.find((s) => s.id === i.site)?.name} ·{" "}
+                    {i.family} · {i.age} min ·{" "}
+                    {options.length
+                      ? `${options.length} crew free`
+                      : skipReason(db, i)}
+                  </small>
+                </div>
+                <select
+                  aria-label={`Crew for ${i.id}`}
+                  value={choice[i.id] || ""}
+                  disabled={!options.length}
+                  onChange={(e) =>
+                    setChoice({ ...choice, [i.id]: e.target.value })
                   }
-                  if (
-                    !eligible(
-                      crews.find((c) => c.name === a.crew),
-                      incident,
-                      latest.assignments,
-                    )
-                  ) {
-                    notify("Crew is unavailable or no longer eligible.");
-                    return;
+                >
+                  <option value="">
+                    {options.length
+                      ? "Choose a crew"
+                      : i.family === "Billing"
+                        ? "Not crew work"
+                        : "No crew free"}
+                  </option>
+                  {options.map((c) => (
+                    <option key={c.name}>{c.name}</option>
+                  ))}
+                </select>
+                <button
+                  className="btn secondary"
+                  disabled={!choice[i.id]}
+                  onClick={() =>
+                    run(
+                      (d) => assignCrew(d, user, i.id, choice[i.id]),
+                      `${choice[i.id]} assigned to ${i.id}. Demo only: no team was contacted.`,
+                    ) && setChoice({ ...choice, [i.id]: "" })
                   }
-                  mutate((d) => {
-                    d.assignments.find((x) => x.id === a.id).status =
-                      "Confirmed";
-                    let i = d.incidents.find((x) => x.id === a.incident);
-                    i.status = "Dispatched";
-                    i.revision++;
-                    i.timeline.push({
-                      text: "Dispatch confirmed: " + a.crew,
-                      actor: user.name,
-                      time: new Date().toISOString(),
-                    });
-                    audit(d, user, "Confirmed dispatch " + a.crew, a.incident);
-                  });
-                  notify(
-                    "Demo dispatch confirmed. No external team was contacted.",
-                  );
-                }}
-              >
-                Confirm assignment <Check size={16} />
-              </button>
-            )}
-            {canDispatch(user) && a.status !== "Cancelled" && (
+                >
+                  Assign
+                </button>
+              </div>
+            );
+          })}
+          <h3 className="mt">Active assignments and meetings</h3>
+          {!active.length && (
+            <p className="muted">No active assignments in your area.</p>
+          )}
+          {active.map((a) => (
+            <div className="assignment-row" key={a.id}>
+              <div>
+                <b>
+                  {a.crew} → {label(a.incident)}
+                </b>
+                <small>
+                  {a.kind === "meeting"
+                    ? `Meeting ${a.date} ${a.start}–${a.end}`
+                    : "Dispatch"}{" "}
+                  · {a.assignedBy} ·{" "}
+                  {new Date(a.assignedAt).toLocaleString("en-GB", {
+                    timeZone: "Europe/Bucharest",
+                  })}{" "}
+                  EET
+                </small>
+              </div>
+              <Pill>{a.status}</Pill>
               <button
                 className="text-btn"
-                onClick={() => {
-                  mutate((d) => {
-                    d.assignments.find((x) => x.id === a.id).status =
-                      "Cancelled";
-                    let i = d.incidents.find((x) => x.id === a.incident);
-                    i.status = "Reviewing";
-                    i.revision++;
-                    i.timeline.push({
-                      text: "Assignment cancelled: " + a.crew,
-                      actor: user.name,
-                      time: new Date().toISOString(),
-                    });
-                    audit(d, user, "Cancelled assignment", a.incident);
-                  });
-                  notify("Assignment cancelled; crew is available again.");
-                }}
+                onClick={() =>
+                  run(
+                    (d) => cancelAssignment(d, user, a.id),
+                    a.kind === "meeting"
+                      ? "Meeting cancelled."
+                      : "Assignment cancelled; the crew is available again.",
+                  )
+                }
               >
                 Cancel
               </button>
-            )}
-          </div>
-        ))}
-      </section>
+            </div>
+          ))}
+        </section>
+      )}
     </>
   );
 }
-function UserAdmin({ db, user, notify }) {
-  const [q, setQ] = useState("");
+function Revenue({ db, user }) {
+  const scope = user.role === "ceo" ? null : [user.area];
+  const report = revenueReport(sites, db.contracts, scope, defaultTariff);
   return (
-    <section className="card">
-      <div className="section-head">
-        <div>
-          <h3>People & access</h3>
-          <p>
-            11 seeded accounts. One overall manager. All records are fictional.
-          </p>
-        </div>
-        <a href="/solarlenes-source.zip" download className="btn secondary">
-          <Download size={17} />
-          Source & database
-        </a>
-      </div>
-      <div className="info-box">
-        Frontend permissions demonstrate the intended experience. The included
-        SQLite seed uses password hashes; connect server-side sessions and
-        enforce these scopes in every API endpoint before real use.
-      </div>
-      <label className="search mt">
-        <Search size={17} />
-        <input
-          placeholder="Search people or roles"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-        />
-      </label>
-      <div className="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Person</th>
-              <th>Role</th>
-              <th>Scope</th>
-              <th>Status</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {db.users
-              .filter((u) =>
-                `${u.name} ${u.email} ${roles[u.role]}`
-                  .toLowerCase()
-                  .includes(q.toLowerCase()),
-              )
-              .map((u) => (
-                <tr key={u.id}>
-                  <td>
-                    <b>{u.name}</b>
-                    <small>{u.email}</small>
-                  </td>
-                  <td>{roles[u.role]}</td>
-                  <td>
-                    {u.role === "ceo"
-                      ? "All sites"
-                      : u.sites.length
-                        ? u.sites.join(", ")
-                        : u.area + " area"}
-                  </td>
-                  <td>
-                    <Pill tone={u.active ? "green" : ""}>
-                      {u.active ? "Active" : "Disabled"}
-                    </Pill>
-                  </td>
-                  <td>
-                    {u.id !== user.id && (
-                      <button
-                        className="text-btn"
-                        onClick={() => {
-                          mutate((d) => {
-                            d.users.find((x) => x.id === u.id).active =
-                              !u.active;
-                            audit(
-                              d,
-                              user,
-                              u.active ? "Disabled account" : "Enabled account",
-                              u.id,
-                            );
-                          });
-                          notify("Demo account status updated.");
-                        }}
-                      >
-                        {u.active ? "Disable" : "Enable"}
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-          </tbody>
-        </table>
-      </div>
-    </section>
-  );
-}
-function Audit({ db }) {
-  return (
-    <section className="card">
-      <h3>Decision audit trail</h3>
-      <p className="muted">
-        Actor, action, subject and receipt time. Browser-local demo history.
-      </p>
-      {!db.audit.length ? (
-        <div className="empty">
-          <Clock size={32} />
-          <p>Actions taken in the workspace will appear here.</p>
-        </div>
-      ) : (
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Time (EET)</th>
-                <th>Actor</th>
-                <th>Action</th>
-                <th>Subject</th>
-              </tr>
-            </thead>
-            <tbody>
-              {db.audit.map((a) => (
-                <tr key={a.id}>
-                  <td>
-                    {new Date(a.time).toLocaleString("en-GB", {
-                      timeZone: "Europe/Bucharest",
-                    })}
-                  </td>
-                  <td>{a.actor}</td>
-                  <td>{a.action}</td>
-                  <td>{a.subject}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </section>
+    <RevenueView
+      report={report}
+      scopeLabel={scope ? `${user.area} area` : "All areas"}
+    />
   );
 }
 function Account({ db, user, current, notify, logout, setLogin }) {
@@ -3004,7 +3105,6 @@ function Account({ db, user, current, notify, logout, setLogin }) {
             e.preventDefault();
             mutate((d) => {
               d.preferences[user.id] = prefs;
-              audit(d, user, "Updated preferences", user.id);
             });
             notify("Preferences saved in this browser.");
           }}
@@ -3057,9 +3157,11 @@ function Account({ db, user, current, notify, logout, setLogin }) {
             <b>
               {user.role === "ceo"
                 ? "All installations"
-                : user.sites.length
-                  ? user.sites.join(", ")
-                  : user.area + " area"}
+                : user.role === "technician"
+                  ? `${user.area} area · ${user.crew}`
+                  : user.sites.length
+                    ? user.sites.join(", ")
+                    : user.area + " area"}
             </b>
           </div>
           <div className="list-row">
@@ -3096,7 +3198,8 @@ function Account({ db, user, current, notify, logout, setLogin }) {
             <h3>Demo controls</h3>
             <p className="muted">
               Restore the 24-site replay. Clears plans, support requests,
-              videos, decisions and account changes in this browser.
+              videos, crew assignments, meetings and incident-log entries in
+              this browser.
             </p>
             <button
               className="btn secondary"

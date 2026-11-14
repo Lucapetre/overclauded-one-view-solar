@@ -1,10 +1,93 @@
 import json
+import re
 import uuid
 
 from backend.db import Database, site_from_row
 from backend.errors import ApiError
 from backend.models import SiteRegistration, User
+from backend.ops_models import FAMILIES
 from backend.security import hash_password
+
+SHIFT_PATTERN = re.compile(r"^([01]\d|2[0-3]):[0-5]\d-([01]\d|2[0-3]):[0-5]\d$")
+
+
+def create_crew(
+    database: Database,
+    name: str,
+    area_id: str,
+    skills: list[str],
+    shift: str = "08:00-18:00",
+) -> str:
+    """Local administration only: a crew works in one area and covers incident families."""
+    name = name.strip()
+    if not 1 <= len(name) <= 80:
+        raise ApiError(422, "invalid_crew", "Crew name must be 1–80 characters")
+    skills = list(dict.fromkeys(skill.strip() for skill in skills if skill.strip()))
+    unknown = [skill for skill in skills if skill not in FAMILIES]
+    if not skills or unknown:
+        raise ApiError(
+            422,
+            "invalid_skills",
+            "Skills must be a comma-separated list of: " + ", ".join(FAMILIES),
+        )
+    if not SHIFT_PATTERN.match(shift):
+        raise ApiError(422, "invalid_shift", "Shift must look like 08:00-18:00")
+    with database.connect() as connection:
+        connection.execute("BEGIN IMMEDIATE")
+        if not connection.execute(
+            "SELECT 1 FROM areas WHERE area_id=?", (area_id,)
+        ).fetchone():
+            raise ApiError(404, "not_found", "Area not found")
+        if connection.execute("SELECT 1 FROM crews WHERE name=?", (name,)).fetchone():
+            raise ApiError(409, "crew_exists", "A crew with this name already exists")
+        crew_id = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-") or "crew"
+        if connection.execute(
+            "SELECT 1 FROM crews WHERE crew_id=?", (crew_id,)
+        ).fetchone():
+            crew_id = f"{crew_id}-{uuid.uuid4().hex[:8]}"
+        connection.execute(
+            "INSERT INTO crews(crew_id,name,area_id,skills,shift) VALUES (?,?,?,?,?)",
+            (crew_id, name, area_id, json.dumps(skills), shift),
+        )
+        database.audit(
+            connection, "local-admin", "crew.created", crew_id, "local-provisioning"
+        )
+    return crew_id
+
+
+def add_crew_member(database: Database, crew_name: str, username: str):
+    with database.connect() as connection:
+        crew = connection.execute(
+            "SELECT crew_id FROM crews WHERE name=?", (crew_name,)
+        ).fetchone()
+        if not crew:
+            raise ApiError(
+                404, "not_found", "Crew not found. Create it with create-crew first"
+            )
+        user = connection.execute(
+            "SELECT user_id,role FROM users WHERE username=?", (username,)
+        ).fetchone()
+        if not user:
+            raise ApiError(
+                404,
+                "not_found",
+                "User not found. Create the account with create-user first",
+            )
+        if user["role"] != "technician":
+            raise ApiError(
+                422, "invalid_account", "Only technician accounts can join a crew"
+            )
+        connection.execute(
+            "INSERT OR IGNORE INTO crew_members(crew_id,user_id) VALUES (?,?)",
+            (crew["crew_id"], user["user_id"]),
+        )
+        database.audit(
+            connection,
+            "local-admin",
+            "crew.member.added",
+            crew["crew_id"] + ":" + user["user_id"],
+            "local-provisioning",
+        )
 
 
 def register_site(database: Database, registration: SiteRegistration):

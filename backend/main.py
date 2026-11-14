@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.concurrency import run_in_threadpool
 from starlette.exceptions import HTTPException
 
 from backend.config import Settings
@@ -38,6 +39,7 @@ from backend.db import Database, site_from_row
 from backend.energy import history, snapshot
 from backend.errors import ApiError
 from backend.ingestion import ingest
+from backend.media import is_upload, media_file, store_media
 from backend.models import (
     Area,
     AreaSummary,
@@ -50,6 +52,30 @@ from backend.models import (
     Site,
     TelemetryRecord,
     utc,
+)
+from backend.ops import (
+    assign_incident,
+    auto_dispatch,
+    capacity,
+    get_incident,
+    list_incidents,
+    ops_map,
+    resolve_incident,
+    revenue,
+    schedule_meeting,
+    send_team,
+    teams,
+)
+from backend.ops_models import (
+    AssignRequest,
+    AutoDispatchResult,
+    CapacityView,
+    Incident,
+    IncidentDetail,
+    MeetingRequest,
+    OpsMap,
+    RevenueView,
+    TeamsView,
 )
 from backend.provider_models import (
     ProviderFrames,
@@ -76,6 +102,8 @@ logger = logging.getLogger(__name__)
 
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or Settings()
+    if settings.media_dir.resolve().is_relative_to(settings.frontend_dist.resolve()):
+        raise ValueError("SOLAR_MEDIA_DIR must not be inside the served frontend build")
     database = Database(settings.database_path)
 
     @asynccontextmanager
@@ -121,15 +149,25 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def request_metadata(request: Request, call_next):
         request.state.request_id = uuid.uuid4().hex
         # Bound the actual body, including chunked requests without Content-Length.
+        # Only the support video upload route accepts the larger media limit.
         if request.method in ("POST", "PUT", "PATCH"):
+            media = is_upload(request.method, request.url.path)
+            limit = settings.max_media_bytes if media else settings.max_request_bytes
+            code = "media_too_large" if media else "request_too_large"
+            message = (
+                "The video is larger than 30 MB"
+                if media
+                else "Request body is too large"
+            )
+            declared = request.headers.get("content-length", "")
+            if declared.isdigit() and int(declared) > limit:
+                return error_response(request, 413, code, message)
             chunks = []
             size = 0
             async for chunk in request.stream():
                 size += len(chunk)
-                if size > settings.max_request_bytes:
-                    return error_response(
-                        request, 413, "request_too_large", "Request body is too large"
-                    )
+                if size > limit:
+                    return error_response(request, 413, code, message)
                 chunks.append(chunk)
             request._body = b"".join(chunks)
         try:
@@ -484,6 +522,191 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 payload.text,
                 request.state.request_id,
             )
+
+    @app.post(
+        "/api/v1/support/requests/{request_id}/media",
+        response_model=SupportRequest,
+        status_code=201,
+        tags=["customer"],
+        responses={415: {"model": ErrorEnvelope}},
+        openapi_extra={
+            "requestBody": {
+                "required": True,
+                "description": "Raw MP4 or WebM bytes (not multipart), at most 30 MB",
+                "content": {
+                    "video/mp4": {"schema": {"type": "string", "format": "binary"}},
+                    "video/webm": {"schema": {"type": "string", "format": "binary"}},
+                },
+            }
+        },
+    )
+    async def upload_media(
+        request_id: str,
+        request: Request,
+        session: Session,
+        filename: Annotated[str, Query(min_length=1, max_length=255)] = "support-video",
+    ):
+        require_csrf(request, session)
+        body = await request.body()
+
+        def save():
+            with database.connect() as connection:
+                return store_media(
+                    database,
+                    connection,
+                    session.user,
+                    request_id,
+                    filename,
+                    request.headers.get("content-type", ""),
+                    body,
+                    settings.media_dir,
+                    settings.max_media_bytes,
+                    request.state.request_id,
+                )
+
+        return await run_in_threadpool(save)
+
+    @app.get(
+        "/api/v1/support/media/{media_id}",
+        response_class=FileResponse,
+        tags=["customer"],
+        responses={
+            200: {
+                "description": "The stored video, served inline",
+                "content": {"video/mp4": {}, "video/webm": {}},
+            }
+        },
+    )
+    def support_media(media_id: str, session: Session):
+        with database.connect() as connection:
+            path, content_type, filename = media_file(
+                connection, session.user, media_id, settings.media_dir
+            )
+        return FileResponse(
+            path,
+            media_type=content_type,
+            filename=filename,
+            content_disposition_type="inline",
+        )
+
+    @app.get("/api/v1/ops/map", response_model=OpsMap, tags=["operations"])
+    def operations_map(session: Session):
+        with database.connect() as connection:
+            return ops_map(connection, session.user)
+
+    @app.get(
+        "/api/v1/ops/incidents", response_model=list[Incident], tags=["operations"]
+    )
+    def incidents(session: Session, status: Literal["open", "all"] = "open"):
+        with database.connect() as connection:
+            return list_incidents(connection, session.user, status)
+
+    @app.get(
+        "/api/v1/ops/incidents/{incident_id}",
+        response_model=IncidentDetail,
+        tags=["operations"],
+    )
+    def incident(incident_id: str, session: Session):
+        with database.connect() as connection:
+            return get_incident(connection, session.user, incident_id)
+
+    @app.post(
+        "/api/v1/ops/incidents/{incident_id}/assign",
+        response_model=IncidentDetail,
+        tags=["operations"],
+    )
+    def assign(
+        incident_id: str, payload: AssignRequest, request: Request, session: Session
+    ):
+        require_csrf(request, session)
+        with database.connect() as connection:
+            return assign_incident(
+                database,
+                connection,
+                session.user,
+                incident_id,
+                payload.crew_id,
+                request.state.request_id,
+            )
+
+    @app.post(
+        "/api/v1/ops/incidents/{incident_id}/send-team",
+        response_model=IncidentDetail,
+        tags=["operations"],
+    )
+    def dispatch_team(incident_id: str, request: Request, session: Session):
+        require_csrf(request, session)
+        with database.connect() as connection:
+            return send_team(
+                database,
+                connection,
+                session.user,
+                incident_id,
+                request.state.request_id,
+            )
+
+    @app.post(
+        "/api/v1/ops/incidents/{incident_id}/meeting",
+        response_model=IncidentDetail,
+        tags=["operations"],
+    )
+    def meeting(
+        incident_id: str, payload: MeetingRequest, request: Request, session: Session
+    ):
+        require_csrf(request, session)
+        with database.connect() as connection:
+            return schedule_meeting(
+                database,
+                connection,
+                session.user,
+                incident_id,
+                payload.start,
+                payload.end,
+                request.state.request_id,
+            )
+
+    @app.post(
+        "/api/v1/ops/incidents/{incident_id}/resolve",
+        response_model=IncidentDetail,
+        tags=["operations"],
+    )
+    def resolve(incident_id: str, request: Request, session: Session):
+        require_csrf(request, session)
+        with database.connect() as connection:
+            return resolve_incident(
+                database,
+                connection,
+                session.user,
+                incident_id,
+                request.state.request_id,
+            )
+
+    @app.post(
+        "/api/v1/ops/dispatch/auto",
+        response_model=AutoDispatchResult,
+        tags=["operations"],
+    )
+    def dispatch_by_severity(request: Request, session: Session):
+        require_csrf(request, session)
+        with database.connect() as connection:
+            return auto_dispatch(
+                database, connection, session.user, request.state.request_id
+            )
+
+    @app.get("/api/v1/ops/teams", response_model=TeamsView, tags=["operations"])
+    def operations_teams(session: Session):
+        with database.connect() as connection:
+            return teams(connection, session.user)
+
+    @app.get("/api/v1/ops/revenue", response_model=RevenueView, tags=["operations"])
+    def operations_revenue(session: Session):
+        with database.connect() as connection:
+            return revenue(connection, session.user)
+
+    @app.get("/api/v1/ops/capacity", response_model=CapacityView, tags=["operations"])
+    def operations_capacity(session: Session):
+        with database.connect() as connection:
+            return capacity(connection, session.user)
 
     @app.get("/api/v1/lessons", response_model=LessonCatalog, tags=["customer"])
     def lessons(session: Session):

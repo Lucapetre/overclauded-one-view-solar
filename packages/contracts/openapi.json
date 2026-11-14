@@ -33,6 +33,89 @@
         "title": "Area",
         "type": "object"
       },
+      "AreaCapacity": {
+        "additionalProperties": false,
+        "properties": {
+          "alias": {
+            "title": "Alias",
+            "type": "string"
+          },
+          "area_id": {
+            "title": "Area Id",
+            "type": "string"
+          },
+          "installed_kwp": {
+            "title": "Installed Kwp",
+            "type": "number"
+          },
+          "sites": {
+            "title": "Sites",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "area_id",
+          "alias",
+          "sites",
+          "installed_kwp"
+        ],
+        "title": "AreaCapacity",
+        "type": "object"
+      },
+      "AreaRevenue": {
+        "additionalProperties": false,
+        "properties": {
+          "alias": {
+            "title": "Alias",
+            "type": "string"
+          },
+          "area_id": {
+            "title": "Area Id",
+            "type": "string"
+          },
+          "business_net_revenue_ron": {
+            "title": "Business Net Revenue Ron",
+            "type": "number"
+          },
+          "business_sites": {
+            "title": "Business Sites",
+            "type": "integer"
+          },
+          "energy_sales_ron": {
+            "title": "Energy Sales Ron",
+            "type": "number"
+          },
+          "export_payments_ron": {
+            "title": "Export Payments Ron",
+            "type": "number"
+          },
+          "net_revenue_ron": {
+            "title": "Net Revenue Ron",
+            "type": "number"
+          },
+          "service_fees_ron": {
+            "title": "Service Fees Ron",
+            "type": "number"
+          },
+          "sites": {
+            "title": "Sites",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "energy_sales_ron",
+          "export_payments_ron",
+          "service_fees_ron",
+          "net_revenue_ron",
+          "sites",
+          "area_id",
+          "alias",
+          "business_sites",
+          "business_net_revenue_ron"
+        ],
+        "title": "AreaRevenue",
+        "type": "object"
+      },
       "AreaSummary": {
         "additionalProperties": false,
         "properties": {
@@ -83,6 +166,437 @@
           "sites"
         ],
         "title": "AreaSummary",
+        "type": "object"
+      },
+      "AssignRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "crew_id": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Crew Id"
+          }
+        },
+        "title": "AssignRequest",
+        "type": "object"
+      },
+      "AssignmentReportRow": {
+        "additionalProperties": false,
+        "properties": {
+          "area_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Area Id"
+          },
+          "assignment_id": {
+            "title": "Assignment Id",
+            "type": "string"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "created_by": {
+            "title": "Created By",
+            "type": "string"
+          },
+          "crew_name": {
+            "title": "Crew Name",
+            "type": "string"
+          },
+          "incident_id": {
+            "title": "Incident Id",
+            "type": "string"
+          },
+          "incident_title": {
+            "title": "Incident Title",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "dispatch",
+              "meeting"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "scheduled_end": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduled End"
+          },
+          "scheduled_start": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduled Start"
+          },
+          "site_alias": {
+            "title": "Site Alias",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "assigned",
+              "team_sent",
+              "meeting_scheduled",
+              "completed",
+              "cancelled"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "tier": {
+            "enum": [
+              "P0",
+              "P1",
+              "P2",
+              "P3"
+            ],
+            "title": "Tier",
+            "type": "string"
+          }
+        },
+        "required": [
+          "assignment_id",
+          "incident_id",
+          "incident_title",
+          "tier",
+          "site_alias",
+          "area_id",
+          "crew_name",
+          "kind",
+          "status",
+          "created_by",
+          "created_at",
+          "scheduled_start",
+          "scheduled_end",
+          "completed_at"
+        ],
+        "title": "AssignmentReportRow",
+        "type": "object"
+      },
+      "AssignmentSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "assignment_id": {
+            "title": "Assignment Id",
+            "type": "string"
+          },
+          "crew_id": {
+            "title": "Crew Id",
+            "type": "string"
+          },
+          "crew_name": {
+            "title": "Crew Name",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "dispatch",
+              "meeting"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "scheduled_end": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduled End"
+          },
+          "scheduled_start": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduled Start"
+          },
+          "status": {
+            "enum": [
+              "assigned",
+              "team_sent",
+              "meeting_scheduled",
+              "completed",
+              "cancelled"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "assignment_id",
+          "crew_id",
+          "crew_name",
+          "kind",
+          "status",
+          "scheduled_start",
+          "scheduled_end"
+        ],
+        "title": "AssignmentSummary",
+        "type": "object"
+      },
+      "AutoAssigned": {
+        "additionalProperties": false,
+        "properties": {
+          "crew_name": {
+            "title": "Crew Name",
+            "type": "string"
+          },
+          "incident_id": {
+            "title": "Incident Id",
+            "type": "string"
+          },
+          "tier": {
+            "enum": [
+              "P0",
+              "P1",
+              "P2",
+              "P3"
+            ],
+            "title": "Tier",
+            "type": "string"
+          }
+        },
+        "required": [
+          "incident_id",
+          "crew_name",
+          "tier"
+        ],
+        "title": "AutoAssigned",
+        "type": "object"
+      },
+      "AutoDispatchResult": {
+        "additionalProperties": false,
+        "properties": {
+          "assigned": {
+            "items": {
+              "$ref": "#/components/schemas/AutoAssigned"
+            },
+            "title": "Assigned",
+            "type": "array"
+          },
+          "skipped": {
+            "items": {
+              "$ref": "#/components/schemas/AutoSkipped"
+            },
+            "title": "Skipped",
+            "type": "array"
+          }
+        },
+        "required": [
+          "assigned",
+          "skipped"
+        ],
+        "title": "AutoDispatchResult",
+        "type": "object"
+      },
+      "AutoSkipped": {
+        "additionalProperties": false,
+        "properties": {
+          "incident_id": {
+            "title": "Incident Id",
+            "type": "string"
+          },
+          "reason": {
+            "enum": [
+              "no_eligible_crew",
+              "no_available_crew"
+            ],
+            "title": "Reason",
+            "type": "string"
+          },
+          "tier": {
+            "enum": [
+              "P0",
+              "P1",
+              "P2",
+              "P3"
+            ],
+            "title": "Tier",
+            "type": "string"
+          }
+        },
+        "required": [
+          "incident_id",
+          "tier",
+          "reason"
+        ],
+        "title": "AutoSkipped",
+        "type": "object"
+      },
+      "BusinessAccount": {
+        "additionalProperties": false,
+        "properties": {
+          "alias": {
+            "title": "Alias",
+            "type": "string"
+          },
+          "area_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Area Id"
+          },
+          "business_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Business Type"
+          },
+          "energy_sales_ron": {
+            "title": "Energy Sales Ron",
+            "type": "number"
+          },
+          "export_payments_ron": {
+            "title": "Export Payments Ron",
+            "type": "number"
+          },
+          "export_price_ron_kwh": {
+            "title": "Export Price Ron Kwh",
+            "type": "number"
+          },
+          "import_price_ron_kwh": {
+            "title": "Import Price Ron Kwh",
+            "type": "number"
+          },
+          "installed_kwp": {
+            "title": "Installed Kwp",
+            "type": "number"
+          },
+          "monthly_export_kwh": {
+            "title": "Monthly Export Kwh",
+            "type": "number"
+          },
+          "monthly_import_kwh": {
+            "title": "Monthly Import Kwh",
+            "type": "number"
+          },
+          "net_revenue_ron": {
+            "title": "Net Revenue Ron",
+            "type": "number"
+          },
+          "price_source": {
+            "enum": [
+              "contract",
+              "default_tariff"
+            ],
+            "title": "Price Source",
+            "type": "string"
+          },
+          "service_fees_ron": {
+            "title": "Service Fees Ron",
+            "type": "number"
+          },
+          "site_id": {
+            "title": "Site Id",
+            "type": "string"
+          },
+          "zone": {
+            "title": "Zone",
+            "type": "string"
+          }
+        },
+        "required": [
+          "energy_sales_ron",
+          "export_payments_ron",
+          "service_fees_ron",
+          "net_revenue_ron",
+          "site_id",
+          "alias",
+          "area_id",
+          "zone",
+          "business_type",
+          "installed_kwp",
+          "monthly_import_kwh",
+          "monthly_export_kwh",
+          "import_price_ron_kwh",
+          "export_price_ron_kwh",
+          "price_source"
+        ],
+        "title": "BusinessAccount",
+        "type": "object"
+      },
+      "CapacityView": {
+        "additionalProperties": false,
+        "properties": {
+          "areas": {
+            "items": {
+              "$ref": "#/components/schemas/AreaCapacity"
+            },
+            "title": "Areas",
+            "type": "array"
+          },
+          "total_installed_kwp": {
+            "title": "Total Installed Kwp",
+            "type": "number"
+          }
+        },
+        "required": [
+          "areas",
+          "total_installed_kwp"
+        ],
+        "title": "CapacityView",
         "type": "object"
       },
       "Contract": {
@@ -170,6 +684,195 @@
           "updated_at"
         ],
         "title": "ContractView",
+        "type": "object"
+      },
+      "Crew": {
+        "additionalProperties": false,
+        "properties": {
+          "active_assignment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CrewActiveAssignment"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "area_alias": {
+            "title": "Area Alias",
+            "type": "string"
+          },
+          "area_id": {
+            "title": "Area Id",
+            "type": "string"
+          },
+          "available": {
+            "title": "Available",
+            "type": "boolean"
+          },
+          "crew_id": {
+            "title": "Crew Id",
+            "type": "string"
+          },
+          "members": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Members",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "report": {
+            "$ref": "#/components/schemas/CrewReport"
+          },
+          "shift": {
+            "title": "Shift",
+            "type": "string"
+          },
+          "skills": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Skills",
+            "type": "array"
+          }
+        },
+        "required": [
+          "crew_id",
+          "name",
+          "area_id",
+          "area_alias",
+          "skills",
+          "shift",
+          "members",
+          "available",
+          "active_assignment",
+          "report"
+        ],
+        "title": "Crew",
+        "type": "object"
+      },
+      "CrewActiveAssignment": {
+        "additionalProperties": false,
+        "properties": {
+          "assignment_id": {
+            "title": "Assignment Id",
+            "type": "string"
+          },
+          "incident_id": {
+            "title": "Incident Id",
+            "type": "string"
+          },
+          "incident_title": {
+            "title": "Incident Title",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "dispatch",
+              "meeting"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "scheduled_end": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduled End"
+          },
+          "scheduled_start": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduled Start"
+          },
+          "site_alias": {
+            "title": "Site Alias",
+            "type": "string"
+          },
+          "site_id": {
+            "title": "Site Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "assigned",
+              "team_sent",
+              "meeting_scheduled",
+              "completed",
+              "cancelled"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "tier": {
+            "enum": [
+              "P0",
+              "P1",
+              "P2",
+              "P3"
+            ],
+            "title": "Tier",
+            "type": "string"
+          }
+        },
+        "required": [
+          "assignment_id",
+          "incident_id",
+          "incident_title",
+          "tier",
+          "site_id",
+          "site_alias",
+          "kind",
+          "status",
+          "scheduled_start",
+          "scheduled_end"
+        ],
+        "title": "CrewActiveAssignment",
+        "type": "object"
+      },
+      "CrewReport": {
+        "additionalProperties": false,
+        "properties": {
+          "assigned_total": {
+            "title": "Assigned Total",
+            "type": "integer"
+          },
+          "completed_by_tier": {
+            "$ref": "#/components/schemas/TierCounts"
+          },
+          "completed_total": {
+            "title": "Completed Total",
+            "type": "integer"
+          },
+          "open_by_tier": {
+            "$ref": "#/components/schemas/TierCounts"
+          }
+        },
+        "required": [
+          "assigned_total",
+          "completed_total",
+          "open_by_tier",
+          "completed_by_tier"
+        ],
+        "title": "CrewReport",
         "type": "object"
       },
       "EnergyHistory": {
@@ -499,6 +1202,356 @@
         "title": "HistoryPoint",
         "type": "object"
       },
+      "Incident": {
+        "additionalProperties": false,
+        "properties": {
+          "area_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Area Id"
+          },
+          "assignment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AssignmentSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "evidence": {
+            "title": "Evidence",
+            "type": "string"
+          },
+          "family": {
+            "enum": [
+              "Production",
+              "Temperature",
+              "Telemetry",
+              "Voltage",
+              "Area event",
+              "Local issue",
+              "Billing",
+              "Other"
+            ],
+            "title": "Family",
+            "type": "string"
+          },
+          "incident_id": {
+            "title": "Incident Id",
+            "type": "string"
+          },
+          "segment": {
+            "anyOf": [
+              {
+                "enum": [
+                  "home",
+                  "business"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Segment"
+          },
+          "site_alias": {
+            "title": "Site Alias",
+            "type": "string"
+          },
+          "site_id": {
+            "title": "Site Id",
+            "type": "string"
+          },
+          "source": {
+            "enum": [
+              "synthetic_replay",
+              "customer_request"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "new",
+              "assigned",
+              "team_sent",
+              "meeting_scheduled",
+              "resolved"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "support_request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Support Request Id"
+          },
+          "tier": {
+            "enum": [
+              "P0",
+              "P1",
+              "P2",
+              "P3"
+            ],
+            "title": "Tier",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "zone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zone"
+          }
+        },
+        "required": [
+          "incident_id",
+          "site_id",
+          "site_alias",
+          "area_id",
+          "zone",
+          "segment",
+          "title",
+          "family",
+          "tier",
+          "status",
+          "source",
+          "evidence",
+          "created_at",
+          "updated_at",
+          "support_request_id",
+          "assignment"
+        ],
+        "title": "Incident",
+        "type": "object"
+      },
+      "IncidentDetail": {
+        "additionalProperties": false,
+        "properties": {
+          "area_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Area Id"
+          },
+          "assignment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AssignmentSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "evidence": {
+            "title": "Evidence",
+            "type": "string"
+          },
+          "family": {
+            "enum": [
+              "Production",
+              "Temperature",
+              "Telemetry",
+              "Voltage",
+              "Area event",
+              "Local issue",
+              "Billing",
+              "Other"
+            ],
+            "title": "Family",
+            "type": "string"
+          },
+          "incident_id": {
+            "title": "Incident Id",
+            "type": "string"
+          },
+          "log": {
+            "items": {
+              "$ref": "#/components/schemas/IncidentLogEntry"
+            },
+            "title": "Log",
+            "type": "array"
+          },
+          "segment": {
+            "anyOf": [
+              {
+                "enum": [
+                  "home",
+                  "business"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Segment"
+          },
+          "site_alias": {
+            "title": "Site Alias",
+            "type": "string"
+          },
+          "site_id": {
+            "title": "Site Id",
+            "type": "string"
+          },
+          "source": {
+            "enum": [
+              "synthetic_replay",
+              "customer_request"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "new",
+              "assigned",
+              "team_sent",
+              "meeting_scheduled",
+              "resolved"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "support_request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Support Request Id"
+          },
+          "tier": {
+            "enum": [
+              "P0",
+              "P1",
+              "P2",
+              "P3"
+            ],
+            "title": "Tier",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "zone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zone"
+          }
+        },
+        "required": [
+          "incident_id",
+          "site_id",
+          "site_alias",
+          "area_id",
+          "zone",
+          "segment",
+          "title",
+          "family",
+          "tier",
+          "status",
+          "source",
+          "evidence",
+          "created_at",
+          "updated_at",
+          "support_request_id",
+          "assignment",
+          "log"
+        ],
+        "title": "IncidentDetail",
+        "type": "object"
+      },
+      "IncidentLogEntry": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "actor": {
+            "title": "Actor",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          }
+        },
+        "required": [
+          "actor",
+          "action",
+          "detail",
+          "created_at"
+        ],
+        "title": "IncidentLogEntry",
+        "type": "object"
+      },
       "IngestResult": {
         "additionalProperties": false,
         "properties": {
@@ -745,6 +1798,142 @@
         "title": "Login",
         "type": "object"
       },
+      "MapCenter": {
+        "additionalProperties": false,
+        "properties": {
+          "latitude": {
+            "title": "Latitude",
+            "type": "number"
+          },
+          "longitude": {
+            "title": "Longitude",
+            "type": "number"
+          },
+          "zoom": {
+            "title": "Zoom",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "latitude",
+          "longitude",
+          "zoom"
+        ],
+        "title": "MapCenter",
+        "type": "object"
+      },
+      "MapSite": {
+        "additionalProperties": false,
+        "properties": {
+          "alias": {
+            "title": "Alias",
+            "type": "string"
+          },
+          "area_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Area Id"
+          },
+          "business_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Business Type"
+          },
+          "character": {
+            "title": "Character",
+            "type": "string"
+          },
+          "freshness_status": {
+            "enum": [
+              "fresh",
+              "stale",
+              "unavailable",
+              "future",
+              "unknown_clock"
+            ],
+            "title": "Freshness Status",
+            "type": "string"
+          },
+          "installed_kwp": {
+            "title": "Installed Kwp",
+            "type": "number"
+          },
+          "latitude": {
+            "title": "Latitude",
+            "type": "number"
+          },
+          "longitude": {
+            "title": "Longitude",
+            "type": "number"
+          },
+          "open_incidents": {
+            "title": "Open Incidents",
+            "type": "integer"
+          },
+          "segment": {
+            "enum": [
+              "home",
+              "business"
+            ],
+            "title": "Segment",
+            "type": "string"
+          },
+          "site_id": {
+            "title": "Site Id",
+            "type": "string"
+          },
+          "worst_tier": {
+            "anyOf": [
+              {
+                "enum": [
+                  "P0",
+                  "P1",
+                  "P2",
+                  "P3"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Worst Tier"
+          },
+          "zone": {
+            "title": "Zone",
+            "type": "string"
+          }
+        },
+        "required": [
+          "site_id",
+          "alias",
+          "area_id",
+          "latitude",
+          "longitude",
+          "zone",
+          "character",
+          "segment",
+          "business_type",
+          "installed_kwp",
+          "freshness_status",
+          "open_incidents",
+          "worst_tier"
+        ],
+        "title": "MapSite",
+        "type": "object"
+      },
       "Measurement": {
         "additionalProperties": false,
         "properties": {
@@ -824,6 +2013,27 @@
         "title": "Measurement",
         "type": "object"
       },
+      "MeetingRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "end": {
+            "format": "date-time",
+            "title": "End",
+            "type": "string"
+          },
+          "start": {
+            "format": "date-time",
+            "title": "Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "start",
+          "end"
+        ],
+        "title": "MeetingRequest",
+        "type": "object"
+      },
       "Metric": {
         "enum": [
           "pv_power",
@@ -838,6 +2048,32 @@
         ],
         "title": "Metric",
         "type": "string"
+      },
+      "OpsMap": {
+        "additionalProperties": false,
+        "properties": {
+          "center": {
+            "$ref": "#/components/schemas/MapCenter"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "sites": {
+            "items": {
+              "$ref": "#/components/schemas/MapSite"
+            },
+            "title": "Sites",
+            "type": "array"
+          }
+        },
+        "required": [
+          "center",
+          "note",
+          "sites"
+        ],
+        "title": "OpsMap",
+        "type": "object"
       },
       "ProviderFrame": {
         "additionalProperties": false,
@@ -1579,6 +2815,151 @@
         "title": "RequestType",
         "type": "object"
       },
+      "RevenueBySegment": {
+        "additionalProperties": false,
+        "properties": {
+          "business": {
+            "$ref": "#/components/schemas/SegmentRevenue"
+          },
+          "home": {
+            "$ref": "#/components/schemas/SegmentRevenue"
+          }
+        },
+        "required": [
+          "home",
+          "business"
+        ],
+        "title": "RevenueBySegment",
+        "type": "object"
+      },
+      "RevenueTotals": {
+        "additionalProperties": false,
+        "properties": {
+          "energy_sales_ron": {
+            "title": "Energy Sales Ron",
+            "type": "number"
+          },
+          "export_payments_ron": {
+            "title": "Export Payments Ron",
+            "type": "number"
+          },
+          "net_revenue_ron": {
+            "title": "Net Revenue Ron",
+            "type": "number"
+          },
+          "service_fees_ron": {
+            "title": "Service Fees Ron",
+            "type": "number"
+          },
+          "sites": {
+            "title": "Sites",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "energy_sales_ron",
+          "export_payments_ron",
+          "service_fees_ron",
+          "net_revenue_ron",
+          "sites"
+        ],
+        "title": "RevenueTotals",
+        "type": "object"
+      },
+      "RevenueView": {
+        "additionalProperties": false,
+        "properties": {
+          "annualized_net_revenue_ron": {
+            "title": "Annualized Net Revenue Ron",
+            "type": "number"
+          },
+          "basis": {
+            "title": "Basis",
+            "type": "string"
+          },
+          "business_accounts": {
+            "items": {
+              "$ref": "#/components/schemas/BusinessAccount"
+            },
+            "title": "Business Accounts",
+            "type": "array"
+          },
+          "by_area": {
+            "items": {
+              "$ref": "#/components/schemas/AreaRevenue"
+            },
+            "title": "By Area",
+            "type": "array"
+          },
+          "by_segment": {
+            "$ref": "#/components/schemas/RevenueBySegment"
+          },
+          "currency": {
+            "const": "RON",
+            "title": "Currency",
+            "type": "string"
+          },
+          "period": {
+            "const": "monthly",
+            "title": "Period",
+            "type": "string"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/RevenueTotals"
+          }
+        },
+        "required": [
+          "period",
+          "basis",
+          "currency",
+          "totals",
+          "by_segment",
+          "by_area",
+          "business_accounts",
+          "annualized_net_revenue_ron"
+        ],
+        "title": "RevenueView",
+        "type": "object"
+      },
+      "SegmentRevenue": {
+        "additionalProperties": false,
+        "properties": {
+          "energy_sales_ron": {
+            "title": "Energy Sales Ron",
+            "type": "number"
+          },
+          "export_payments_ron": {
+            "title": "Export Payments Ron",
+            "type": "number"
+          },
+          "net_revenue_ron": {
+            "title": "Net Revenue Ron",
+            "type": "number"
+          },
+          "service_fees_ron": {
+            "title": "Service Fees Ron",
+            "type": "number"
+          },
+          "share_of_net": {
+            "title": "Share Of Net",
+            "type": "number"
+          },
+          "sites": {
+            "title": "Sites",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "energy_sales_ron",
+          "export_payments_ron",
+          "service_fees_ron",
+          "net_revenue_ron",
+          "sites",
+          "share_of_net"
+        ],
+        "title": "SegmentRevenue",
+        "type": "object"
+      },
       "SessionView": {
         "additionalProperties": false,
         "properties": {
@@ -1685,6 +3066,65 @@
         "title": "Site",
         "type": "object"
       },
+      "SupportMedia": {
+        "additionalProperties": false,
+        "properties": {
+          "content_type": {
+            "enum": [
+              "video/mp4",
+              "video/webm"
+            ],
+            "title": "Content Type",
+            "type": "string"
+          },
+          "filename": {
+            "title": "Filename",
+            "type": "string"
+          },
+          "media_id": {
+            "title": "Media Id",
+            "type": "string"
+          },
+          "size_bytes": {
+            "title": "Size Bytes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "media_id",
+          "filename",
+          "content_type",
+          "size_bytes"
+        ],
+        "title": "SupportMedia",
+        "type": "object"
+      },
+      "SupportMeeting": {
+        "additionalProperties": false,
+        "properties": {
+          "crew_name": {
+            "title": "Crew Name",
+            "type": "string"
+          },
+          "end": {
+            "format": "date-time",
+            "title": "End",
+            "type": "string"
+          },
+          "start": {
+            "format": "date-time",
+            "title": "Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "start",
+          "end",
+          "crew_name"
+        ],
+        "title": "SupportMeeting",
+        "type": "object"
+      },
       "SupportReply": {
         "additionalProperties": false,
         "properties": {
@@ -1746,6 +3186,37 @@
           "description": {
             "title": "Description",
             "type": "string"
+          },
+          "incident_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Incident Id"
+          },
+          "media": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SupportMedia"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "meeting": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SupportMeeting"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "priority": {
             "enum": [
@@ -1817,7 +3288,10 @@
           "status",
           "created_at",
           "updated_at",
-          "replies"
+          "replies",
+          "incident_id",
+          "meeting",
+          "media"
         ],
         "title": "SupportRequest",
         "type": "object"
@@ -1855,6 +3329,36 @@
           "description"
         ],
         "title": "SupportRequestCreate",
+        "type": "object"
+      },
+      "TeamsView": {
+        "additionalProperties": false,
+        "properties": {
+          "assignments": {
+            "items": {
+              "$ref": "#/components/schemas/AssignmentReportRow"
+            },
+            "title": "Assignments",
+            "type": "array"
+          },
+          "crews": {
+            "items": {
+              "$ref": "#/components/schemas/Crew"
+            },
+            "title": "Crews",
+            "type": "array"
+          },
+          "unassigned_incidents": {
+            "title": "Unassigned Incidents",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "crews",
+          "unassigned_incidents",
+          "assignments"
+        ],
+        "title": "TeamsView",
         "type": "object"
       },
       "TelemetryRecord": {
@@ -1958,6 +3462,35 @@
           "measurements"
         ],
         "title": "TelemetryRecord",
+        "type": "object"
+      },
+      "TierCounts": {
+        "additionalProperties": false,
+        "properties": {
+          "P0": {
+            "title": "P0",
+            "type": "integer"
+          },
+          "P1": {
+            "title": "P1",
+            "type": "integer"
+          },
+          "P2": {
+            "title": "P2",
+            "type": "integer"
+          },
+          "P3": {
+            "title": "P3",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "P0",
+          "P1",
+          "P2",
+          "P3"
+        ],
+        "title": "TierCounts",
         "type": "object"
       },
       "User": {
@@ -2862,6 +4395,1377 @@
         "summary": "Me",
         "tags": [
           "auth"
+        ]
+      }
+    },
+    "/api/v1/ops/capacity": {
+      "get": {
+        "operationId": "operations_capacity_api_v1_ops_capacity_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CapacityView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Request Entity Too Large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "summary": "Operations Capacity",
+        "tags": [
+          "operations"
+        ]
+      }
+    },
+    "/api/v1/ops/dispatch/auto": {
+      "post": {
+        "operationId": "dispatch_by_severity_api_v1_ops_dispatch_auto_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutoDispatchResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Request Entity Too Large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "summary": "Dispatch By Severity",
+        "tags": [
+          "operations"
+        ]
+      }
+    },
+    "/api/v1/ops/incidents": {
+      "get": {
+        "operationId": "incidents_api_v1_ops_incidents_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "default": "open",
+              "enum": [
+                "open",
+                "all"
+              ],
+              "title": "Status",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Incident"
+                  },
+                  "title": "Response Incidents Api V1 Ops Incidents Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Request Entity Too Large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "summary": "Incidents",
+        "tags": [
+          "operations"
+        ]
+      }
+    },
+    "/api/v1/ops/incidents/{incident_id}": {
+      "get": {
+        "operationId": "incident_api_v1_ops_incidents__incident_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "incident_id",
+            "required": true,
+            "schema": {
+              "title": "Incident Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IncidentDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Request Entity Too Large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "summary": "Incident",
+        "tags": [
+          "operations"
+        ]
+      }
+    },
+    "/api/v1/ops/incidents/{incident_id}/assign": {
+      "post": {
+        "operationId": "assign_api_v1_ops_incidents__incident_id__assign_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "incident_id",
+            "required": true,
+            "schema": {
+              "title": "Incident Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IncidentDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Request Entity Too Large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "summary": "Assign",
+        "tags": [
+          "operations"
+        ]
+      }
+    },
+    "/api/v1/ops/incidents/{incident_id}/meeting": {
+      "post": {
+        "operationId": "meeting_api_v1_ops_incidents__incident_id__meeting_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "incident_id",
+            "required": true,
+            "schema": {
+              "title": "Incident Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MeetingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IncidentDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Request Entity Too Large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "summary": "Meeting",
+        "tags": [
+          "operations"
+        ]
+      }
+    },
+    "/api/v1/ops/incidents/{incident_id}/resolve": {
+      "post": {
+        "operationId": "resolve_api_v1_ops_incidents__incident_id__resolve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "incident_id",
+            "required": true,
+            "schema": {
+              "title": "Incident Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IncidentDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Request Entity Too Large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "summary": "Resolve",
+        "tags": [
+          "operations"
+        ]
+      }
+    },
+    "/api/v1/ops/incidents/{incident_id}/send-team": {
+      "post": {
+        "operationId": "dispatch_team_api_v1_ops_incidents__incident_id__send_team_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "incident_id",
+            "required": true,
+            "schema": {
+              "title": "Incident Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IncidentDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Request Entity Too Large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "summary": "Dispatch Team",
+        "tags": [
+          "operations"
+        ]
+      }
+    },
+    "/api/v1/ops/map": {
+      "get": {
+        "operationId": "operations_map_api_v1_ops_map_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpsMap"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Request Entity Too Large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "summary": "Operations Map",
+        "tags": [
+          "operations"
+        ]
+      }
+    },
+    "/api/v1/ops/revenue": {
+      "get": {
+        "operationId": "operations_revenue_api_v1_ops_revenue_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RevenueView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Request Entity Too Large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "summary": "Operations Revenue",
+        "tags": [
+          "operations"
+        ]
+      }
+    },
+    "/api/v1/ops/teams": {
+      "get": {
+        "operationId": "operations_teams_api_v1_ops_teams_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamsView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Request Entity Too Large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "summary": "Operations Teams",
+        "tags": [
+          "operations"
         ]
       }
     },
@@ -4389,6 +7293,130 @@
         ]
       }
     },
+    "/api/v1/support/media/{media_id}": {
+      "get": {
+        "operationId": "support_media_api_v1_support_media__media_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "media_id",
+            "required": true,
+            "schema": {
+              "title": "Media Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "video/mp4": {},
+              "video/webm": {}
+            },
+            "description": "The stored video, served inline"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Request Entity Too Large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "summary": "Support Media",
+        "tags": [
+          "customer"
+        ]
+      }
+    },
     "/api/v1/support/request-types": {
       "get": {
         "operationId": "request_types_api_v1_support_request_types_get",
@@ -4748,6 +7776,173 @@
           }
         ],
         "summary": "Open Request",
+        "tags": [
+          "customer"
+        ]
+      }
+    },
+    "/api/v1/support/requests/{request_id}/media": {
+      "post": {
+        "operationId": "upload_media_api_v1_support_requests__request_id__media_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "title": "Request Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "filename",
+            "required": false,
+            "schema": {
+              "default": "support-video",
+              "maxLength": 255,
+              "minLength": 1,
+              "title": "Filename",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "video/mp4": {
+              "schema": {
+                "format": "binary",
+                "type": "string"
+              }
+            },
+            "video/webm": {
+              "schema": {
+                "format": "binary",
+                "type": "string"
+              }
+            }
+          },
+          "description": "Raw MP4 or WebM bytes (not multipart), at most 30 MB",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SupportRequest"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Request Entity Too Large"
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unsupported Media Type"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "summary": "Upload Media",
         "tags": [
           "customer"
         ]

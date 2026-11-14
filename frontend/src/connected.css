@@ -613,3 +613,157 @@
     grid-template-columns: repeat(4, 1fr);
   }
 }
+
+/* ---- Connected operations pages (opsPages.jsx) and support video ---- */
+.ops-map-card .section-head {
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.ops-map-card .bm-wrap {
+  margin-top: 14px;
+}
+.ops-incidents-head {
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.ops-auto {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  max-width: 100%;
+}
+.ops-auto .ops-result {
+  width: 100%;
+}
+.ops-filters {
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.ops-chip {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  background: #f7edbe;
+  color: #3d3412;
+  font-size: 12px;
+}
+.ops-chip .text-btn {
+  font-size: 11px;
+}
+.ops-incident-table tr.clickable {
+  cursor: pointer;
+}
+.ops-incident-table tr.clickable:hover td {
+  background: #f6f8f0;
+}
+.ops-incident-table td small {
+  display: block;
+  color: #5d6957;
+}
+.ops-modal h3 {
+  margin-top: 18px;
+}
+.ops-modal .detail-meta {
+  flex-wrap: wrap;
+}
+.ops-log b {
+  color: #2f3a33;
+  font-weight: 600;
+}
+.ops-log span {
+  display: block;
+  font-size: 12px;
+  color: #2f3a33;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.ops-log small {
+  color: #5d6957;
+}
+.ops-assign-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 12px;
+  align-items: end;
+}
+.ops-assign-form label {
+  margin: 0;
+}
+.request-card.focused {
+  outline: 2px solid #e4c84a;
+  outline-offset: 6px;
+  border-radius: 4px;
+}
+.video-field {
+  margin: 4px 0 12px;
+}
+.video-field label {
+  display: block;
+  margin-bottom: 6px;
+}
+.video-field input[type="file"] {
+  max-width: 100%;
+  font-size: 12px;
+}
+.video-status {
+  display: block;
+  margin: 6px 0;
+  font-size: 12px;
+  color: #2f3a33;
+}
+.support-video {
+  margin: 12px 0;
+}
+.support-video .video-preview {
+  margin: 0;
+}
+.support-video figcaption {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 11px;
+  color: #3d4a3f;
+  overflow-wrap: anywhere;
+}
+.attach-video {
+  margin: 10px 0;
+  padding: 12px;
+  border: 1px dashed #cfd9bf;
+  border-radius: 7px;
+}
+@media (max-width: 760px) {
+  .ops-assign-form {
+    grid-template-columns: 1fr;
+  }
+  .connected-app .bottom-nav button {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+  .connected-app .bottom-nav button span {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+@media (max-width: 480px) {
+  .connected-app .ops-meeting-form {
+    grid-template-columns: 1fr;
+  }
+  .ops-auto,
+  .ops-auto .btn {
+    width: 100%;
+  }
+}
+/* The connected tables' cell minimum would push crew cards past phone width. */
+.connected-app .ops-tier-table td,
+.connected-app .ops-tier-table th {
+  min-width: 0;
+  padding: 7px 8px;
+}

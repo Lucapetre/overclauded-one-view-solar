@@ -12,6 +12,8 @@ from backend.ingestion import ingest
 from backend.models import SiteRegistration, utc
 from backend.providers import import_provider_snapshot
 from backend.provisioning import (
+    add_crew_member,
+    create_crew,
     create_user,
     grant_access,
     register_site,
@@ -81,6 +83,22 @@ def main(argv=None):
         )
         grant.add_argument("username")
         grant.add_argument("subject")
+    crew = commands.add_parser(
+        "create-crew", help="Create a field crew for one area and incident families"
+    )
+    crew.add_argument("name")
+    crew.add_argument("--area", required=True)
+    crew.add_argument(
+        "--skills",
+        required=True,
+        help="Comma-separated incident families, e.g. Production,Telemetry,Local issue",
+    )
+    crew.add_argument("--shift", default="08:00-18:00")
+    member = commands.add_parser(
+        "add-crew-member", help="Add a technician account to a crew"
+    )
+    member.add_argument("crew")
+    member.add_argument("username")
     arguments = parser.parse_args(argv)
     settings = Settings()
     database = Database(settings.database_path)
@@ -160,6 +178,18 @@ def execute(arguments, database: Database, settings: Settings):
             arguments.command.removeprefix("grant-"),
         )
         print("Access grant recorded")
+    elif arguments.command == "create-crew":
+        crew_id = create_crew(
+            database,
+            arguments.name,
+            arguments.area,
+            arguments.skills.split(","),
+            arguments.shift,
+        )
+        print(f"Created crew {arguments.name} ({crew_id}) in area {arguments.area}")
+    elif arguments.command == "add-crew-member":
+        add_crew_member(database, arguments.crew, arguments.username)
+        print(f"{arguments.username} is a member of {arguments.crew}")
     elif arguments.command == "seed-demo":
         credentials = seed_demo(database, os.getenv("SOLAR_DEMO_PASSWORD"))
         destination = settings.database_path.parent / "demo-credentials.json"
