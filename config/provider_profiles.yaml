@@ -1,0 +1,542 @@
+# Provider profile registry for the ONE shared ingestion engine (scraper.py + engine/).
+#
+# Every vendor-specific field name, path, unit, sign convention, enum map, route and cadence
+# lives here. The engine contains no provider branches. Values ingested with these profiles
+# in this repository are SYNTHETIC demonstration data.
+#
+# Path syntax (generic selector): "<context>.<key>.<key>..."; contexts are
+#   envelope  - the mock transport metadata block (NOT vendor payload)
+#   payload   - the native vendor payload
+#   site      - the registered site record from sites.json (onboarding metadata)
+#   device    - the registered device record (when resolved)
+#   <alias>   - an iteration alias declared under records.iterate / entities.iterate
+#   <alias>.__key__ - the key of a map iteration item
+registry_version: "2026.11.14-1"
+schema_version: 1
+requirements_registry: requirements_registry.yaml
+review_policies: review_policies.yaml
+synthetic_notice: >-
+  SYNTHETIC DEMONSTRATION. Profiles are pinned to public references (see SOURCE_NOTES.md);
+  ingested values are generated fixtures, not real customer telemetry.
+
+rule_versions:
+  delivery_idempotency: "1.0"
+  dedupe_exact: "1.0"
+  conflict_preserve: "1.0"
+  quarantine: "1.0"
+  numeric_parse: "1.0"
+  unit_conversion: "1.0"
+  sign_split: "1.0"
+  edge_flow: "1.0"
+  bounds: "1.0"
+  counter_difference: "1.0"
+  power_integration: "1.0"
+  time_parse: "1.0"
+  freshness: "1.0"
+  schema_review: "1.0"
+  transport_status: "1.0"
+  provider_failure_envelope: "1.0"
+  capability: "1.0"
+  mapping_version_select: "1.0"
+
+defaults:
+  freshness_grace_factor: 3.0      # stale if as_of - latest > cadence * factor + expected_delay
+  gap_factor: 2.5                  # historical gap if spacing > cadence * factor
+  late_arrival_s: 3600             # received - source time above this counts as a late arrival
+  future_tolerance_s: 300          # source time later than replay clock + tolerance is flagged
+  conflict_abs_tolerance: 0.0000001
+
+units:
+  W:    {dimension: power, canonical: kW, factor: 0.001}
+  kW:   {dimension: power, canonical: kW, factor: 1.0}
+  Wh:   {dimension: energy, canonical: kWh, factor: 0.001}
+  kWh:  {dimension: energy, canonical: kWh, factor: 1.0}
+  pct:  {dimension: ratio, canonical: pct, factor: 1.0}
+  "%":  {dimension: ratio, canonical: pct, factor: 1.0}
+  degC: {dimension: temperature, canonical: degC, factor: 1.0}
+  V:    {dimension: voltage, canonical: V, factor: 1.0}
+  A:    {dimension: current, canonical: A, factor: 1.0}
+  Hz:   {dimension: frequency, canonical: Hz, factor: 1.0}
+  none: {dimension: none, canonical: none, factor: 1.0}
+
+# Canonical metric dictionary. bounds.max_ref is an ordered list of registry paths; the first
+# that resolves is multiplied by max_factor. Exceeding a magnitude bound without trustworthy unit
+# evidence is an unresolved unit ambiguity (value withheld, never rescaled).
+canonical_metrics:
+  inverter_ac_output_kw: {unit: kW, kind: power, description: "Inverter AC output (net AC; on hybrids may include battery)",
+                          bounds: {min: -0.2, max_ref: [device.max_ac_kw, device.rated_ac_kw, site.rated_ac_kw_total], max_factor: 1.25, on_exceed: implausible_magnitude}}
+  pv_dc_kw:          {unit: kW, kind: power, description: "PV generation at the DC boundary", bounds: {min: -0.2, max_ref: [site.pv_kwp], max_factor: 1.3, on_exceed: implausible_magnitude}}
+  pv_ac_kw:          {unit: kW, kind: power, description: "PV AC output where the profile defines P_PV as AC", bounds: {min: -0.2, max_ref: [site.rated_ac_kw_total], max_factor: 1.25, on_exceed: implausible_magnitude}}
+  pv_production_kw:  {unit: kW, kind: power, description: "PV production with UNSPECIFIED AC/DC boundary (site flow)", bounds: {min: 0, max_ref: [site.pv_kwp], max_factor: 1.3, on_exceed: implausible_magnitude}}
+  grid_import_kw:    {unit: kW, kind: power, bounds: {min: 0, max_ref: [site.grid_connection_kw], max_factor: 1.2, on_exceed: implausible_magnitude}}
+  grid_export_kw:    {unit: kW, kind: power, bounds: {min: 0, max_ref: [site.grid_connection_kw], max_factor: 1.2, on_exceed: implausible_magnitude}}
+  household_load_kw: {unit: kW, kind: power, bounds: {min: 0, max_ref: [site.grid_connection_kw], max_factor: 1.5, on_exceed: implausible_magnitude}}
+  battery_charge_kw:    {unit: kW, kind: power, bounds: {min: 0, max_ref: [device.rated_power_kw, site.battery_rated_power_kw], max_factor: 1.3, on_exceed: implausible_magnitude}}
+  battery_discharge_kw: {unit: kW, kind: power, bounds: {min: 0, max_ref: [device.rated_power_kw, site.battery_rated_power_kw], max_factor: 1.3, on_exceed: implausible_magnitude}}
+  soc_pct:           {unit: pct, kind: percent, bounds: {min: 0, max: 100, on_exceed: out_of_range}}
+  daily_yield_kwh:   {unit: kWh, kind: energy_counter_daily}
+  lifetime_yield_kwh: {unit: kWh, kind: energy_counter_lifetime}
+  yearly_yield_kwh:  {unit: kWh, kind: energy_counter_yearly, description: "vendor extension"}
+  daily_battery_charge_kwh:    {unit: kWh, kind: energy_counter_daily}
+  daily_battery_discharge_kwh: {unit: kWh, kind: energy_counter_daily}
+  lifetime_battery_charge_kwh:    {unit: kWh, kind: energy_counter_lifetime}
+  lifetime_battery_discharge_kwh: {unit: kWh, kind: energy_counter_lifetime}
+  interval_yield_kwh:             {unit: kWh, kind: energy_interval, derived_only: true}
+  interval_grid_import_kwh:       {unit: kWh, kind: energy_interval, derived_only: true}
+  interval_grid_export_kwh:       {unit: kWh, kind: energy_interval, derived_only: true}
+  interval_household_load_kwh:    {unit: kWh, kind: energy_interval, derived_only: true}
+  interval_battery_charge_kwh:    {unit: kWh, kind: energy_interval, derived_only: true}
+  interval_battery_discharge_kwh: {unit: kWh, kind: energy_interval, derived_only: true}
+  phase_voltage_v:   {unit: V, kind: voltage, bounds: {min: 0, max: 300, on_exceed: out_of_range}}
+  ac_voltage_v:      {unit: V, kind: voltage, bounds: {min: 0, max: 300, on_exceed: out_of_range}}
+  ac_current_a:      {unit: A, kind: current, bounds: {min: 0, max: 80, on_exceed: out_of_range}}
+  grid_frequency_hz: {unit: Hz, kind: frequency, bounds: {min: 45, max: 55, on_exceed: out_of_range}}
+  string_dc_voltage_v: {unit: V, kind: voltage, bounds: {min: 0, max: 1500, on_exceed: out_of_range}}
+  string_dc_current_a: {unit: A, kind: current, bounds: {min: 0, max: 40, on_exceed: out_of_range}}
+  dc_input_voltage_v:  {unit: V, kind: voltage, bounds: {min: 0, max: 1500, on_exceed: out_of_range}}
+  dc_input_current_a:  {unit: A, kind: current, bounds: {min: 0, max: 60, on_exceed: out_of_range}}
+  battery_busbar_voltage_v: {unit: V, kind: voltage, bounds: {min: 0, max: 1500, on_exceed: out_of_range}}
+  inverter_temperature_c: {unit: degC, kind: temperature, description: "Internal inverter temperature (never merged with battery/ambient)", bounds: {min: -40, max: 110, on_exceed: out_of_range}}
+  battery_temperature_c:  {unit: degC, kind: temperature, description: "Battery internal temperature", bounds: {min: -40, max: 90, on_exceed: out_of_range}}
+  inverter_state_raw: {unit: none, kind: state}
+  battery_state_raw:  {unit: none, kind: state}
+  battery_mode_raw:   {unit: none, kind: state}
+
+profiles:
+  # =====================================================================================
+  huawei_smartpvms_nbi_2025_07_28:
+    provider: huawei
+    display_name: "Huawei FusionSolar SmartPVMS Northbound interface (synthetic replay)"
+    profile_version: "SmartPVMS 25.2.0 Northbound API Reference, issue 2025-07-28"
+    evidence: [R3, R4]
+    provenance: >-
+      Field names/units taken from a publicly mirrored manufacturer reference (R3). Not tested against
+      a live customer endpoint. Units vary by device type and version: these units apply to device
+      types 38/39 in this issue only.
+    numeric: {allow_numeric_strings: true, decimal_separator: ".", thousands_separator: null}
+    transport:
+      http_status_classes: {"400": request_validation_error, "401": auth_failed, "403": access_denied, "429": rate_limited, "500": server_error, "503": server_error}
+    failure_detection:
+      - when: {path: payload.success, op: eq, value: false}
+        code_path: payload.failCode
+        message_path: payload.message
+        code_classes:
+          "407": {class: rate_limited, evidence: "R3 error code list (verify against chosen issue)", verified: false}
+          "305": {class: session_expired, evidence: "R3 error code list (verify against chosen issue)", verified: false}
+        default_class: provider_failure
+    endpoints:
+      - endpoint_key: getDevHistoryKpi
+        variant: residential_inverter_dt38
+        route: [{path: envelope.request_scope.devTypeId, op: eq, value: 38}]
+        mapping_version: "hw-dt38-hist-1.0"
+        realtime: false
+        cadence_s: 300
+        expected_delay_s: 1200
+        request_window:
+          start: {path: envelope.request_scope.startTime, format: epoch_ms}
+          end: {path: envelope.request_scope.endTime, format: epoch_ms}
+        records:
+          iterate: [{alias: item, path: payload.data, kind: list}]
+          device_id: {path: item.devId, required: true}
+          entity_scope: inverter
+          times:
+            - {role: collect_time, path: item.collectTime, format: epoch_ms, is_measurement: true, required: true}
+            - {role: server_current_time, path: payload.params.currentTime, format: epoch_ms, is_measurement: false, is_response: true}
+          effective_time_roles: [collect_time]
+          known_keys:
+            - {path: item, keys: [devId, collectTime, dataItemMap]}
+            - {path: item.dataItemMap, keys: [active_power, day_cap, total_cap, inverter_state, temperature, a_u, b_u, c_u, elec_freq, pv1_u, pv1_i, pv2_u, pv2_i, mppt_power]}
+        entities:
+          - scope: inverter
+            fields: &huawei_dt38_fields
+              - {id: hw38.active_power, source: item.dataItemMap.active_power, metric: inverter_ac_output_kw, unit: kW, boundary: ac_inverter_output, presence: optional, requirement: optional, evidence: "R3 dt38 active_power (kW in this device type)"}
+              - {id: hw38.day_cap, source: item.dataItemMap.day_cap, metric: daily_yield_kwh, unit: kWh, boundary: ac_inverter_output, presence: optional, requirement: optional, evidence: "R3 dt38 day_cap (kWh)"}
+              - {id: hw38.total_cap, source: item.dataItemMap.total_cap, metric: lifetime_yield_kwh, unit: kWh, boundary: ac_inverter_output, presence: optional, requirement: optional, evidence: "R3 dt38 total_cap (kWh)"}
+              - {id: hw38.inverter_state, source: item.dataItemMap.inverter_state, metric: inverter_state_raw, transform: state, presence: optional, requirement: optional, evidence: "R3 dt38 inverter_state (raw code preserved; no mapping applied)"}
+              - {id: hw38.temperature, source: item.dataItemMap.temperature, metric: inverter_temperature_c, unit: degC, boundary: inverter_internal, presence: optional, requirement: optional, evidence: "R3 dt38 temperature (internal, degC)"}
+              - {id: hw38.a_u, source: item.dataItemMap.a_u, metric: phase_voltage_v, channel: L1, unit: V, boundary: ac_phase, presence: optional, requirement: optional, evidence: "R3 dt38 a_u"}
+              - {id: hw38.b_u, source: item.dataItemMap.b_u, metric: phase_voltage_v, channel: L2, unit: V, boundary: ac_phase, presence: optional, requirement: optional, applies_if: {path: device.phase_count, op: gte, value: 2}, evidence: "R3 dt38 b_u (only applicable phases)"}
+              - {id: hw38.c_u, source: item.dataItemMap.c_u, metric: phase_voltage_v, channel: L3, unit: V, boundary: ac_phase, presence: optional, requirement: optional, applies_if: {path: device.phase_count, op: gte, value: 3}, evidence: "R3 dt38 c_u (only applicable phases)"}
+              - {id: hw38.elec_freq, source: item.dataItemMap.elec_freq, metric: grid_frequency_hz, unit: Hz, boundary: ac_grid, presence: optional, requirement: optional, evidence: "R3 dt38 elec_freq"}
+              - {id: hw38.pv1_u, source: item.dataItemMap.pv1_u, metric: string_dc_voltage_v, channel: PV1, unit: V, boundary: dc_string, presence: optional, requirement: optional, evidence: "R3 dt38 pv1_u"}
+              - {id: hw38.pv1_i, source: item.dataItemMap.pv1_i, metric: string_dc_current_a, channel: PV1, unit: A, boundary: dc_string, presence: optional, requirement: optional, evidence: "R3 dt38 pv1_i"}
+              - {id: hw38.pv2_u, source: item.dataItemMap.pv2_u, metric: string_dc_voltage_v, channel: PV2, unit: V, boundary: dc_string, presence: optional, requirement: optional, evidence: "R3 dt38 pv2_u"}
+              - {id: hw38.pv2_i, source: item.dataItemMap.pv2_i, metric: string_dc_current_a, channel: PV2, unit: A, boundary: dc_string, presence: optional, requirement: optional, evidence: "R3 dt38 pv2_i"}
+              - {id: hw38.mppt_power, source: item.dataItemMap.mppt_power, metric: pv_dc_kw, unit: kW, boundary: dc_mppt_input, presence: optional, requirement: optional, evidence: "R3 dt38 mppt_power (total MPPT input, kW; DC boundary kept)"}
+        derive:
+          - {id: hw38.interval_from_lifetime, method: counter_difference, from_metric: lifetime_yield_kwh, to_metric: interval_yield_kwh, counter: lifetime, priority: 1, max_gap_s: 900, max_rate_ref: [device.max_ac_kw, device.rated_ac_kw], max_rate_factor: 1.3, resolution: 0.002}
+          - {id: hw38.interval_from_daily, method: counter_difference, from_metric: daily_yield_kwh, to_metric: interval_yield_kwh, counter: daily, priority: 2, max_gap_s: 900, max_rate_ref: [device.max_ac_kw, device.rated_ac_kw], max_rate_factor: 1.3, resolution: 0.002}
+
+      - endpoint_key: getDevHistoryKpi
+        variant: residential_battery_dt39
+        route: [{path: envelope.request_scope.devTypeId, op: eq, value: 39}]
+        mapping_version: "hw-dt39-hist-1.0"
+        realtime: false
+        cadence_s: 300
+        expected_delay_s: 1200
+        request_window:
+          start: {path: envelope.request_scope.startTime, format: epoch_ms}
+          end: {path: envelope.request_scope.endTime, format: epoch_ms}
+        records:
+          iterate: [{alias: item, path: payload.data, kind: list}]
+          device_id: {path: item.devId, required: true}
+          entity_scope: battery
+          times:
+            - {role: collect_time, path: item.collectTime, format: epoch_ms, is_measurement: true, required: true}
+            - {role: server_current_time, path: payload.params.currentTime, format: epoch_ms, is_measurement: false, is_response: true}
+          effective_time_roles: [collect_time]
+          known_keys:
+            - {path: item, keys: [devId, collectTime, dataItemMap]}
+            - {path: item.dataItemMap, keys: [battery_status, battery_soc, busbar_u, ch_discharge_power, charge_cap, discharge_cap]}
+        entities:
+          - scope: battery
+            fields:
+              - {id: hw39.battery_status, source: item.dataItemMap.battery_status, metric: battery_state_raw, transform: state, presence: optional, requirement: optional, evidence: "R3 dt39 battery_status (raw)"}
+              - {id: hw39.battery_soc, source: item.dataItemMap.battery_soc, metric: soc_pct, unit: pct, boundary: battery, presence: optional, requirement: optional, evidence: "R3 dt39 battery_soc (%)"}
+              - {id: hw39.busbar_u, source: item.dataItemMap.busbar_u, metric: battery_busbar_voltage_v, unit: V, boundary: dc_battery_bus, presence: optional, requirement: optional, evidence: "R3 dt39 busbar_u"}
+              - id: hw39.ch_discharge_power
+                source: item.dataItemMap.ch_discharge_power
+                transform: sign_split
+                sign_split: {positive: battery_charge_kw, negative: battery_discharge_kw}
+                unit: W
+                boundary: dc_battery
+                presence: optional
+                requirement: optional
+                assumption_basis: assumed_demo_sign
+                evidence: >-
+                  R3 dt39 ch_discharge_power (W). Sign convention NOT established in the reviewed material:
+                  this demo ASSUMES positive = charging, negative = discharging (assumed_demo). Not a claimed
+                  universal Huawei convention.
+              - {id: hw39.charge_cap, source: item.dataItemMap.charge_cap, metric: daily_battery_charge_kwh, unit: kWh, boundary: dc_battery, presence: optional, requirement: optional, evidence: "R3 dt39 charge_cap (daily, kWh)"}
+              - {id: hw39.discharge_cap, source: item.dataItemMap.discharge_cap, metric: daily_battery_discharge_kwh, unit: kWh, boundary: dc_battery, presence: optional, requirement: optional, evidence: "R3 dt39 discharge_cap (daily, kWh)"}
+        derive:
+          - {id: hw39.charge_interval, method: counter_difference, from_metric: daily_battery_charge_kwh, to_metric: interval_battery_charge_kwh, counter: daily, priority: 1, max_gap_s: 900, max_rate_ref: [device.rated_power_kw], max_rate_factor: 1.3, resolution: 0.002}
+          - {id: hw39.discharge_interval, method: counter_difference, from_metric: daily_battery_discharge_kwh, to_metric: interval_battery_discharge_kwh, counter: daily, priority: 1, max_gap_s: 900, max_rate_ref: [device.rated_power_kw], max_rate_factor: 1.3, resolution: 0.002}
+
+      - endpoint_key: getDevRealKpi
+        variant: residential_inverter_dt38_realtime
+        route: [{path: envelope.request_scope.devTypeId, op: eq, value: 38}]
+        mapping_version: "hw-dt38-real-1.0"
+        realtime: true
+        continuous_feed: false       # optional sampled fixture; not polled continuously in this demo
+        cadence_s: 900
+        expected_delay_s: 60
+        stale_after_s: 600
+        records:
+          iterate: [{alias: item, path: payload.data, kind: list}]
+          device_id: {path: item.devId, required: true}
+          entity_scope: inverter
+          times:
+            # Real-time responses carry server currentTime only. It is a RESPONSE time, not a sensor time.
+            - {role: server_current_time, path: payload.params.currentTime, format: epoch_ms, is_measurement: false, is_response: true, required: true}
+          effective_time_roles: [server_current_time]
+          known_keys:
+            - {path: item, keys: [devId, dataItemMap]}
+            - {path: item.dataItemMap, keys: [active_power, day_cap, total_cap, inverter_state, temperature, a_u, b_u, c_u, elec_freq, pv1_u, pv1_i, pv2_u, pv2_i, mppt_power]}
+        entities:
+          - scope: inverter
+            fields: *huawei_dt38_fields
+        derive: []
+
+  # =====================================================================================
+  fronius_solar_api_v1_rev021:
+    provider: fronius
+    display_name: "Fronius Solar API V1 (local JSON; synthetic replay)"
+    value_object_keys: {value: Value, unit: Unit}   # CommonInverterData {Unit, Value} objects
+    profile_version: "Solar API V1, document 42,0410,2012,EN, revision 021-21012025"
+    evidence: [R5, R6]
+    provenance: >-
+      Versioned public mirror of the manufacturer document (R6) plus the official overview (R5).
+      Not proof of compatibility with every current device/firmware. Required keys may legitimately
+      hold null; optional keys may be absent.
+    numeric: {allow_numeric_strings: false, decimal_separator: ".", thousands_separator: null}
+    transport:
+      http_status_classes: {"400": request_validation_error, "403": access_denied, "404": not_found, "429": rate_limited, "500": server_error, "503": server_error}
+    failure_detection:
+      - when: {path: payload.Head.Status.Code, op: ne, value: 0}
+        code_path: payload.Head.Status.Code
+        message_path: payload.Head.Status.Reason
+        code_classes:
+          "12": {class: device_not_available, informational: true, evidence: "R6 Head.Status codes (verify)", verified: false}
+          "11": {class: unsupported, evidence: "R6 Head.Status codes (verify)", verified: false}
+          "5":  {class: timeout, evidence: "R6 Head.Status codes (verify)", verified: false}
+          "6":  {class: request_validation_error, evidence: "R6 Head.Status codes (verify)", verified: false}
+        default_class: provider_failure
+    endpoints:
+      - endpoint_key: GetPowerFlowRealtimeData
+        variant: snapinverter
+        route: [{path: site.profile_variant, op: eq, value: snapinverter}]
+        mapping_version: "fr-pf-snap-1.0"
+        realtime: true
+        cadence_s: 60
+        expected_delay_s: 30
+        stale_after_s: 120
+        records:
+          iterate: []
+          entity_scope: site
+          times:
+            # Head.Timestamp is the RESPONSE timestamp. It is retained in that role; measurement time is unknown.
+            - {role: response_time, path: payload.Head.Timestamp, format: iso_offset, is_measurement: false, is_response: true, required: true}
+          effective_time_roles: [response_time]
+          known_keys:
+            - {path: payload.Body.Data, keys: [Inverters, Site, Version]}
+            - {path: payload.Body.Data.Site, keys: [E_Day, E_Total, E_Year, Meter_Location, Mode, P_Akku, P_Grid, P_Load, P_PV, rel_Autonomy, rel_SelfConsumption]}
+        entities:
+          - scope: site
+            fields:
+              - {id: frpf.P_Grid, source: payload.Body.Data.Site.P_Grid, transform: sign_split, sign_split: {positive: grid_import_kw, negative: grid_export_kw}, unit: W, boundary: site_grid_connection, presence: required_nullable, requirement: vendor_response_required, requires_capability: grid_meter, assumption_basis: documented_sign, evidence: "R6 Site.P_Grid W; + import / - export"}
+              - {id: frpf.P_Load, source: payload.Body.Data.Site.P_Load, metric: household_load_kw, transform: negate, expect_sign: nonpositive, unit: W, boundary: site_load, presence: required_nullable, requirement: vendor_response_required, requires_capability: grid_meter, assumption_basis: documented_sign, evidence: "R6 Site.P_Load W; consumption negative"}
+              - {id: frpf.P_Akku, source: payload.Body.Data.Site.P_Akku, transform: sign_split, sign_split: {positive: battery_discharge_kw, negative: battery_charge_kw}, unit: W, boundary: dc_battery, presence: required_nullable, requirement: vendor_response_required, requires_capability: battery, assumption_basis: documented_sign, evidence: "R6 Site.P_Akku W; - charge / + discharge"}
+              - {id: frpf.P_PV.snap, source: payload.Body.Data.Site.P_PV, metric: pv_ac_kw, unit: W, boundary: ac_pv_inverter_output, presence: required_nullable, requirement: vendor_response_required, assumption_basis: model_dependent_documented, evidence: "R6: P_PV is AC output on SnapInverter (DC on GEN24/SymoHybrid)"}
+              - {id: frpf.E_Day.snap, source: payload.Body.Data.Site.E_Day, metric: daily_yield_kwh, unit: Wh, boundary: ac_inverter_output, presence: required_nullable, requirement: vendor_response_required, evidence: "R6 Site.E_Day Wh (model/firmware dependent)"}
+              - {id: frpf.E_Year.snap, source: payload.Body.Data.Site.E_Year, metric: yearly_yield_kwh, unit: Wh, boundary: ac_inverter_output, presence: required_nullable, requirement: vendor_response_required, evidence: "R6 Site.E_Year Wh (vendor extension)"}
+              - {id: frpf.E_Total, source: payload.Body.Data.Site.E_Total, metric: lifetime_yield_kwh, unit: Wh, boundary: ac_inverter_output, presence: required_nullable, requirement: vendor_response_required, evidence: "R6 Site.E_Total Wh"}
+          - scope: inverter
+            iterate: [{alias: inv, path: payload.Body.Data.Inverters, kind: map}]
+            device_id: {path: inv.__key__, required: true}
+            known_keys: [{path: inv, keys: [DT, E_Day, E_Total, E_Year, P, SOC, Battery_Mode]}]
+            fields:
+              - {id: frpf.inv.P, source: inv.P, metric: inverter_ac_output_kw, unit: W, boundary: ac_inverter_output, presence: required_nullable, requirement: vendor_response_required, evidence: "R6 Inverters.<id>.P W"}
+        derive:
+          - {id: frpf.interval_from_E_Total, method: counter_difference, from_metric: lifetime_yield_kwh, to_metric: interval_yield_kwh, counter: lifetime, priority: 1, max_gap_s: 180, max_rate_ref: [site.rated_ac_kw_total], max_rate_factor: 1.3, resolution: 0.001}
+          - {id: frpf.interval_from_E_Day, method: counter_difference, from_metric: daily_yield_kwh, to_metric: interval_yield_kwh, counter: daily, priority: 2, max_gap_s: 180, max_rate_ref: [site.rated_ac_kw_total], max_rate_factor: 1.3, resolution: 0.001}
+          - {id: frpf.import_est, method: power_integration, from_metric: grid_import_kw, to_metric: interval_grid_import_kwh, max_gap_s: 180}
+          - {id: frpf.export_est, method: power_integration, from_metric: grid_export_kw, to_metric: interval_grid_export_kwh, max_gap_s: 180}
+          - {id: frpf.load_est, method: power_integration, from_metric: household_load_kw, to_metric: interval_household_load_kwh, max_gap_s: 180}
+
+      - endpoint_key: GetPowerFlowRealtimeData
+        variant: gen24_hybrid
+        route: [{path: site.profile_variant, op: eq, value: gen24_hybrid}]
+        mapping_version: "fr-pf-gen24-1.0"
+        realtime: true
+        cadence_s: 60
+        expected_delay_s: 30
+        stale_after_s: 120
+        records:
+          iterate: []
+          entity_scope: site
+          times:
+            - {role: response_time, path: payload.Head.Timestamp, format: iso_offset, is_measurement: false, is_response: true, required: true}
+          effective_time_roles: [response_time]
+          known_keys:
+            - {path: payload.Body.Data, keys: [Inverters, Site, Version]}
+            - {path: payload.Body.Data.Site, keys: [E_Day, E_Total, E_Year, Meter_Location, Mode, P_Akku, P_Grid, P_Load, P_PV, rel_Autonomy, rel_SelfConsumption]}
+        entities:
+          - scope: site
+            fields:
+              - {id: frpf.P_Grid, source: payload.Body.Data.Site.P_Grid, transform: sign_split, sign_split: {positive: grid_import_kw, negative: grid_export_kw}, unit: W, boundary: site_grid_connection, presence: required_nullable, requirement: vendor_response_required, requires_capability: grid_meter, assumption_basis: documented_sign, evidence: "R6 Site.P_Grid W; + import / - export"}
+              - {id: frpf.P_Load, source: payload.Body.Data.Site.P_Load, metric: household_load_kw, transform: negate, expect_sign: nonpositive, unit: W, boundary: site_load, presence: required_nullable, requirement: vendor_response_required, requires_capability: grid_meter, assumption_basis: documented_sign, evidence: "R6 Site.P_Load W; consumption negative"}
+              - {id: frpf.P_Akku, source: payload.Body.Data.Site.P_Akku, transform: sign_split, sign_split: {positive: battery_discharge_kw, negative: battery_charge_kw}, unit: W, boundary: dc_battery, presence: required_nullable, requirement: vendor_response_required, requires_capability: battery, assumption_basis: documented_sign, evidence: "R6 Site.P_Akku W; - charge / + discharge"}
+              - {id: frpf.P_PV.gen24, source: payload.Body.Data.Site.P_PV, metric: pv_dc_kw, unit: W, boundary: dc_pv_input, presence: required_nullable, requirement: vendor_response_required, assumption_basis: model_dependent_documented, evidence: "R6: P_PV is DC generation on GEN24/SymoHybrid; NOT renamed to pv_ac_kw"}
+              - {id: frpf.E_Day.gen24, source: payload.Body.Data.Site.E_Day, metric: daily_yield_kwh, unit: Wh, presence: required_nullable, requirement: vendor_response_required, model_behaviour: always_null, evidence: "R6: E_Day null on this model family (legitimate)"}
+              - {id: frpf.E_Year.gen24, source: payload.Body.Data.Site.E_Year, metric: yearly_yield_kwh, unit: Wh, presence: required_nullable, requirement: vendor_response_required, model_behaviour: always_null, evidence: "R6: E_Year null on this model family (legitimate)"}
+              - {id: frpf.E_Total, source: payload.Body.Data.Site.E_Total, metric: lifetime_yield_kwh, unit: Wh, boundary: ac_inverter_output, presence: required_nullable, requirement: vendor_response_required, evidence: "R6 Site.E_Total Wh (hybrid AC output; may include battery contribution)"}
+          - scope: inverter
+            iterate: [{alias: inv, path: payload.Body.Data.Inverters, kind: map}]
+            device_id: {path: inv.__key__, required: true}
+            known_keys: [{path: inv, keys: [DT, E_Day, E_Total, E_Year, P, SOC, Battery_Mode]}]
+            fields:
+              - {id: frpf.inv.P.gen24, source: inv.P, metric: inverter_ac_output_kw, unit: W, boundary: ac_inverter_output, presence: required_nullable, requirement: vendor_response_required, evidence: "R6 Inverters.<id>.P W (hybrid net AC; not solar-only production)"}
+              - {id: frpf.inv.SOC, source: inv.SOC, metric: soc_pct, unit: pct, boundary: battery, presence: optional, requirement: optional, requires_capability: battery, evidence: "R6 Inverters.<id>.SOC (optional)"}
+              - {id: frpf.inv.Battery_Mode, source: inv.Battery_Mode, metric: battery_mode_raw, transform: state, presence: optional, requirement: optional, requires_capability: battery, evidence: "R6 Inverters.<id>.Battery_Mode (optional, raw string)"}
+        derive:
+          - {id: frpf.interval_from_E_Total, method: counter_difference, from_metric: lifetime_yield_kwh, to_metric: interval_yield_kwh, counter: lifetime, priority: 1, max_gap_s: 180, max_rate_ref: [site.rated_ac_kw_total], max_rate_factor: 1.3, resolution: 0.001}
+          - {id: frpf.import_est, method: power_integration, from_metric: grid_import_kw, to_metric: interval_grid_import_kwh, max_gap_s: 180}
+          - {id: frpf.export_est, method: power_integration, from_metric: grid_export_kw, to_metric: interval_grid_export_kwh, max_gap_s: 180}
+          - {id: frpf.load_est, method: power_integration, from_metric: household_load_kw, to_metric: interval_household_load_kwh, max_gap_s: 180}
+          - {id: frpf.charge_est, method: power_integration, from_metric: battery_charge_kw, to_metric: interval_battery_charge_kwh, max_gap_s: 180}
+          - {id: frpf.discharge_est, method: power_integration, from_metric: battery_discharge_kw, to_metric: interval_battery_discharge_kwh, max_gap_s: 180}
+
+      - endpoint_key: GetInverterRealtimeData.CommonInverterData
+        variant: snapinverter
+        route: [{path: site.profile_variant, op: eq, value: snapinverter}]
+        mapping_version: "fr-cid-snap-1.0"
+        realtime: true
+        cadence_s: 300
+        expected_delay_s: 30
+        stale_after_s: 120
+        records:
+          iterate: []
+          device_id: {path: payload.Head.RequestArguments.DeviceId, required: true}
+          entity_scope: inverter
+          times:
+            - {role: response_time, path: payload.Head.Timestamp, format: iso_offset, is_measurement: false, is_response: true, required: true}
+          effective_time_roles: [response_time]
+          known_keys:
+            - {path: payload.Body.Data, keys: [DAY_ENERGY, DeviceStatus, FAC, IAC, IDC, PAC, TOTAL_ENERGY, UAC, UDC, YEAR_ENERGY]}
+        entities:
+          - scope: inverter
+            fields: &fronius_cid_fields
+              - {id: frcid.PAC, source: payload.Body.Data.PAC, metric: inverter_ac_output_kw, transform: value_object, allowed_units: [W, kW], boundary: ac_inverter_output, presence: optional, requirement: optional, evidence: "R6 CommonInverterData PAC {Unit,Value}"}
+              - {id: frcid.UAC, source: payload.Body.Data.UAC, metric: ac_voltage_v, transform: value_object, allowed_units: [V], boundary: ac_phase, presence: optional, requirement: optional, evidence: "R6 CommonInverterData UAC"}
+              - {id: frcid.IAC, source: payload.Body.Data.IAC, metric: ac_current_a, transform: value_object, allowed_units: [A], boundary: ac_phase, presence: optional, requirement: optional, evidence: "R6 CommonInverterData IAC"}
+              - {id: frcid.FAC, source: payload.Body.Data.FAC, metric: grid_frequency_hz, transform: value_object, allowed_units: [Hz], boundary: ac_grid, presence: optional, requirement: optional, evidence: "R6 CommonInverterData FAC"}
+              - {id: frcid.UDC, source: payload.Body.Data.UDC, metric: dc_input_voltage_v, transform: value_object, allowed_units: [V], boundary: dc_input, presence: optional, requirement: optional, evidence: "R6 CommonInverterData UDC"}
+              - {id: frcid.IDC, source: payload.Body.Data.IDC, metric: dc_input_current_a, transform: value_object, allowed_units: [A], boundary: dc_input, presence: optional, requirement: optional, evidence: "R6 CommonInverterData IDC"}
+              - {id: frcid.TOTAL_ENERGY, source: payload.Body.Data.TOTAL_ENERGY, metric: lifetime_yield_kwh, transform: value_object, allowed_units: [Wh, kWh], boundary: ac_inverter_output, presence: optional, requirement: optional, evidence: "R6 CommonInverterData TOTAL_ENERGY"}
+              - {id: frcid.StatusCode, source: payload.Body.Data.DeviceStatus.StatusCode, metric: inverter_state_raw, transform: state, presence: optional, requirement: optional, status_map: {"7": running, "8": standby}, status_map_evidence: "R6 DeviceStatus.StatusCode table for SnapInverter (verify; unmapped codes kept raw)", evidence: "R6 DeviceStatus"}
+        derive: []
+
+      - endpoint_key: GetInverterRealtimeData.CommonInverterData
+        variant: gen24_hybrid
+        route: [{path: site.profile_variant, op: eq, value: gen24_hybrid}]
+        mapping_version: "fr-cid-gen24-1.0"
+        realtime: true
+        cadence_s: 300
+        expected_delay_s: 30
+        stale_after_s: 120
+        records:
+          iterate: []
+          device_id: {path: payload.Head.RequestArguments.DeviceId, required: true}
+          entity_scope: inverter
+          times:
+            - {role: response_time, path: payload.Head.Timestamp, format: iso_offset, is_measurement: false, is_response: true, required: true}
+          effective_time_roles: [response_time]
+          known_keys:
+            - {path: payload.Body.Data, keys: [DAY_ENERGY, DeviceStatus, FAC, IAC, IDC, PAC, TOTAL_ENERGY, UAC, UDC, YEAR_ENERGY]}
+        entities:
+          - scope: inverter
+            fields:
+              - {id: frcid.PAC, source: payload.Body.Data.PAC, metric: inverter_ac_output_kw, transform: value_object, allowed_units: [W, kW], boundary: ac_inverter_output, presence: optional, requirement: optional, evidence: "R6 CommonInverterData PAC {Unit,Value}"}
+              - {id: frcid.UAC, source: payload.Body.Data.UAC, metric: ac_voltage_v, transform: value_object, allowed_units: [V], boundary: ac_phase, presence: optional, requirement: optional, evidence: "R6 CommonInverterData UAC"}
+              - {id: frcid.IAC, source: payload.Body.Data.IAC, metric: ac_current_a, transform: value_object, allowed_units: [A], boundary: ac_phase, presence: optional, requirement: optional, evidence: "R6 CommonInverterData IAC"}
+              - {id: frcid.FAC, source: payload.Body.Data.FAC, metric: grid_frequency_hz, transform: value_object, allowed_units: [Hz], boundary: ac_grid, presence: optional, requirement: optional, evidence: "R6 CommonInverterData FAC"}
+              - {id: frcid.UDC, source: payload.Body.Data.UDC, metric: dc_input_voltage_v, transform: value_object, allowed_units: [V], boundary: dc_input, presence: optional, requirement: optional, evidence: "R6 CommonInverterData UDC"}
+              - {id: frcid.IDC, source: payload.Body.Data.IDC, metric: dc_input_current_a, transform: value_object, allowed_units: [A], boundary: dc_input, presence: optional, requirement: optional, evidence: "R6 CommonInverterData IDC"}
+              - {id: frcid.TOTAL_ENERGY, source: payload.Body.Data.TOTAL_ENERGY, metric: lifetime_yield_kwh, transform: value_object, allowed_units: [Wh, kWh], boundary: ac_inverter_output, presence: optional, requirement: optional, evidence: "R6 CommonInverterData TOTAL_ENERGY"}
+              - {id: frcid.StatusCode.gen24, source: payload.Body.Data.DeviceStatus.StatusCode, metric: inverter_state_raw, transform: state, presence: optional, requirement: optional, evidence: "R6 DeviceStatus (GEN24 codes not mapped; raw kept)"}
+        derive: []
+
+  # =====================================================================================
+  solaredge_monitoring_api_2026_03:
+    provider: solaredge
+    display_name: "SolarEdge Monitoring Server API (legacy, JSON; synthetic replay)"
+    profile_version: "Monitoring Server API reference, version updated March 2026 (JSON only)"
+    evidence: [R7]
+    provenance: >-
+      Official SolarEdge PDF (R7). The mock does not implement any newer API generation and does not
+      mix its authentication/version with this contract. Local naive timestamps use the SITE timezone.
+    numeric: {allow_numeric_strings: false, decimal_separator: ".", thousands_separator: null}
+    transport:
+      http_status_classes: {"400": request_validation_error, "403": access_denied, "404": not_found, "429": rate_limited, "500": server_error, "503": server_error}
+    failure_detection: []
+    endpoints:
+      - endpoint_key: equipment_data
+        variant: inverter_technical_data
+        route: []
+        mapping_version: "se-tel-1.0"
+        mapping_versions:
+          - version: "se-tel-1.1-synthetic-alias"
+            detect: {path: tel.inverterTemperature, op: present}
+            aliases: {tel.temperature: tel.inverterTemperature}
+            extra_known_keys: [{path: tel, keys: [inverterTemperature]}]
+            note: "SYNTHETIC schema-drift test registered for the demo; NOT a documented SolarEdge change."
+        realtime: false
+        cadence_s: 900
+        expected_delay_s: 1800
+        request_window:
+          start: {path: envelope.request_scope.query.startTime, format: local_naive, pattern: "%Y-%m-%d %H:%M:%S"}
+          end: {path: envelope.request_scope.query.endTime, format: local_naive, pattern: "%Y-%m-%d %H:%M:%S"}
+        records:
+          iterate: [{alias: tel, path: payload.data.telemetries, kind: list}]
+          device_id: {path: envelope.request_scope.serialNumber, required: true}
+          entity_scope: inverter
+          times:
+            - {role: local_measurement_time, path: tel.date, format: local_naive, pattern: "%Y-%m-%d %H:%M:%S", is_measurement: true, required: true}
+          effective_time_roles: [local_measurement_time]
+          known_keys:
+            - {path: tel, keys: [date, totalActivePower, dcVoltage, groundFaultResistance, powerLimit, totalEnergy, temperature, inverterMode, operationMode, L1Data, L2Data, L3Data, vL1To2, vL2To3, vL3To1]}
+        entities:
+          - scope: inverter
+            fields:
+              - {id: setel.totalActivePower, source: tel.totalActivePower, metric: inverter_ac_output_kw, unit: W, boundary: ac_inverter_output, presence: optional, requirement: optional, evidence: "R7 Inverter Technical Data totalActivePower (W)"}
+              - {id: setel.totalEnergy, source: tel.totalEnergy, metric: lifetime_yield_kwh, unit: Wh, boundary: ac_inverter_output, presence: optional, requirement: optional, evidence: "R7 totalEnergy (Wh, lifetime)"}
+              - {id: setel.temperature, source: tel.temperature, metric: inverter_temperature_c, unit: degC, boundary: inverter_internal, presence: optional, requirement: optional, evidence: "R7 temperature (inverter)"}
+              - {id: setel.dcVoltage, source: tel.dcVoltage, metric: dc_input_voltage_v, unit: V, boundary: dc_input, presence: optional, requirement: optional, evidence: "R7 dcVoltage"}
+              - {id: setel.inverterMode, source: tel.inverterMode, metric: inverter_state_raw, transform: state, presence: optional, requirement: optional, evidence: "R7 inverterMode (raw enum kept)"}
+              - {id: setel.L1.acVoltage, source: tel.L1Data.acVoltage, metric: phase_voltage_v, channel: L1, unit: V, boundary: ac_phase, presence: optional, requirement: optional, evidence: "R7 L1Data.acVoltage"}
+              - {id: setel.L2.acVoltage, source: tel.L2Data.acVoltage, metric: phase_voltage_v, channel: L2, unit: V, boundary: ac_phase, presence: optional, requirement: optional, applies_if: {path: device.phase_count, op: gte, value: 2}, evidence: "R7 L2Data.acVoltage (three-phase only)"}
+              - {id: setel.L3.acVoltage, source: tel.L3Data.acVoltage, metric: phase_voltage_v, channel: L3, unit: V, boundary: ac_phase, presence: optional, requirement: optional, applies_if: {path: device.phase_count, op: gte, value: 3}, evidence: "R7 L3Data.acVoltage (three-phase only)"}
+              - {id: setel.L1.acFrequency, source: tel.L1Data.acFrequency, metric: grid_frequency_hz, unit: Hz, boundary: ac_grid, presence: optional, requirement: optional, evidence: "R7 L1Data.acFrequency"}
+        derive:
+          - {id: setel.interval_from_totalEnergy, method: counter_difference, from_metric: lifetime_yield_kwh, to_metric: interval_yield_kwh, counter: lifetime, priority: 1, max_gap_s: 2700, max_rate_ref: [device.max_ac_kw, device.rated_ac_kw], max_rate_factor: 1.3, resolution: 0.002}
+
+      - endpoint_key: currentPowerFlow
+        variant: site_power_flow
+        route: []
+        mapping_version: "se-pf-1.0"
+        realtime: true
+        cadence_s: 900
+        expected_delay_s: 120
+        empty_response: {when_path_empty: payload, state: unsupported, capability: site_power_flow,
+                         note: "R7: an unsupported site returns an empty object; NOT a zero-load home"}
+        records:
+          iterate: []
+          entity_scope: site
+          times:
+            # The response carries no timestamp; the capture time is the only time anchor.
+            - {role: capture_time, path: envelope.recorded_at_utc, format: iso_offset, is_measurement: false, required: true}
+          effective_time_roles: [capture_time]
+          known_keys:
+            - {path: payload, keys: [siteCurrentPowerFlow]}
+            - {path: payload.siteCurrentPowerFlow, keys: [updateRefreshRate, unit, connections, GRID, LOAD, PV, STORAGE]}
+        entities:
+          - scope: site
+            fields:
+              - id: sepf.flows
+                transform: edge_flow
+                source: payload.siteCurrentPowerFlow
+                unit_from: payload.siteCurrentPowerFlow.unit
+                allowed_units: [kW, W]
+                connections_path: payload.siteCurrentPowerFlow.connections
+                magnitude_key: currentPower
+                edge_keys: {from: from, to: to}
+                node_case_insensitive: true
+                presence: required
+                requirement: vendor_response_required
+                assumption_basis: documented_edge_direction
+                evidence: "R7 currentPowerFlow: currentPower is a nonnegative magnitude; connections give direction"
+                outputs:
+                  - {metric: grid_import_kw, node: GRID, boundary: site_grid_connection, requires_capability: grid_meter, direction_any: [[GRID, LOAD], [GRID, STORAGE]], opposite_any: [[LOAD, GRID], [PV, GRID], [STORAGE, GRID]]}
+                  - {metric: grid_export_kw, node: GRID, boundary: site_grid_connection, requires_capability: grid_meter, direction_any: [[LOAD, GRID], [PV, GRID], [STORAGE, GRID]], opposite_any: [[GRID, LOAD], [GRID, STORAGE]]}
+                  - {metric: household_load_kw, node: LOAD, boundary: site_load, requires_capability: grid_meter, direction: none}
+                  - {metric: pv_production_kw, node: PV, boundary: site_flow_unspecified, direction: none}
+                  - {metric: battery_charge_kw, node: STORAGE, boundary: battery_flow, requires_capability: battery, direction_any: [[PV, STORAGE], [LOAD, STORAGE], [GRID, STORAGE]], opposite_any: [[STORAGE, LOAD], [STORAGE, GRID]]}
+                  - {metric: battery_discharge_kw, node: STORAGE, boundary: battery_flow, requires_capability: battery, direction_any: [[STORAGE, LOAD], [STORAGE, GRID]], opposite_any: [[PV, STORAGE], [LOAD, STORAGE], [GRID, STORAGE]]}
+              - {id: sepf.chargeLevel, source: payload.siteCurrentPowerFlow.STORAGE.chargeLevel, metric: soc_pct, unit: pct, boundary: battery, presence: optional, requirement: optional, requires_capability: battery, evidence: "R7 STORAGE.chargeLevel (%)"}
+        derive:
+          - {id: sepf.import_est, method: power_integration, from_metric: grid_import_kw, to_metric: interval_grid_import_kwh, max_gap_s: 1200}
+          - {id: sepf.export_est, method: power_integration, from_metric: grid_export_kw, to_metric: interval_grid_export_kwh, max_gap_s: 1200}
+          - {id: sepf.load_est, method: power_integration, from_metric: household_load_kw, to_metric: interval_household_load_kwh, max_gap_s: 1200}
+
+      - endpoint_key: storageData
+        variant: storage_information
+        route: []
+        mapping_version: "se-storage-1.0"
+        realtime: false
+        cadence_s: 900
+        expected_delay_s: 1800
+        request_window:
+          start: {path: envelope.request_scope.query.startTime, format: local_naive, pattern: "%Y-%m-%d %H:%M:%S"}
+          end: {path: envelope.request_scope.query.endTime, format: local_naive, pattern: "%Y-%m-%d %H:%M:%S"}
+        records:
+          iterate: [{alias: bat, path: payload.storageData.batteries, kind: list}, {alias: tel, path: bat.telemetries, kind: list}]
+          device_id: {path: bat.serialNumber, required: true}
+          entity_scope: battery
+          times:
+            - {role: local_measurement_time, path: tel.timeStamp, format: local_naive, pattern: "%Y-%m-%d %H:%M:%S", is_measurement: true, required: true}
+          effective_time_roles: [local_measurement_time]
+          known_keys:
+            - {path: tel, keys: [timeStamp, power, batteryState, lifeTimeEnergyDischarged, lifeTimeEnergyCharged, fullPackEnergyAvailable, internalTemp, ACGridCharging, stateOfCharge]}
+        entities:
+          - scope: battery
+            fields:
+              - {id: sest.power, source: tel.power, transform: sign_split, sign_split: {positive: battery_charge_kw, negative: battery_discharge_kw}, unit: W, boundary: dc_battery, presence: optional, requirement: optional, assumption_basis: documented_sign, evidence: "R7 storageData power: + charging / - discharging (differs from currentPowerFlow)"}
+              - {id: sest.stateOfCharge, source: tel.stateOfCharge, metric: soc_pct, unit: pct, boundary: battery, presence: optional, requirement: optional, evidence: "R7 stateOfCharge"}
+              - {id: sest.internalTemp, source: tel.internalTemp, metric: battery_temperature_c, unit: degC, boundary: battery_internal, presence: optional, requirement: optional, evidence: "R7 internalTemp (battery; never merged with inverter temperature)"}
+              - {id: sest.batteryState, source: tel.batteryState, metric: battery_state_raw, transform: state, presence: optional, requirement: optional, evidence: "R7 batteryState (raw)"}
+              - {id: sest.lifeTimeEnergyCharged, source: tel.lifeTimeEnergyCharged, metric: lifetime_battery_charge_kwh, unit: Wh, boundary: dc_battery, presence: optional, requirement: optional, evidence: "R7 lifeTimeEnergyCharged (Wh)"}
+              - {id: sest.lifeTimeEnergyDischarged, source: tel.lifeTimeEnergyDischarged, metric: lifetime_battery_discharge_kwh, unit: Wh, boundary: dc_battery, presence: optional, requirement: optional, evidence: "R7 lifeTimeEnergyDischarged (Wh)"}
+        derive:
+          - {id: sest.charge_interval, method: counter_difference, from_metric: lifetime_battery_charge_kwh, to_metric: interval_battery_charge_kwh, counter: lifetime, priority: 1, max_gap_s: 2700, max_rate_ref: [device.rated_power_kw], max_rate_factor: 1.3, resolution: 0.002}
+          - {id: sest.discharge_interval, method: counter_difference, from_metric: lifetime_battery_discharge_kwh, to_metric: interval_battery_discharge_kwh, counter: lifetime, priority: 1, max_gap_s: 2700, max_rate_ref: [device.rated_power_kw], max_rate_factor: 1.3, resolution: 0.002}

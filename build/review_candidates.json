@@ -1,0 +1,159 @@
+{
+ "synthetic_demonstration": true,
+ "candidates": [
+  {
+   "candidate_id": "c82561275e3521b2",
+   "policy_id": "demo_high_inverter_temperature",
+   "policy_version": "demo-1",
+   "site_key": "huawei|hw-nbi-demo-01|NE=33554791",
+   "endpoint_key": "getDevHistoryKpi",
+   "device_key": "huawei|hw-nbi-demo-01|NE=33554791|1000000035350464",
+   "channel": "",
+   "metric_name": "inverter_temperature_c",
+   "start_ms": 1784541900000,
+   "end_ms": 1784553900000,
+   "duration_s": 12000.0,
+   "peak_value": 74.3,
+   "n_samples": 41,
+   "evidence": {
+    "first_obs_id": 75129,
+    "last_obs_id": 77037,
+    "peak_obs_id": 75825,
+    "sample_obs_ids": [
+     75129,
+     75189,
+     75249,
+     75813,
+     75873,
+     76185,
+     76245,
+     76977,
+     77037
+    ]
+   },
+   "status": "open_for_review",
+   "label": "Internal inverter temperature >= 70 degC for >= 15 min (demo policy)",
+   "disclaimer": "Demo review policy. Not a manufacturer threshold, not a protection setting, not a root-cause claim. Candidates are evidence pointers for a (virtual) technician; values are preserved unchanged.",
+   "start_utc": "2026-07-20T10:05:00.000Z",
+   "end_utc": "2026-07-20T13:25:00.000Z"
+  },
+  {
+   "candidate_id": "7f7cbf4281a3b967",
+   "policy_id": "demo_phase_voltage_high",
+   "policy_version": "demo-1",
+   "site_key": "huawei|hw-nbi-demo-01|NE=33554792",
+   "endpoint_key": "getDevHistoryKpi",
+   "device_key": "huawei|hw-nbi-demo-01|NE=33554792|1000000035351021",
+   "channel": "L1",
+   "metric_name": "phase_voltage_v",
+   "start_ms": 1784449200000,
+   "end_ms": 1784459700000,
+   "duration_s": 10500.0,
+   "peak_value": 256.5,
+   "n_samples": 36,
+   "evidence": {
+    "first_obs_id": 60822,
+    "last_obs_id": 62332,
+    "peak_obs_id": 61232,
+    "sample_obs_ids": [
+     60822,
+     60878,
+     61162,
+     61218,
+     61274,
+     61894,
+     61950,
+     62006,
+     62290
+    ]
+   },
+   "status": "open_for_review",
+   "label": "Phase voltage > 253 V (230 V + 10 %, illustrative) for >= 10 min (demo policy)",
+   "disclaimer": "Demo review policy. Not a manufacturer threshold, not a protection setting, not a root-cause claim. Candidates are evidence pointers for a (virtual) technician; values are preserved unchanged.",
+   "start_utc": "2026-07-19T08:20:00.000Z",
+   "end_utc": "2026-07-19T11:15:00.000Z"
+  },
+  {
+   "candidate_id": "766bfcf2c11454af",
+   "policy_id": "demo_phase_voltage_high",
+   "policy_version": "demo-1",
+   "site_key": "huawei|hw-nbi-demo-01|NE=33554792",
+   "endpoint_key": "getDevHistoryKpi",
+   "device_key": "huawei|hw-nbi-demo-01|NE=33554792|1000000035351021",
+   "channel": "L1",
+   "metric_name": "phase_voltage_v",
+   "start_ms": 1784535600000,
+   "end_ms": 1784545800000,
+   "duration_s": 10200.0,
+   "peak_value": 256.0,
+   "n_samples": 35,
+   "evidence": {
+    "first_obs_id": 74190,
+    "last_obs_id": 75938,
+    "peak_obs_id": 74274,
+    "sample_obs_ids": [
+     74190,
+     74246,
+     74614,
+     74670,
+     74726,
+     75430,
+     75486,
+     75542,
+     75910
+    ]
+   },
+   "status": "open_for_review",
+   "label": "Phase voltage > 253 V (230 V + 10 %, illustrative) for >= 10 min (demo policy)",
+   "disclaimer": "Demo review policy. Not a manufacturer threshold, not a protection setting, not a root-cause claim. Candidates are evidence pointers for a (virtual) technician; values are preserved unchanged.",
+   "start_utc": "2026-07-20T08:20:00.000Z",
+   "end_utc": "2026-07-20T11:10:00.000Z"
+  },
+  {
+   "candidate_id": "630537f5dca85f75",
+   "policy_id": "demo_sustained_underproduction_peer",
+   "policy_version": "demo-1",
+   "site_key": "solaredge|se-acct-demo-01|3141592",
+   "endpoint_key": "equipment_data",
+   "device_key": "",
+   "channel": "",
+   "metric_name": "interval_yield_kwh",
+   "start_ms": 1784408400000,
+   "end_ms": 1784667600000,
+   "duration_s": 259200.0,
+   "peak_value": 0.513,
+   "n_samples": 3,
+   "evidence": [
+    {
+     "local_date": "2026-07-19",
+     "specific_yield_kwh_per_kwp": 3.181,
+     "peer_median_kwh_per_kwp": 6.117,
+     "ratio": 0.52,
+     "day_kwh": 29.263,
+     "coverage": 1.0
+    },
+    {
+     "local_date": "2026-07-20",
+     "specific_yield_kwh_per_kwp": 3.122,
+     "peer_median_kwh_per_kwp": 6.084,
+     "ratio": 0.513,
+     "day_kwh": 28.724,
+     "coverage": 1.0
+    },
+    {
+     "local_date": "2026-07-21",
+     "specific_yield_kwh_per_kwp": 2.874,
+     "peer_median_kwh_per_kwp": 5.408,
+     "ratio": 0.531,
+     "day_kwh": 26.438,
+     "coverage": 0.99
+    }
+   ],
+   "status": "open_for_review",
+   "label": "Daily specific yield (kWh/kWp, from counter-derived intervals) below 60 % of the same-day peer median for >= 2 consecutive days (demo policy; shared-weather peers make a cloudy day a negative example)",
+   "disclaimer": "Demo review policy. Not a manufacturer threshold, not a protection setting, not a root-cause claim. Candidates are evidence pointers for a (virtual) technician; values are preserved unchanged.",
+   "start_utc": "2026-07-18T21:00:00.000Z",
+   "end_utc": "2026-07-21T21:00:00.000Z"
+  }
+ ]
+}

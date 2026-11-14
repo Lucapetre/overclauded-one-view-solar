@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+build_http/
+# raw DB is ~350 MB (> GitHub 100 MB limit); the committed copy is build/scraper.sqlite.gz
+build/scraper.sqlite
+build/scraper.sqlite-wal
+build/scraper.sqlite-shm
+build/side/*.sqlite-wal
+build/side/*.sqlite-shm
+*_log.txt

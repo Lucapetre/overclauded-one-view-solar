@@ -1,0 +1,4 @@
+site_key,endpoint_key,device_key,start_ms,end_ms,duration_s,gap_class,detail
+fronius|fr-lan-gw-0003|FR-SITE-0003,GetPowerFlowRealtimeData,,1784466001000,1784467261000,1260.0,stale_feed_repeated_response,no accepted records between 2026-07-19T13:00:01.000Z and 2026-07-19T13:21:01.000Z
+huawei|hw-nbi-demo-01|NE=33554792,getDevHistoryKpi,huawei|hw-nbi-demo-01|NE=33554792|1000000035351021,1784634900000,1784667600000,32700.0,trailing_gap_feed_stale,no accepted records between 2026-07-21T11:55:00.000Z and 2026-07-21T21:00:00.000Z
+solaredge|se-acct-demo-02|1618033,storageData,solaredge|se-acct-demo-02|1618033|BAT-00A1B2C3,1784407500000,1784494800000,87300.0,access_denied,no accepted records between 2026-07-18T20:45:00.000Z and 2026-07-19T21:00:00.000Z

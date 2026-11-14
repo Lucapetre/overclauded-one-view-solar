@@ -1,0 +1,2887 @@
+{
+ "synthetic_demonstration": true,
+ "notice": "SYNTHETIC DEMONSTRATION. All payloads are generated fixtures shaped after pinned public references; they are not real vendor or customer data. Counts below describe this synthetic replay only: they are not field fault-detection accuracy and not a compliance certification.",
+ "as_of_utc": "2026-07-21T21:00:00.000Z",
+ "registry_version": "2026.11.14-1",
+ "config_hash": "7a58f9febf3177a4cb157dc2ba656a2f662579ed97d5632cfbbb153fc46d1772",
+ "engine_version": "1.0.0",
+ "runs": [
+  {
+   "run_id": "20261114T172200005964Z-c1c73f",
+   "started_at_utc": "2026-11-14T17:22:00.005964+00:00",
+   "finished_at_utc": "2026-11-14T17:23:29.564063+00:00",
+   "as_of_utc": "2026-07-21T21:00:00+00:00",
+   "mode": "file_replay",
+   "datasets": "delivery",
+   "input_root": "demo_data",
+   "config_hash": "7a58f9febf3177a4cb157dc2ba656a2f662579ed97d5632cfbbb153fc46d1772",
+   "engine_hash": "b35fa991a47d5c98d688621a5182ee9c5eb0286a67562692116ec51e32a80a5c",
+   "registry_version": "2026.11.14-1",
+   "deliveries_seen": 39722,
+   "deliveries_new": 39722,
+   "deliveries_skipped_known": 0,
+   "observations_added": 380096,
+   "status": "completed",
+   "notes": "{\"capability_state_responses\": 672, \"declared_unit_changes\": 2, \"deliveries_new\": 39722, \"deliveries_seen\": 39722, \"documented_unavailable_responses\": 1598, \"issue:ambiguous_number\": 2, \"issue:conflicting_versions\": 4, \"issue:exact_duplicate_suppressed\": 56, \"issue:http_access_denied\": 24, \"issue:http_rate_limited\": 1, \"issue:http_request_validation_error\": 1, \"issue:implausible_magnitude_unit_ambiguity\": 3, \"issue:invalid_field_type\": 4, \"issue:missing_required_identifier\": 1, \"issue:optional_field_absent\": 26, \"issue:provider_failure_rate_limited\": 3, \"issue:required_key_missing\": 5, \"issue:stale_repeated_response\": 19, \"issue:truncated_or_invalid_json\": 1, \"issue:unknown_field\": 4, \"issue:unparseable_transport_line\": 1, \"issue:unusable_time_missing\": 2, \"issue:value_out_of_range\": 1, \"late_arrival_records\": 2095, \"mapping_version_applied\": 96, \"numeric_strings_parsed\": 132, \"observations_added\": 380096, \"records_accepted\": 46618, \"records_conflict_version\": 2, \"records_exact_duplicate\": 56, \"records_input\": 46679, \"records_quarantined\": 3}"
+  },
+  {
+   "run_id": "20261114T172456284977Z-7f438e",
+   "started_at_utc": "2026-11-14T17:24:56.284977+00:00",
+   "finished_at_utc": "2026-11-14T17:25:00.838351+00:00",
+   "as_of_utc": "2026-07-21T21:00:00+00:00",
+   "mode": "file_replay",
+   "datasets": "delivery",
+   "input_root": "demo_data",
+   "config_hash": "7a58f9febf3177a4cb157dc2ba656a2f662579ed97d5632cfbbb153fc46d1772",
+   "engine_hash": "b35fa991a47d5c98d688621a5182ee9c5eb0286a67562692116ec51e32a80a5c",
+   "registry_version": "2026.11.14-1",
+   "deliveries_seen": 39722,
+   "deliveries_new": 0,
+   "deliveries_skipped_known": 39722,
+   "observations_added": 0,
+   "status": "completed",
+   "notes": "{\"deliveries_seen\": 39722, \"deliveries_skipped_known\": 39722}"
+  }
+ ],
+ "record_level": {
+  "denominator_note": "Record-level counts use extracted records as the denominator. Deliveries that could not be parsed contribute an UNKNOWN number of records and are counted separately.",
+  "unparseable_or_unbound_deliveries": 1,
+  "by_provider": {
+   "huawei": {
+    "deliveries_total": 729,
+    "deliveries_by_status": {
+     "parsed_ok": 725,
+     "payload_parse_error": 1,
+     "provider_failure": 3
+    },
+    "records_input": 8040,
+    "records_accepted": 8015,
+    "records_retained": 8017,
+    "records_exact_duplicate": 22,
+    "records_conflict_version": 2,
+    "records_quarantined": 1,
+    "transport_errors_by_class": {},
+    "provider_failure_envelopes_by_class": {
+     "rate_limited": 3
+    }
+   },
+   "fronius": {
+    "deliveries_total": 36297,
+    "deliveries_by_status": {
+     "parsed_ok": 34699,
+     "provider_failure": 1598
+    },
+    "records_input": 34699,
+    "records_accepted": 34668,
+    "records_retained": 34668,
+    "records_exact_duplicate": 30,
+    "records_conflict_version": 0,
+    "records_quarantined": 1,
+    "transport_errors_by_class": {},
+    "provider_failure_envelopes_by_class": {
+     "device_not_available": 1598
+    }
+   },
+   "solaredge": {
+    "deliveries_total": 2695,
+    "deliveries_by_status": {
+     "empty_response": 672,
+     "parsed_ok": 1997,
+     "transport_error": 26
+    },
+    "records_input": 3940,
+    "records_accepted": 3935,
+    "records_retained": 3935,
+    "records_exact_duplicate": 4,
+    "records_conflict_version": 0,
+    "records_quarantined": 1,
+    "transport_errors_by_class": {
+     "access_denied": 24,
+     "rate_limited": 1,
+     "request_validation_error": 1
+    },
+    "provider_failure_envelopes_by_class": {}
+   }
+  },
+  "by_site": {
+   "fronius|fr-lan-gw-0001|FR-SITE-0001": {
+    "accepted": 11292,
+    "exact_duplicate": 10
+   },
+   "fronius|fr-lan-gw-0002|FR-SITE-0002": {
+    "accepted": 11300,
+    "quarantined": 1
+   },
+   "fronius|fr-lan-gw-0003|FR-SITE-0003": {
+    "accepted": 12076,
+    "exact_duplicate": 20
+   },
+   "huawei|hw-nbi-demo-01|NE=33554791": {
+    "accepted": 2075,
+    "exact_duplicate": 12,
+    "quarantined": 1
+   },
+   "huawei|hw-nbi-demo-01|NE=33554792": {
+    "accepted": 1908
+   },
+   "huawei|hw-nbi-demo-02|NE=33554850": {
+    "accepted": 4032,
+    "conflict_version": 2,
+    "exact_duplicate": 10
+   },
+   "solaredge|se-acct-demo-01|2718281": {
+    "accepted": 671,
+    "quarantined": 1
+   },
+   "solaredge|se-acct-demo-01|3141592": {
+    "accepted": 1344,
+    "exact_duplicate": 4
+   },
+   "solaredge|se-acct-demo-02|1618033": {
+    "accepted": 1920
+   }
+  },
+  "by_endpoint": {
+   "GetInverterRealtimeData.CommonInverterData": {
+    "accepted": 4449,
+    "quarantined": 1
+   },
+   "GetPowerFlowRealtimeData": {
+    "accepted": 30219,
+    "exact_duplicate": 30
+   },
+   "currentPowerFlow": {
+    "accepted": 1344
+   },
+   "equipment_data": {
+    "accepted": 2015,
+    "exact_duplicate": 4,
+    "quarantined": 1
+   },
+   "getDevHistoryKpi": {
+    "accepted": 7955,
+    "conflict_version": 2,
+    "exact_duplicate": 22,
+    "quarantined": 1
+   },
+   "getDevRealKpi": {
+    "accepted": 60
+   },
+   "storageData": {
+    "accepted": 576
+   }
+  }
+ },
+ "metric_level": {
+  "denominator_note": "Metric-level denominator = all emitted observation slots (available, missing, invalid, stale, access-denied) PLUS an estimate of metric slots lost in quarantined records. Unknown data never leaves the denominator. not_installed / unsupported capability states are reported under capability_coverage, not as data loss.",
+  "by_provider": {
+   "huawei": {
+    "observations_total": 93976,
+    "by_availability": {
+     "available": 93958,
+     "invalid": 6,
+     "missing": 12
+    },
+    "of_which_vendor_permitted_null": 0,
+    "conflicted_observations": 8,
+    "quarantined_record_metric_slots_estimate": 14,
+    "denominator": 93990,
+    "available_unconflicted_share": 0.9996
+   },
+   "fronius": {
+    "observations_total": 259247,
+    "by_availability": {
+     "available": 251250,
+     "missing": 7990,
+     "invalid": 7
+    },
+    "of_which_vendor_permitted_null": 7980,
+    "conflicted_observations": 0,
+    "quarantined_record_metric_slots_estimate": 8,
+    "denominator": 259255,
+    "available_unconflicted_share": 0.9691
+   },
+   "solaredge": {
+    "observations_total": 26873,
+    "by_availability": {
+     "available": 26148,
+     "missing": 725
+    },
+    "of_which_vendor_permitted_null": 0,
+    "conflicted_observations": 0,
+    "quarantined_record_metric_slots_estimate": 9,
+    "denominator": 26882,
+    "available_unconflicted_share": 0.9727
+   }
+  },
+  "by_metric": {
+   "ac_current_a": {
+    "available": 4449
+   },
+   "ac_voltage_v": {
+    "available": 4449
+   },
+   "battery_busbar_voltage_v": {
+    "available": 2004,
+    "missing": 12
+   },
+   "battery_charge_kw": {
+    "available": 13324
+   },
+   "battery_discharge_kw": {
+    "available": 13324
+   },
+   "battery_mode_raw": {
+    "available": 10060
+   },
+   "battery_state_raw": {
+    "available": 2592
+   },
+   "battery_temperature_c": {
+    "available": 576
+   },
+   "daily_battery_charge_kwh": {
+    "available": 2016
+   },
+   "daily_battery_discharge_kwh": {
+    "available": 2016
+   },
+   "daily_yield_kwh": {
+    "available": 26160
+   },
+   "dc_input_current_a": {
+    "available": 4449
+   },
+   "dc_input_voltage_v": {
+    "available": 5743,
+    "missing": 721
+   },
+   "grid_export_kw": {
+    "available": 21481,
+    "invalid": 3
+   },
+   "grid_frequency_hz": {
+    "available": 12465
+   },
+   "grid_import_kw": {
+    "available": 21481,
+    "invalid": 3
+   },
+   "household_load_kw": {
+    "available": 21483,
+    "invalid": 1
+   },
+   "inverter_ac_output_kw": {
+    "available": 34696,
+    "invalid": 4,
+    "missing": 4
+   },
+   "inverter_state_raw": {
+    "available": 12465
+   },
+   "inverter_temperature_c": {
+    "available": 8016
+   },
+   "lifetime_battery_charge_kwh": {
+    "available": 576
+   },
+   "lifetime_battery_discharge_kwh": {
+    "available": 576
+   },
+   "lifetime_yield_kwh": {
+    "available": 42683,
+    "invalid": 1
+   },
+   "phase_voltage_v": {
+    "available": 17212
+   },
+   "pv_ac_kw": {
+    "available": 12179,
+    "missing": 7980
+   },
+   "pv_dc_kw": {
+    "available": 16061
+   },
+   "pv_production_kw": {
+    "available": 1344
+   },
+   "soc_pct": {
+    "available": 13313,
+    "invalid": 1,
+    "missing": 10
+   },
+   "string_dc_current_a": {
+    "available": 12002
+   },
+   "string_dc_voltage_v": {
+    "available": 12002
+   },
+   "yearly_yield_kwh": {
+    "available": 20159
+   }
+  },
+  "by_site_metric": {
+   "fronius|fr-lan-gw-0001|FR-SITE-0001": {
+    "ac_current_a": {
+     "available": 1213
+    },
+    "ac_voltage_v": {
+     "available": 1213
+    },
+    "daily_yield_kwh": {
+     "available": 10079
+    },
+    "dc_input_current_a": {
+     "available": 1213
+    },
+    "dc_input_voltage_v": {
+     "available": 1213
+    },
+    "grid_frequency_hz": {
+     "available": 1213
+    },
+    "inverter_ac_output_kw": {
+     "available": 7280
+    },
+    "inverter_state_raw": {
+     "available": 1213
+    },
+    "lifetime_yield_kwh": {
+     "available": 11292
+    },
+    "pv_ac_kw": {
+     "available": 6067,
+     "missing": 4012
+    },
+    "yearly_yield_kwh": {
+     "available": 10079
+    }
+   },
+   "fronius|fr-lan-gw-0002|FR-SITE-0002": {
+    "ac_current_a": {
+     "available": 1220
+    },
+    "ac_voltage_v": {
+     "available": 1220
+    },
+    "daily_yield_kwh": {
+     "available": 10080
+    },
+    "dc_input_current_a": {
+     "available": 1220
+    },
+    "dc_input_voltage_v": {
+     "available": 1220
+    },
+    "grid_export_kw": {
+     "available": 10077,
+     "invalid": 3
+    },
+    "grid_frequency_hz": {
+     "available": 1220
+    },
+    "grid_import_kw": {
+     "available": 10077,
+     "invalid": 3
+    },
+    "household_load_kw": {
+     "available": 10079,
+     "invalid": 1
+    },
+    "inverter_ac_output_kw": {
+     "available": 7332
+    },
+    "inverter_state_raw": {
+     "available": 1220
+    },
+    "lifetime_yield_kwh": {
+     "available": 11300
+    },
+    "pv_ac_kw": {
+     "available": 6112,
+     "missing": 3968
+    },
+    "yearly_yield_kwh": {
+     "available": 10080
+    }
+   },
+   "fronius|fr-lan-gw-0003|FR-SITE-0003": {
+    "ac_current_a": {
+     "available": 2016
+    },
+    "ac_voltage_v": {
+     "available": 2016
+    },
+    "battery_charge_kw": {
+     "available": 10060
+    },
+    "battery_discharge_kw": {
+     "available": 10060
+    },
+    "battery_mode_raw": {
+     "available": 10060
+    },
+    "dc_input_current_a": {
+     "available": 2016
+    },
+    "dc_input_voltage_v": {
+     "available": 2016
+    },
+    "grid_export_kw": {
+     "available": 10060
+    },
+    "grid_frequency_hz": {
+     "available": 2016
+    },
+    "grid_import_kw": {
+     "available": 10060
+    },
+    "household_load_kw": {
+     "available": 10060
+    },
+    "inverter_ac_output_kw": {
+     "available": 12076
+    },
+    "inverter_state_raw": {
+     "available": 2016
+    },
+    "lifetime_yield_kwh": {
+     "available": 12076
+    },
+    "pv_dc_kw": {
+     "available": 10060
+    },
+    "soc_pct": {
+     "available": 10050,
+     "missing": 10
+    }
+   },
+   "huawei|hw-nbi-demo-01|NE=33554791": {
+    "daily_yield_kwh": {
+     "available": 2075
+    },
+    "grid_frequency_hz": {
+     "available": 2075
+    },
+    "inverter_ac_output_kw": {
+     "available": 2074,
+     "invalid": 1
+    },
+    "inverter_state_raw": {
+     "available": 2075
+    },
+    "inverter_temperature_c": {
+     "available": 2075
+    },
+    "lifetime_yield_kwh": {
+     "available": 2074,
+     "invalid": 1
+    },
+    "phase_voltage_v": {
+     "available": 2075
+    },
+    "pv_dc_kw": {
+     "available": 2075
+    },
+    "string_dc_current_a": {
+     "available": 4150
+    },
+    "string_dc_voltage_v": {
+     "available": 4150
+    }
+   },
+   "huawei|hw-nbi-demo-01|NE=33554792": {
+    "daily_yield_kwh": {
+     "available": 1908
+    },
+    "grid_frequency_hz": {
+     "available": 1908
+    },
+    "inverter_ac_output_kw": {
+     "available": 1905,
+     "invalid": 3
+    },
+    "inverter_state_raw": {
+     "available": 1908
+    },
+    "inverter_temperature_c": {
+     "available": 1908
+    },
+    "lifetime_yield_kwh": {
+     "available": 1908
+    },
+    "phase_voltage_v": {
+     "available": 5724
+    },
+    "pv_dc_kw": {
+     "available": 1908
+    },
+    "string_dc_current_a": {
+     "available": 3816
+    },
+    "string_dc_voltage_v": {
+     "available": 3816
+    }
+   },
+   "huawei|hw-nbi-demo-02|NE=33554850": {
+    "battery_busbar_voltage_v": {
+     "available": 2004,
+     "missing": 12
+    },
+    "battery_charge_kw": {
+     "available": 2016
+    },
+    "battery_discharge_kw": {
+     "available": 2016
+    },
+    "battery_state_raw": {
+     "available": 2016
+    },
+    "daily_battery_charge_kwh": {
+     "available": 2016
+    },
+    "daily_battery_discharge_kwh": {
+     "available": 2016
+    },
+    "daily_yield_kwh": {
+     "available": 2018
+    },
+    "grid_frequency_hz": {
+     "available": 2018
+    },
+    "inverter_ac_output_kw": {
+     "available": 2018
+    },
+    "inverter_state_raw": {
+     "available": 2018
+    },
+    "inverter_temperature_c": {
+     "available": 2018
+    },
+    "lifetime_yield_kwh": {
+     "available": 2018
+    },
+    "phase_voltage_v": {
+     "available": 6054
+    },
+    "pv_dc_kw": {
+     "available": 2018
+    },
+    "soc_pct": {
+     "available": 2015,
+     "invalid": 1
+    },
+    "string_dc_current_a": {
+     "available": 4036
+    },
+    "string_dc_voltage_v": {
+     "available": 4036
+    }
+   },
+   "solaredge|se-acct-demo-01|2718281": {
+    "dc_input_voltage_v": {
+     "available": 405,
+     "missing": 266
+    },
+    "grid_frequency_hz": {
+     "available": 671
+    },
+    "inverter_ac_output_kw": {
+     "available": 671
+    },
+    "inverter_state_raw": {
+     "available": 671
+    },
+    "inverter_temperature_c": {
+     "available": 671
+    },
+    "lifetime_yield_kwh": {
+     "available": 671
+    },
+    "phase_voltage_v": {
+     "available": 671
+    }
+   },
+   "solaredge|se-acct-demo-01|3141592": {
+    "dc_input_voltage_v": {
+     "available": 405,
+     "missing": 267
+    },
+    "grid_export_kw": {
+     "available": 672
+    },
+    "grid_frequency_hz": {
+     "available": 672
+    },
+    "grid_import_kw": {
+     "available": 672
+    },
+    "household_load_kw": {
+     "available": 672
+    },
+    "inverter_ac_output_kw": {
+     "available": 668,
+     "missing": 4
+    },
+    "inverter_state_raw": {
+     "available": 672
+    },
+    "inverter_temperature_c": {
+     "available": 672
+    },
+    "lifetime_yield_kwh": {
+     "available": 672
+    },
+    "phase_voltage_v": {
+     "available": 2016
+    },
+    "pv_production_kw": {
+     "available": 672
+    }
+   },
+   "solaredge|se-acct-demo-02|1618033": {
+    "battery_charge_kw": {
+     "available": 1248
+    },
+    "battery_discharge_kw": {
+     "available": 1248
+    },
+    "battery_state_raw": {
+     "available": 576
+    },
+    "battery_temperature_c": {
+     "available": 576
+    },
+    "dc_input_voltage_v": {
+     "available": 484,
+     "missing": 188
+    },
+    "grid_export_kw": {
+     "available": 672
+    },
+    "grid_frequency_hz": {
+     "available": 672
+    },
+    "grid_import_kw": {
+     "available": 672
+    },
+    "household_load_kw": {
+     "available": 672
+    },
+    "inverter_ac_output_kw": {
+     "available": 672
+    },
+    "inverter_state_raw": {
+     "available": 672
+    },
+    "inverter_temperature_c": {
+     "available": 672
+    },
+    "lifetime_battery_charge_kwh": {
+     "available": 576
+    },
+    "lifetime_battery_discharge_kwh": {
+     "available": 576
+    },
+    "lifetime_yield_kwh": {
+     "available": 672
+    },
+    "phase_voltage_v": {
+     "available": 672
+    },
+    "pv_production_kw": {
+     "available": 672
+    },
+    "soc_pct": {
+     "available": 1248
+    }
+   }
+  }
+ },
+ "issues": {
+  "by_code": {
+   "exact_duplicate_suppressed": 56,
+   "optional_field_absent": 26,
+   "http_access_denied": 24,
+   "stale_repeated_response": 19,
+   "required_key_missing": 5,
+   "conflicting_versions": 4,
+   "invalid_field_type": 4,
+   "unknown_field": 4,
+   "implausible_magnitude_unit_ambiguity": 3,
+   "provider_failure_rate_limited": 3,
+   "ambiguous_number": 2,
+   "unusable_time_missing": 2,
+   "gap_access_denied": 1,
+   "gap_stale_feed_repeated_response": 1,
+   "gap_trailing_gap_feed_stale": 1,
+   "http_rate_limited": 1,
+   "http_request_validation_error": 1,
+   "lifetime_counter_reset": 1,
+   "missing_required_identifier": 1,
+   "truncated_or_invalid_json": 1,
+   "unparseable_transport_line": 1,
+   "value_out_of_range": 1
+  },
+  "by_category": {
+   "access": 25,
+   "data_gap": 2,
+   "defect_repaired": 56,
+   "informational": 26,
+   "provider_failure": 3,
+   "quarantined": 5,
+   "schema_damage": 5,
+   "schema_review": 4,
+   "transport": 2,
+   "unresolved": 34
+  },
+  "by_provider": {
+   "(unparsed)": {
+    "unparseable_transport_line": 1
+   },
+   "fronius": {
+    "exact_duplicate_suppressed": 30,
+    "gap_stale_feed_repeated_response": 1,
+    "invalid_field_type": 4,
+    "optional_field_absent": 10,
+    "required_key_missing": 5,
+    "stale_repeated_response": 19,
+    "unusable_time_missing": 1
+   },
+   "huawei": {
+    "ambiguous_number": 2,
+    "conflicting_versions": 4,
+    "exact_duplicate_suppressed": 22,
+    "gap_trailing_gap_feed_stale": 1,
+    "implausible_magnitude_unit_ambiguity": 3,
+    "missing_required_identifier": 1,
+    "optional_field_absent": 12,
+    "provider_failure_rate_limited": 3,
+    "truncated_or_invalid_json": 1,
+    "value_out_of_range": 1
+   },
+   "solaredge": {
+    "exact_duplicate_suppressed": 4,
+    "gap_access_denied": 1,
+    "http_access_denied": 24,
+    "http_rate_limited": 1,
+    "http_request_validation_error": 1,
+    "lifetime_counter_reset": 1,
+    "optional_field_absent": 4,
+    "unknown_field": 4,
+    "unusable_time_missing": 1
+   }
+  },
+  "by_site": {
+   "(unbound)": {
+    "unparseable_transport_line": 1
+   },
+   "fronius|fr-lan-gw-0001|FR-SITE-0001": {
+    "exact_duplicate_suppressed": 10,
+    "required_key_missing": 5
+   },
+   "fronius|fr-lan-gw-0002|FR-SITE-0002": {
+    "invalid_field_type": 4,
+    "unusable_time_missing": 1
+   },
+   "fronius|fr-lan-gw-0003|FR-SITE-0003": {
+    "exact_duplicate_suppressed": 20,
+    "gap_stale_feed_repeated_response": 1,
+    "optional_field_absent": 10,
+    "stale_repeated_response": 19
+   },
+   "huawei|hw-nbi-demo-01|NE=33554791": {
+    "ambiguous_number": 2,
+    "exact_duplicate_suppressed": 12,
+    "missing_required_identifier": 1
+   },
+   "huawei|hw-nbi-demo-01|NE=33554792": {
+    "gap_trailing_gap_feed_stale": 1,
+    "implausible_magnitude_unit_ambiguity": 3
+   },
+   "huawei|hw-nbi-demo-02|NE=33554850": {
+    "conflicting_versions": 4,
+    "exact_duplicate_suppressed": 10,
+    "optional_field_absent": 12,
+    "provider_failure_rate_limited": 3,
+    "truncated_or_invalid_json": 1,
+    "value_out_of_range": 1
+   },
+   "solaredge|se-acct-demo-01|2718281": {
+    "unusable_time_missing": 1
+   },
+   "solaredge|se-acct-demo-01|3141592": {
+    "exact_duplicate_suppressed": 4,
+    "http_rate_limited": 1,
+    "optional_field_absent": 4,
+    "unknown_field": 4
+   },
+   "solaredge|se-acct-demo-02|1618033": {
+    "gap_access_denied": 1,
+    "http_access_denied": 24,
+    "http_request_validation_error": 1,
+    "lifetime_counter_reset": 1
+   }
+  },
+  "by_metric": {
+   "(record-level)": {
+    "exact_duplicate_suppressed": 56,
+    "gap_access_denied": 1,
+    "gap_stale_feed_repeated_response": 1,
+    "gap_trailing_gap_feed_stale": 1,
+    "http_access_denied": 24,
+    "http_rate_limited": 1,
+    "http_request_validation_error": 1,
+    "missing_required_identifier": 1,
+    "provider_failure_rate_limited": 3,
+    "stale_repeated_response": 19,
+    "truncated_or_invalid_json": 1,
+    "unknown_field": 4,
+    "unparseable_transport_line": 1,
+    "unusable_time_missing": 2
+   },
+   "battery_busbar_voltage_v": {
+    "optional_field_absent": 12
+   },
+   "grid_import_kw,grid_export_kw": {
+    "invalid_field_type": 3,
+    "required_key_missing": 5
+   },
+   "household_load_kw": {
+    "invalid_field_type": 1
+   },
+   "interval_yield_kwh": {
+    "lifetime_counter_reset": 1
+   },
+   "inverter_ac_output_kw": {
+    "ambiguous_number": 1,
+    "conflicting_versions": 2,
+    "implausible_magnitude_unit_ambiguity": 3,
+    "optional_field_absent": 4
+   },
+   "inverter_temperature_c": {
+    "conflicting_versions": 2
+   },
+   "lifetime_yield_kwh": {
+    "ambiguous_number": 1
+   },
+   "soc_pct": {
+    "optional_field_absent": 10,
+    "value_out_of_range": 1
+   }
+  },
+  "category_legend": {
+   "defect_repaired": "a delivery defect neutralised deterministically (e.g. duplicate suppressed)",
+   "quarantined": "record/delivery isolated with raw evidence; nothing invented",
+   "unresolved": "value or interval left unknown/invalid on purpose (ambiguity, conflict, reset)",
+   "schema_damage": "vendor-required key absent",
+   "schema_review": "unknown/unrouted shape",
+   "access": "access denied or authentication state",
+   "transport": "HTTP/transport state",
+   "provider_failure": "HTTP 200 carrying a provider failure envelope",
+   "data_gap": "no accepted records for longer than the cadence policy",
+   "informational": "documented legitimate state"
+  }
+ },
+ "deterministic_transformations": {
+  "routine_normalisation_note": "Routine unit scaling / sign handling of correct data; NOT defect repair.",
+  "routine_normalisation": [
+   {
+    "provider": "fronius",
+    "endpoint_key": "GetInverterRealtimeData.CommonInverterData",
+    "transform": "unit_scale",
+    "detail": "W->kW",
+    "n": 4449
+   },
+   {
+    "provider": "fronius",
+    "endpoint_key": "GetInverterRealtimeData.CommonInverterData",
+    "transform": "unit_scale",
+    "detail": "Wh->kWh",
+    "n": 4449
+   },
+   {
+    "provider": "fronius",
+    "endpoint_key": "GetPowerFlowRealtimeData",
+    "transform": "negate",
+    "detail": "frpf.P_Load",
+    "n": 20139
+   },
+   {
+    "provider": "fronius",
+    "endpoint_key": "GetPowerFlowRealtimeData",
+    "transform": "sign_split",
+    "detail": "frpf.P_Akku",
+    "n": 10060
+   },
+   {
+    "provider": "fronius",
+    "endpoint_key": "GetPowerFlowRealtimeData",
+    "transform": "sign_split",
+    "detail": "frpf.P_Grid",
+    "n": 20137
+   },
+   {
+    "provider": "fronius",
+    "endpoint_key": "GetPowerFlowRealtimeData",
+    "transform": "unit_scale",
+    "detail": "W->kW",
+    "n": 125011
+   },
+   {
+    "provider": "fronius",
+    "endpoint_key": "GetPowerFlowRealtimeData",
+    "transform": "unit_scale",
+    "detail": "Wh->kWh",
+    "n": 70537
+   },
+   {
+    "provider": "huawei",
+    "endpoint_key": "getDevHistoryKpi",
+    "transform": "sign_split",
+    "detail": "hw39.ch_discharge_power",
+    "n": 2016
+   },
+   {
+    "provider": "huawei",
+    "endpoint_key": "getDevHistoryKpi",
+    "transform": "unit_scale",
+    "detail": "W->kW",
+    "n": 4032
+   },
+   {
+    "provider": "solaredge",
+    "endpoint_key": "currentPowerFlow",
+    "transform": "edge_flow",
+    "detail": "edge_direction",
+    "n": 1348
+   },
+   {
+    "provider": "solaredge",
+    "endpoint_key": "currentPowerFlow",
+    "transform": "edge_flow",
+    "detail": "magnitude",
+    "n": 2688
+   },
+   {
+    "provider": "solaredge",
+    "endpoint_key": "currentPowerFlow",
+    "transform": "edge_flow",
+    "detail": "opposite_edge",
+    "n": 1348
+   },
+   {
+    "provider": "solaredge",
+    "endpoint_key": "currentPowerFlow",
+    "transform": "edge_flow",
+    "detail": "zero_magnitude_no_edge",
+    "n": 1336
+   },
+   {
+    "provider": "solaredge",
+    "endpoint_key": "currentPowerFlow",
+    "transform": "unit_scale",
+    "detail": "W->kW",
+    "n": 384
+   },
+   {
+    "provider": "solaredge",
+    "endpoint_key": "equipment_data",
+    "transform": "unit_scale",
+    "detail": "W->kW",
+    "n": 2011
+   },
+   {
+    "provider": "solaredge",
+    "endpoint_key": "equipment_data",
+    "transform": "unit_scale",
+    "detail": "Wh->kWh",
+    "n": 2015
+   },
+   {
+    "provider": "solaredge",
+    "endpoint_key": "storageData",
+    "transform": "sign_split",
+    "detail": "sest.power",
+    "n": 576
+   },
+   {
+    "provider": "solaredge",
+    "endpoint_key": "storageData",
+    "transform": "unit_scale",
+    "detail": "W->kW",
+    "n": 1152
+   },
+   {
+    "provider": "solaredge",
+    "endpoint_key": "storageData",
+    "transform": "unit_scale",
+    "detail": "Wh->kWh",
+    "n": 1152
+   }
+  ],
+  "format_and_metadata_normalisation": {
+   "declared_unit_change_converted": 2,
+   "numeric_string_parsed": 132,
+   "registered_mapping_version_applied": 96
+  }
+ },
+ "defect_repairs": {
+  "exact_duplicate_suppressed": 56
+ },
+ "unresolved": {
+  "ambiguous_number": 2,
+  "conflicting_versions": 4,
+  "implausible_magnitude_unit_ambiguity": 3,
+  "invalid_field_type": 4,
+  "lifetime_counter_reset": 1,
+  "stale_repeated_response": 19,
+  "value_out_of_range": 1
+ },
+ "quarantined": {
+  "missing_required_identifier": 1,
+  "truncated_or_invalid_json": 1,
+  "unparseable_transport_line": 1,
+  "unusable_time_missing": 2
+ },
+ "invalid_fields": {
+  "grid_export_kw": 3,
+  "grid_import_kw": 3,
+  "household_load_kw": 1,
+  "inverter_ac_output_kw": 4,
+  "lifetime_yield_kwh": 1,
+  "soc_pct": 1
+ },
+ "unresolved_conflicts": 8,
+ "interval_energy_by_status": {
+  "interval_battery_charge_kwh": {
+   "estimated_from_power": 10058,
+   "gap_span_total": 1,
+   "unknown_pre_midnight_remainder": 6,
+   "valid": 2583
+  },
+  "interval_battery_discharge_kwh": {
+   "estimated_from_power": 10058,
+   "gap_span_total": 1,
+   "unknown_pre_midnight_remainder": 6,
+   "valid": 2583
+  },
+  "interval_grid_export_kwh": {
+   "estimated_from_power": 21475
+  },
+  "interval_grid_import_kwh": {
+   "estimated_from_power": 21475
+  },
+  "interval_household_load_kwh": {
+   "estimated_from_power": 21478
+  },
+  "interval_yield_kwh": {
+   "daily_segment_start": 12,
+   "gap_span_total": 1,
+   "unknown_counter_reset": 1,
+   "unknown_pre_midnight_remainder": 30,
+   "valid": 64224
+  }
+ },
+ "counter_discontinuities": [
+  {
+   "site_key": "solaredge|se-acct-demo-02|1618033",
+   "endpoint_key": "equipment_data",
+   "metric_name": "interval_yield_kwh",
+   "status": "unknown_counter_reset",
+   "formula": "0.012 - 5666.19 < 0: counter reset; crossing energy unknown",
+   "start_utc": "2026-07-18T09:15:00.000Z",
+   "end_utc": "2026-07-18T09:30:00.000Z"
+  }
+ ],
+ "legitimate_local_midnight_daily_resets": 12,
+ "data_gaps": [
+  {
+   "site_key": "fronius|fr-lan-gw-0003|FR-SITE-0003",
+   "endpoint_key": "GetPowerFlowRealtimeData",
+   "device_key": "",
+   "duration_s": 1260.0,
+   "gap_class": "stale_feed_repeated_response",
+   "start_utc": "2026-07-19T13:00:01.000Z",
+   "end_utc": "2026-07-19T13:21:01.000Z"
+  },
+  {
+   "site_key": "huawei|hw-nbi-demo-01|NE=33554792",
+   "endpoint_key": "getDevHistoryKpi",
+   "device_key": "huawei|hw-nbi-demo-01|NE=33554792|1000000035351021",
+   "duration_s": 32700.0,
+   "gap_class": "trailing_gap_feed_stale",
+   "start_utc": "2026-07-21T11:55:00.000Z",
+   "end_utc": "2026-07-21T21:00:00.000Z"
+  },
+  {
+   "site_key": "solaredge|se-acct-demo-02|1618033",
+   "endpoint_key": "storageData",
+   "device_key": "solaredge|se-acct-demo-02|1618033|BAT-00A1B2C3",
+   "duration_s": 87300.0,
+   "gap_class": "access_denied",
+   "start_utc": "2026-07-18T20:45:00.000Z",
+   "end_utc": "2026-07-19T21:00:00.000Z"
+  }
+ ],
+ "access_and_transport_issues": [
+  {
+   "site_key": "huawei|hw-nbi-demo-02|NE=33554850",
+   "endpoint_key": "getDevHistoryKpi",
+   "status_class": "rate_limited",
+   "http_status": 200,
+   "n": 3,
+   "detail": "ACCESS_FREQUENCY_IS_TOO_HIGH",
+   "first_window_start_utc": null,
+   "last_window_end_utc": null
+  },
+  {
+   "site_key": "solaredge|se-acct-demo-01|3141592",
+   "endpoint_key": "equipment_data",
+   "status_class": "rate_limited",
+   "http_status": 429,
+   "n": 1,
+   "detail": "synthetic: too many requests",
+   "first_window_start_utc": "2026-07-16T05:00:00.000Z",
+   "last_window_end_utc": "2026-07-16T06:00:00.000Z"
+  },
+  {
+   "site_key": "solaredge|se-acct-demo-02|1618033",
+   "endpoint_key": "storageData",
+   "status_class": "access_denied",
+   "http_status": 403,
+   "n": 24,
+   "detail": "synthetic: forbidden for this API key / site scope",
+   "first_window_start_utc": "2026-07-18T21:00:00.000Z",
+   "last_window_end_utc": "2026-07-19T21:00:00.000Z"
+  },
+  {
+   "site_key": "solaredge|se-acct-demo-02|1618033",
+   "endpoint_key": "storageData",
+   "status_class": "request_validation_error",
+   "http_status": 400,
+   "n": 1,
+   "detail": "synthetic: invalid time range (endTime before startTime)",
+   "first_window_start_utc": "2026-07-20T00:00:00.000Z",
+   "last_window_end_utc": "2026-07-19T23:00:00.000Z"
+  }
+ ],
+ "source_health": [
+  {
+   "site_key": "fronius|fr-lan-gw-0001|FR-SITE-0001",
+   "endpoint_key": "GetInverterRealtimeData.CommonInverterData",
+   "device_key": "fronius|fr-lan-gw-0001|FR-SITE-0001|1",
+   "provider": "fronius",
+   "variant": "snapinverter",
+   "n_records": 1213,
+   "cadence_s": 300,
+   "latest_source_age_s": 298.0,
+   "stale_threshold_s": 930.0,
+   "freshness_status": "fresh_documented_unavailable",
+   "late_arrivals": 0,
+   "historical_gaps": 0,
+   "access_status": "granted",
+   "notes": "realtime endpoint: response/capture time is the time anchor, not a sensor time",
+   "first_source_utc": "2026-07-15T03:10:02.000Z",
+   "latest_source_utc": "2026-07-21T17:30:02.000Z",
+   "latest_received_utc": "2026-07-21T17:30:05.194Z",
+   "as_of_utc": "2026-07-21T21:00:00.000Z",
+   "events": {
+    "device_not_available": 803
+   }
+  },
+  {
+   "site_key": "fronius|fr-lan-gw-0001|FR-SITE-0001",
+   "endpoint_key": "GetPowerFlowRealtimeData",
+   "device_key": "",
+   "provider": "fronius",
+   "variant": "snapinverter",
+   "n_records": 10079,
+   "cadence_s": 60,
+   "latest_source_age_s": 59.0,
+   "stale_threshold_s": 210.0,
+   "freshness_status": "fresh",
+   "late_arrivals": 0,
+   "historical_gaps": 0,
+   "access_status": "granted",
+   "notes": "realtime endpoint: response/capture time is the time anchor, not a sensor time",
+   "first_source_utc": "2026-07-14T21:00:01.000Z",
+   "latest_source_utc": "2026-07-21T20:59:01.000Z",
+   "latest_received_utc": "2026-07-21T20:59:01.798Z",
+   "as_of_utc": "2026-07-21T21:00:00.000Z",
+   "events": {}
+  },
+  {
+   "site_key": "fronius|fr-lan-gw-0002|FR-SITE-0002",
+   "endpoint_key": "GetInverterRealtimeData.CommonInverterData",
+   "device_key": "fronius|fr-lan-gw-0002|FR-SITE-0002|1",
+   "provider": "fronius",
+   "variant": "snapinverter",
+   "n_records": 1220,
+   "cadence_s": 300,
+   "latest_source_age_s": 298.0,
+   "stale_threshold_s": 930.0,
+   "freshness_status": "fresh_documented_unavailable",
+   "late_arrivals": 0,
+   "historical_gaps": 0,
+   "access_status": "granted",
+   "notes": "realtime endpoint: response/capture time is the time anchor, not a sensor time",
+   "first_source_utc": "2026-07-15T03:05:02.000Z",
+   "latest_source_utc": "2026-07-21T17:30:02.000Z",
+   "latest_received_utc": "2026-07-21T17:30:04.449Z",
+   "as_of_utc": "2026-07-21T21:00:00.000Z",
+   "events": {
+    "device_not_available": 795
+   }
+  },
+  {
+   "site_key": "fronius|fr-lan-gw-0002|FR-SITE-0002",
+   "endpoint_key": "GetPowerFlowRealtimeData",
+   "device_key": "",
+   "provider": "fronius",
+   "variant": "snapinverter",
+   "n_records": 10080,
+   "cadence_s": 60,
+   "latest_source_age_s": 59.0,
+   "stale_threshold_s": 210.0,
+   "freshness_status": "fresh",
+   "late_arrivals": 60,
+   "historical_gaps": 0,
+   "access_status": "granted",
+   "notes": "realtime endpoint: response/capture time is the time anchor, not a sensor time",
+   "first_source_utc": "2026-07-14T21:00:01.000Z",
+   "latest_source_utc": "2026-07-21T20:59:01.000Z",
+   "latest_received_utc": "2026-07-21T20:59:02.922Z",
+   "as_of_utc": "2026-07-21T21:00:00.000Z",
+   "events": {}
+  },
+  {
+   "site_key": "fronius|fr-lan-gw-0003|FR-SITE-0003",
+   "endpoint_key": "GetInverterRealtimeData.CommonInverterData",
+   "device_key": "fronius|fr-lan-gw-0003|FR-SITE-0003|1",
+   "provider": "fronius",
+   "variant": "gen24_hybrid",
+   "n_records": 2016,
+   "cadence_s": 300,
+   "latest_source_age_s": 298.0,
+   "stale_threshold_s": 930.0,
+   "freshness_status": "fresh",
+   "late_arrivals": 0,
+   "historical_gaps": 0,
+   "access_status": "granted",
+   "notes": "realtime endpoint: response/capture time is the time anchor, not a sensor time",
+   "first_source_utc": "2026-07-14T21:00:02.000Z",
+   "latest_source_utc": "2026-07-21T20:55:02.000Z",
+   "latest_received_utc": "2026-07-21T20:55:05.027Z",
+   "as_of_utc": "2026-07-21T21:00:00.000Z",
+   "events": {}
+  },
+  {
+   "site_key": "fronius|fr-lan-gw-0003|FR-SITE-0003",
+   "endpoint_key": "GetPowerFlowRealtimeData",
+   "device_key": "",
+   "provider": "fronius",
+   "variant": "gen24_hybrid",
+   "n_records": 10060,
+   "cadence_s": 60,
+   "latest_source_age_s": 59.0,
+   "stale_threshold_s": 210.0,
+   "freshness_status": "fresh",
+   "late_arrivals": 0,
+   "historical_gaps": 1,
+   "access_status": "granted",
+   "notes": "realtime endpoint: response/capture time is the time anchor, not a sensor time",
+   "first_source_utc": "2026-07-14T21:00:01.000Z",
+   "latest_source_utc": "2026-07-21T20:59:01.000Z",
+   "latest_received_utc": "2026-07-21T20:59:02.734Z",
+   "as_of_utc": "2026-07-21T21:00:00.000Z",
+   "events": {}
+  },
+  {
+   "site_key": "huawei|hw-nbi-demo-01|NE=33554791",
+   "endpoint_key": "getDevHistoryKpi",
+   "device_key": "huawei|hw-nbi-demo-01|NE=33554791|1000000035350464",
+   "provider": "huawei",
+   "variant": "residential_inverter_dt38",
+   "n_records": 2015,
+   "cadence_s": 300,
+   "latest_source_age_s": 300.0,
+   "stale_threshold_s": 2100.0,
+   "freshness_status": "fresh",
+   "late_arrivals": 336,
+   "historical_gaps": 0,
+   "access_status": "granted",
+   "notes": null,
+   "first_source_utc": "2026-07-14T21:00:00.000Z",
+   "latest_source_utc": "2026-07-21T20:55:00.000Z",
+   "latest_received_utc": "2026-07-21T21:05:40.953Z",
+   "as_of_utc": "2026-07-21T21:00:00.000Z",
+   "events": {}
+  },
+  {
+   "site_key": "huawei|hw-nbi-demo-01|NE=33554791",
+   "endpoint_key": "getDevRealKpi",
+   "device_key": "huawei|hw-nbi-demo-01|NE=33554791|1000000035350464",
+   "provider": "huawei",
+   "variant": "residential_inverter_dt38_realtime",
+   "n_records": 60,
+   "cadence_s": 900,
+   "latest_source_age_s": 530096.65,
+   "stale_threshold_s": 2760.0,
+   "freshness_status": "not_continuously_polled",
+   "late_arrivals": 0,
+   "historical_gaps": 0,
+   "access_status": "granted",
+   "notes": "realtime endpoint: response/capture time is the time anchor, not a sensor time",
+   "first_source_utc": "2026-07-15T03:00:04.949Z",
+   "latest_source_utc": "2026-07-15T17:45:03.350Z",
+   "latest_received_utc": "2026-07-15T17:45:09.833Z",
+   "as_of_utc": "2026-07-21T21:00:00.000Z",
+   "events": {}
+  },
+  {
+   "site_key": "huawei|hw-nbi-demo-01|NE=33554792",
+   "endpoint_key": "getDevHistoryKpi",
+   "device_key": "huawei|hw-nbi-demo-01|NE=33554792|1000000035351021",
+   "provider": "huawei",
+   "variant": "residential_inverter_dt38",
+   "n_records": 1908,
+   "cadence_s": 300,
+   "latest_source_age_s": 32700.0,
+   "stale_threshold_s": 2100.0,
+   "freshness_status": "stale",
+   "late_arrivals": 318,
+   "historical_gaps": 1,
+   "access_status": "granted",
+   "notes": null,
+   "first_source_utc": "2026-07-14T21:00:00.000Z",
+   "latest_source_utc": "2026-07-21T11:55:00.000Z",
+   "latest_received_utc": "2026-07-21T12:06:19.261Z",
+   "as_of_utc": "2026-07-21T21:00:00.000Z",
+   "events": {}
+  },
+  {
+   "site_key": "huawei|hw-nbi-demo-02|NE=33554850",
+   "endpoint_key": "getDevHistoryKpi",
+   "device_key": "huawei|hw-nbi-demo-02|NE=33554850|18000000036112209",
+   "provider": "huawei",
+   "variant": "residential_inverter_dt38",
+   "n_records": 2018,
+   "cadence_s": 300,
+   "latest_source_age_s": 300.0,
+   "stale_threshold_s": 2100.0,
+   "freshness_status": "fresh",
+   "late_arrivals": 340,
+   "historical_gaps": 0,
+   "access_status": "granted",
+   "notes": null,
+   "first_source_utc": "2026-07-14T21:00:00.000Z",
+   "latest_source_utc": "2026-07-21T20:55:00.000Z",
+   "latest_received_utc": "2026-07-21T21:05:18.987Z",
+   "as_of_utc": "2026-07-21T21:00:00.000Z",
+   "events": {
+    "rate_limited": 3
+   }
+  },
+  {
+   "site_key": "huawei|hw-nbi-demo-02|NE=33554850",
+   "endpoint_key": "getDevHistoryKpi",
+   "device_key": "huawei|hw-nbi-demo-02|NE=33554850|18000000036112210",
+   "provider": "huawei",
+   "variant": "residential_battery_dt39",
+   "n_records": 2016,
+   "cadence_s": 300,
+   "latest_source_age_s": 300.0,
+   "stale_threshold_s": 2100.0,
+   "freshness_status": "fresh",
+   "late_arrivals": 366,
+   "historical_gaps": 0,
+   "access_status": "granted",
+   "notes": null,
+   "first_source_utc": "2026-07-14T21:00:00.000Z",
+   "latest_source_utc": "2026-07-21T20:55:00.000Z",
+   "latest_received_utc": "2026-07-21T21:06:06.555Z",
+   "as_of_utc": "2026-07-21T21:00:00.000Z",
+   "events": {
+    "rate_limited": 3
+   }
+  },
+  {
+   "site_key": "solaredge|se-acct-demo-01|2718281",
+   "endpoint_key": "currentPowerFlow",
+   "device_key": "",
+   "provider": "solaredge",
+   "variant": null,
+   "n_records": 0,
+   "cadence_s": null,
+   "latest_source_age_s": null,
+   "stale_threshold_s": null,
+   "freshness_status": "capability_unsupported",
+   "late_arrivals": 0,
+   "historical_gaps": 0,
+   "access_status": "capability_unsupported",
+   "notes": "no accepted records; see events",
+   "first_source_utc": null,
+   "latest_source_utc": null,
+   "latest_received_utc": null,
+   "as_of_utc": "2026-07-21T21:00:00.000Z",
+   "events": {
+    "unsupported": 672
+   }
+  },
+  {
+   "site_key": "solaredge|se-acct-demo-01|2718281",
+   "endpoint_key": "equipment_data",
+   "device_key": "solaredge|se-acct-demo-01|2718281|7E0412A3-6B",
+   "provider": "solaredge",
+   "variant": "inverter_technical_data",
+   "n_records": 671,
+   "cadence_s": 900,
+   "latest_source_age_s": 900.0,
+   "stale_threshold_s": 4500.0,
+   "freshness_status": "fresh",
+   "late_arrivals": 180,
+   "historical_gaps": 0,
+   "access_status": "granted",
+   "notes": null,
+   "first_source_utc": "2026-07-14T21:00:00.000Z",
+   "latest_source_utc": "2026-07-21T20:45:00.000Z",
+   "latest_received_utc": "2026-07-21T21:03:53.723Z",
+   "as_of_utc": "2026-07-21T21:00:00.000Z",
+   "events": {
+    "empty_window": 4
+   }
+  },
+  {
+   "site_key": "solaredge|se-acct-demo-01|3141592",
+   "endpoint_key": "currentPowerFlow",
+   "device_key": "",
+   "provider": "solaredge",
+   "variant": "site_power_flow",
+   "n_records": 672,
+   "cadence_s": 900,
+   "latest_source_age_s": 897.4,
+   "stale_threshold_s": 2820.0,
+   "freshness_status": "fresh",
+   "late_arrivals": 0,
+   "historical_gaps": 0,
+   "access_status": "granted",
+   "notes": "realtime endpoint: response/capture time is the time anchor, not a sensor time",
+   "first_source_utc": "2026-07-14T21:00:02.653Z",
+   "latest_source_utc": "2026-07-21T20:45:02.600Z",
+   "latest_received_utc": "2026-07-21T20:45:42.065Z",
+   "as_of_utc": "2026-07-21T21:00:00.000Z",
+   "events": {}
+  },
+  {
+   "site_key": "solaredge|se-acct-demo-01|3141592",
+   "endpoint_key": "equipment_data",
+   "device_key": "solaredge|se-acct-demo-01|3141592|0071F2A3-9C",
+   "provider": "solaredge",
+   "variant": "inverter_technical_data",
+   "n_records": 672,
+   "cadence_s": 900,
+   "latest_source_age_s": 900.0,
+   "stale_threshold_s": 4500.0,
+   "freshness_status": "fresh",
+   "late_arrivals": 168,
+   "historical_gaps": 0,
+   "access_status": "granted",
+   "notes": null,
+   "first_source_utc": "2026-07-14T21:00:00.000Z",
+   "latest_source_utc": "2026-07-21T20:45:00.000Z",
+   "latest_received_utc": "2026-07-21T21:03:56.895Z",
+   "as_of_utc": "2026-07-21T21:00:00.000Z",
+   "events": {
+    "rate_limited": 1
+   }
+  },
+  {
+   "site_key": "solaredge|se-acct-demo-02|1618033",
+   "endpoint_key": "currentPowerFlow",
+   "device_key": "",
+   "provider": "solaredge",
+   "variant": "site_power_flow",
+   "n_records": 672,
+   "cadence_s": 900,
+   "latest_source_age_s": 898.5,
+   "stale_threshold_s": 2820.0,
+   "freshness_status": "fresh",
+   "late_arrivals": 0,
+   "historical_gaps": 0,
+   "access_status": "granted",
+   "notes": "realtime endpoint: response/capture time is the time anchor, not a sensor time",
+   "first_source_utc": "2026-07-14T21:00:05.421Z",
+   "latest_source_utc": "2026-07-21T20:45:01.500Z",
+   "latest_received_utc": "2026-07-21T20:45:37.996Z",
+   "as_of_utc": "2026-07-21T21:00:00.000Z",
+   "events": {}
+  },
+  {
+   "site_key": "solaredge|se-acct-demo-02|1618033",
+   "endpoint_key": "equipment_data",
+   "device_key": "solaredge|se-acct-demo-02|1618033|7F11C0DE-21",
+   "provider": "solaredge",
+   "variant": "inverter_technical_data",
+   "n_records": 672,
+   "cadence_s": 900,
+   "latest_source_age_s": 900.0,
+   "stale_threshold_s": 4500.0,
+   "freshness_status": "fresh",
+   "late_arrivals": 168,
+   "historical_gaps": 0,
+   "access_status": "granted",
+   "notes": null,
+   "first_source_utc": "2026-07-14T21:00:00.000Z",
+   "latest_source_utc": "2026-07-21T20:45:00.000Z",
+   "latest_received_utc": "2026-07-21T21:03:43.777Z",
+   "as_of_utc": "2026-07-21T21:00:00.000Z",
+   "events": {}
+  },
+  {
+   "site_key": "solaredge|se-acct-demo-02|1618033",
+   "endpoint_key": "storageData",
+   "device_key": "solaredge|se-acct-demo-02|1618033|BAT-00A1B2C3",
+   "provider": "solaredge",
+   "variant": "storage_information",
+   "n_records": 576,
+   "cadence_s": 900,
+   "latest_source_age_s": 900.0,
+   "stale_threshold_s": 4500.0,
+   "freshness_status": "fresh",
+   "late_arrivals": 144,
+   "historical_gaps": 1,
+   "access_status": "access_denied_windows",
+   "notes": null,
+   "first_source_utc": "2026-07-14T21:00:00.000Z",
+   "latest_source_utc": "2026-07-21T20:45:00.000Z",
+   "latest_received_utc": "2026-07-21T21:03:33.701Z",
+   "as_of_utc": "2026-07-21T21:00:00.000Z",
+   "events": {
+    "access_denied": 24,
+    "request_validation_error": 1
+   }
+  }
+ ],
+ "capability_coverage": {
+  "declared_states": [
+   {
+    "site_key": "fronius|fr-lan-gw-0001|FR-SITE-0001",
+    "endpoint_key": "GetPowerFlowRealtimeData",
+    "metric_name": "battery_charge_kw",
+    "channel": "",
+    "state": "not_installed",
+    "reason": "site capability battery=not_installed",
+    "n_records": 10079
+   },
+   {
+    "site_key": "fronius|fr-lan-gw-0001|FR-SITE-0001",
+    "endpoint_key": "GetPowerFlowRealtimeData",
+    "metric_name": "battery_discharge_kw",
+    "channel": "",
+    "state": "not_installed",
+    "reason": "site capability battery=not_installed",
+    "n_records": 10079
+   },
+   {
+    "site_key": "fronius|fr-lan-gw-0001|FR-SITE-0001",
+    "endpoint_key": "GetPowerFlowRealtimeData",
+    "metric_name": "grid_export_kw",
+    "channel": "",
+    "state": "not_installed",
+    "reason": "site capability grid_meter=not_installed",
+    "n_records": 10079
+   },
+   {
+    "site_key": "fronius|fr-lan-gw-0001|FR-SITE-0001",
+    "endpoint_key": "GetPowerFlowRealtimeData",
+    "metric_name": "grid_import_kw",
+    "channel": "",
+    "state": "not_installed",
+    "reason": "site capability grid_meter=not_installed",
+    "n_records": 10079
+   },
+   {
+    "site_key": "fronius|fr-lan-gw-0001|FR-SITE-0001",
+    "endpoint_key": "GetPowerFlowRealtimeData",
+    "metric_name": "household_load_kw",
+    "channel": "",
+    "state": "not_installed",
+    "reason": "site capability grid_meter=not_installed",
+    "n_records": 10079
+   },
+   {
+    "site_key": "fronius|fr-lan-gw-0002|FR-SITE-0002",
+    "endpoint_key": "GetPowerFlowRealtimeData",
+    "metric_name": "battery_charge_kw",
+    "channel": "",
+    "state": "not_installed",
+    "reason": "site capability battery=not_installed",
+    "n_records": 10080
+   },
+   {
+    "site_key": "fronius|fr-lan-gw-0002|FR-SITE-0002",
+    "endpoint_key": "GetPowerFlowRealtimeData",
+    "metric_name": "battery_discharge_kw",
+    "channel": "",
+    "state": "not_installed",
+    "reason": "site capability battery=not_installed",
+    "n_records": 10080
+   },
+   {
+    "site_key": "fronius|fr-lan-gw-0003|FR-SITE-0003",
+    "endpoint_key": "GetPowerFlowRealtimeData",
+    "metric_name": "daily_yield_kwh",
+    "channel": "",
+    "state": "unsupported",
+    "reason": "documented model behaviour: field is null on this model family",
+    "n_records": 10060
+   },
+   {
+    "site_key": "fronius|fr-lan-gw-0003|FR-SITE-0003",
+    "endpoint_key": "GetPowerFlowRealtimeData",
+    "metric_name": "yearly_yield_kwh",
+    "channel": "",
+    "state": "unsupported",
+    "reason": "documented model behaviour: field is null on this model family",
+    "n_records": 10060
+   },
+   {
+    "site_key": "huawei|hw-nbi-demo-01|NE=33554791",
+    "endpoint_key": "getDevHistoryKpi",
+    "metric_name": "phase_voltage_v",
+    "channel": "L2",
+    "state": "not_installed",
+    "reason": "not applicable to this device (applies_if)",
+    "n_records": 2015
+   },
+   {
+    "site_key": "huawei|hw-nbi-demo-01|NE=33554791",
+    "endpoint_key": "getDevHistoryKpi",
+    "metric_name": "phase_voltage_v",
+    "channel": "L3",
+    "state": "not_installed",
+    "reason": "not applicable to this device (applies_if)",
+    "n_records": 2015
+   },
+   {
+    "site_key": "huawei|hw-nbi-demo-01|NE=33554791",
+    "endpoint_key": "getDevRealKpi",
+    "metric_name": "phase_voltage_v",
+    "channel": "L2",
+    "state": "not_installed",
+    "reason": "not applicable to this device (applies_if)",
+    "n_records": 60
+   },
+   {
+    "site_key": "huawei|hw-nbi-demo-01|NE=33554791",
+    "endpoint_key": "getDevRealKpi",
+    "metric_name": "phase_voltage_v",
+    "channel": "L3",
+    "state": "not_installed",
+    "reason": "not applicable to this device (applies_if)",
+    "n_records": 60
+   },
+   {
+    "site_key": "solaredge|se-acct-demo-01|2718281",
+    "endpoint_key": "currentPowerFlow",
+    "metric_name": "battery_charge_kw",
+    "channel": "",
+    "state": "unsupported",
+    "reason": "R7: an unsupported site returns an empty object; NOT a zero-load home",
+    "n_records": 672
+   },
+   {
+    "site_key": "solaredge|se-acct-demo-01|2718281",
+    "endpoint_key": "currentPowerFlow",
+    "metric_name": "battery_discharge_kw",
+    "channel": "",
+    "state": "unsupported",
+    "reason": "R7: an unsupported site returns an empty object; NOT a zero-load home",
+    "n_records": 672
+   },
+   {
+    "site_key": "solaredge|se-acct-demo-01|2718281",
+    "endpoint_key": "currentPowerFlow",
+    "metric_name": "grid_export_kw",
+    "channel": "",
+    "state": "unsupported",
+    "reason": "R7: an unsupported site returns an empty object; NOT a zero-load home",
+    "n_records": 672
+   },
+   {
+    "site_key": "solaredge|se-acct-demo-01|2718281",
+    "endpoint_key": "currentPowerFlow",
+    "metric_name": "grid_import_kw",
+    "channel": "",
+    "state": "unsupported",
+    "reason": "R7: an unsupported site returns an empty object; NOT a zero-load home",
+    "n_records": 672
+   },
+   {
+    "site_key": "solaredge|se-acct-demo-01|2718281",
+    "endpoint_key": "currentPowerFlow",
+    "metric_name": "household_load_kw",
+    "channel": "",
+    "state": "unsupported",
+    "reason": "R7: an unsupported site returns an empty object; NOT a zero-load home",
+    "n_records": 672
+   },
+   {
+    "site_key": "solaredge|se-acct-demo-01|2718281",
+    "endpoint_key": "currentPowerFlow",
+    "metric_name": "pv_production_kw",
+    "channel": "",
+    "state": "unsupported",
+    "reason": "R7: an unsupported site returns an empty object; NOT a zero-load home",
+    "n_records": 672
+   },
+   {
+    "site_key": "solaredge|se-acct-demo-01|2718281",
+    "endpoint_key": "currentPowerFlow",
+    "metric_name": "soc_pct",
+    "channel": "",
+    "state": "unsupported",
+    "reason": "R7: an unsupported site returns an empty object; NOT a zero-load home",
+    "n_records": 672
+   },
+   {
+    "site_key": "solaredge|se-acct-demo-01|2718281",
+    "endpoint_key": "equipment_data",
+    "metric_name": "phase_voltage_v",
+    "channel": "L2",
+    "state": "not_installed",
+    "reason": "not applicable to this device (applies_if)",
+    "n_records": 671
+   },
+   {
+    "site_key": "solaredge|se-acct-demo-01|2718281",
+    "endpoint_key": "equipment_data",
+    "metric_name": "phase_voltage_v",
+    "channel": "L3",
+    "state": "not_installed",
+    "reason": "not applicable to this device (applies_if)",
+    "n_records": 671
+   },
+   {
+    "site_key": "solaredge|se-acct-demo-01|3141592",
+    "endpoint_key": "currentPowerFlow",
+    "metric_name": "battery_charge_kw",
+    "channel": "",
+    "state": "not_installed",
+    "reason": "site capability battery=not_installed",
+    "n_records": 672
+   },
+   {
+    "site_key": "solaredge|se-acct-demo-01|3141592",
+    "endpoint_key": "currentPowerFlow",
+    "metric_name": "battery_discharge_kw",
+    "channel": "",
+    "state": "not_installed",
+    "reason": "site capability battery=not_installed",
+    "n_records": 672
+   },
+   {
+    "site_key": "solaredge|se-acct-demo-01|3141592",
+    "endpoint_key": "currentPowerFlow",
+    "metric_name": "soc_pct",
+    "channel": "",
+    "state": "not_installed",
+    "reason": "site capability battery=not_installed",
+    "n_records": 672
+   },
+   {
+    "site_key": "solaredge|se-acct-demo-02|1618033",
+    "endpoint_key": "equipment_data",
+    "metric_name": "phase_voltage_v",
+    "channel": "L2",
+    "state": "not_installed",
+    "reason": "not applicable to this device (applies_if)",
+    "n_records": 672
+   },
+   {
+    "site_key": "solaredge|se-acct-demo-02|1618033",
+    "endpoint_key": "equipment_data",
+    "metric_name": "phase_voltage_v",
+    "channel": "L3",
+    "state": "not_installed",
+    "reason": "not applicable to this device (applies_if)",
+    "n_records": 672
+   }
+  ],
+  "observed": [
+   {
+    "site_key": "fronius|fr-lan-gw-0001|FR-SITE-0001",
+    "metric_name": "ac_current_a",
+    "n_obs": 1213,
+    "n_available": 1213
+   },
+   {
+    "site_key": "fronius|fr-lan-gw-0001|FR-SITE-0001",
+    "metric_name": "ac_voltage_v",
+    "n_obs": 1213,
+    "n_available": 1213
+   },
+   {
+    "site_key": "fronius|fr-lan-gw-0001|FR-SITE-0001",
+    "metric_name": "daily_yield_kwh",
+    "n_obs": 10079,
+    "n_available": 10079
+   },
+   {
+    "site_key": "fronius|fr-lan-gw-0001|FR-SITE-0001",
+    "metric_name": "dc_input_current_a",
+    "n_obs": 1213,
+    "n_available": 1213
+   },
+   {
+    "site_key": "fronius|fr-lan-gw-0001|FR-SITE-0001",
+    "metric_name": "dc_input_voltage_v",
+    "n_obs": 1213,
+    "n_available": 1213
+   },
+   {
+    "site_key": "fronius|fr-lan-gw-0001|FR-SITE-0001",
+    "metric_name": "grid_frequency_hz",
+    "n_obs": 1213,
+    "n_available": 1213
+   },
+   {
+    "site_key": "fronius|fr-lan-gw-0001|FR-SITE-0001",
+    "metric_name": "inverter_ac_output_kw",
+    "n_obs": 7280,
+    "n_available": 7280
+   },
+   {
+    "site_key": "fronius|fr-lan-gw-0001|FR-SITE-0001",
+    "metric_name": "inverter_state_raw",
+    "n_obs": 1213,
+    "n_available": 1213
+   },
+   {
+    "site_key": "fronius|fr-lan-gw-0001|FR-SITE-0001",
+    "metric_name": "lifetime_yield_kwh",
+    "n_obs": 11292,
+    "n_available": 11292
+   },
+   {
+    "site_key": "fronius|fr-lan-gw-0001|FR-SITE-0001",
+    "metric_name": "pv_ac_kw",
+    "n_obs": 10079,
+    "n_available": 6067
+   },
+   {
+    "site_key": "fronius|fr-lan-gw-0001|FR-SITE-0001",
+    "metric_name": "yearly_yield_kwh",
+    "n_obs": 10079,
+    "n_available": 10079
+   },
+   {
+    "site_key": "fronius|fr-lan-gw-0002|FR-SITE-0002",
+    "metric_name": "ac_current_a",
+    "n_obs": 1220,
+    "n_available": 1220
+   },
+   {
+    "site_key": "fronius|fr-lan-gw-0002|FR-SITE-0002",
+    "metric_name": "ac_voltage_v",
+    "n_obs": 1220,
+    "n_available": 1220
+   },
+   {
+    "site_key": "fronius|fr-lan-gw-0002|FR-SITE-0002",
+    "metric_name": "daily_yield_kwh",
+    "n_obs": 10080,
+    "n_available": 10080
+   },
+   {
+    "site_key": "fronius|fr-lan-gw-0002|FR-SITE-0002",
+    "metric_name": "dc_input_current_a",
+    "n_obs": 1220,
+    "n_available": 1220
+   },
+   {
+    "site_key": "fronius|fr-lan-gw-0002|FR-SITE-0002",
+    "metric_name": "dc_input_voltage_v",
+    "n_obs": 1220,
+    "n_available": 1220
+   },
+   {
+    "site_key": "fronius|fr-lan-gw-0002|FR-SITE-0002",
+    "metric_name": "grid_export_kw",
+    "n_obs": 10080,
+    "n_available": 10077
+   },
+   {
+    "site_key": "fronius|fr-lan-gw-0002|FR-SITE-0002",
+    "metric_name": "grid_frequency_hz",
+    "n_obs": 1220,
+    "n_available": 1220
+   },
+   {
+    "site_key": "fronius|fr-lan-gw-0002|FR-SITE-0002",
+    "metric_name": "grid_import_kw",
+    "n_obs": 10080,
+    "n_available": 10077
+   },
+   {
+    "site_key": "fronius|fr-lan-gw-0002|FR-SITE-0002",
+    "metric_name": "household_load_kw",
+    "n_obs": 10080,
+    "n_available": 10079
+   },
+   {
+    "site_key": "fronius|fr-lan-gw-0002|FR-SITE-0002",
+    "metric_name": "inverter_ac_output_kw",
+    "n_obs": 7332,
+    "n_available": 7332
+   },
+   {
+    "site_key": "fronius|fr-lan-gw-0002|FR-SITE-0002",
+    "metric_name": "inverter_state_raw",
+    "n_obs": 1220,
+    "n_available": 1220
+   },
+   {
+    "site_key": "fronius|fr-lan-gw-0002|FR-SITE-0002",
+    "metric_name": "lifetime_yield_kwh",
+    "n_obs": 11300,
+    "n_available": 11300
+   },
+   {
+    "site_key": "fronius|fr-lan-gw-0002|FR-SITE-0002",
+    "metric_name": "pv_ac_kw",
+    "n_obs": 10080,
+    "n_available": 6112
+   },
+   {
+    "site_key": "fronius|fr-lan-gw-0002|FR-SITE-0002",
+    "metric_name": "yearly_yield_kwh",
+    "n_obs": 10080,
+    "n_available": 10080
+   },
+   {
+    "site_key": "fronius|fr-lan-gw-0003|FR-SITE-0003",
+    "metric_name": "ac_current_a",
+    "n_obs": 2016,
+    "n_available": 2016
+   },
+   {
+    "site_key": "fronius|fr-lan-gw-0003|FR-SITE-0003",
+    "metric_name": "ac_voltage_v",
+    "n_obs": 2016,
+    "n_available": 2016
+   },
+   {
+    "site_key": "fronius|fr-lan-gw-0003|FR-SITE-0003",
+    "metric_name": "battery_charge_kw",
+    "n_obs": 10060,
+    "n_available": 10060
+   },
+   {
+    "site_key": "fronius|fr-lan-gw-0003|FR-SITE-0003",
+    "metric_name": "battery_discharge_kw",
+    "n_obs": 10060,
+    "n_available": 10060
+   },
+   {
+    "site_key": "fronius|fr-lan-gw-0003|FR-SITE-0003",
+    "metric_name": "battery_mode_raw",
+    "n_obs": 10060,
+    "n_available": 10060
+   },
+   {
+    "site_key": "fronius|fr-lan-gw-0003|FR-SITE-0003",
+    "metric_name": "dc_input_current_a",
+    "n_obs": 2016,
+    "n_available": 2016
+   },
+   {
+    "site_key": "fronius|fr-lan-gw-0003|FR-SITE-0003",
+    "metric_name": "dc_input_voltage_v",
+    "n_obs": 2016,
+    "n_available": 2016
+   },
+   {
+    "site_key": "fronius|fr-lan-gw-0003|FR-SITE-0003",
+    "metric_name": "grid_export_kw",
+    "n_obs": 10060,
+    "n_available": 10060
+   },
+   {
+    "site_key": "fronius|fr-lan-gw-0003|FR-SITE-0003",
+    "metric_name": "grid_frequency_hz",
+    "n_obs": 2016,
+    "n_available": 2016
+   },
+   {
+    "site_key": "fronius|fr-lan-gw-0003|FR-SITE-0003",
+    "metric_name": "grid_import_kw",
+    "n_obs": 10060,
+    "n_available": 10060
+   },
+   {
+    "site_key": "fronius|fr-lan-gw-0003|FR-SITE-0003",
+    "metric_name": "household_load_kw",
+    "n_obs": 10060,
+    "n_available": 10060
+   },
+   {
+    "site_key": "fronius|fr-lan-gw-0003|FR-SITE-0003",
+    "metric_name": "inverter_ac_output_kw",
+    "n_obs": 12076,
+    "n_available": 12076
+   },
+   {
+    "site_key": "fronius|fr-lan-gw-0003|FR-SITE-0003",
+    "metric_name": "inverter_state_raw",
+    "n_obs": 2016,
+    "n_available": 2016
+   },
+   {
+    "site_key": "fronius|fr-lan-gw-0003|FR-SITE-0003",
+    "metric_name": "lifetime_yield_kwh",
+    "n_obs": 12076,
+    "n_available": 12076
+   },
+   {
+    "site_key": "fronius|fr-lan-gw-0003|FR-SITE-0003",
+    "metric_name": "pv_dc_kw",
+    "n_obs": 10060,
+    "n_available": 10060
+   },
+   {
+    "site_key": "fronius|fr-lan-gw-0003|FR-SITE-0003",
+    "metric_name": "soc_pct",
+    "n_obs": 10060,
+    "n_available": 10050
+   },
+   {
+    "site_key": "huawei|hw-nbi-demo-01|NE=33554791",
+    "metric_name": "daily_yield_kwh",
+    "n_obs": 2075,
+    "n_available": 2075
+   },
+   {
+    "site_key": "huawei|hw-nbi-demo-01|NE=33554791",
+    "metric_name": "grid_frequency_hz",
+    "n_obs": 2075,
+    "n_available": 2075
+   },
+   {
+    "site_key": "huawei|hw-nbi-demo-01|NE=33554791",
+    "metric_name": "inverter_ac_output_kw",
+    "n_obs": 2075,
+    "n_available": 2074
+   },
+   {
+    "site_key": "huawei|hw-nbi-demo-01|NE=33554791",
+    "metric_name": "inverter_state_raw",
+    "n_obs": 2075,
+    "n_available": 2075
+   },
+   {
+    "site_key": "huawei|hw-nbi-demo-01|NE=33554791",
+    "metric_name": "inverter_temperature_c",
+    "n_obs": 2075,
+    "n_available": 2075
+   },
+   {
+    "site_key": "huawei|hw-nbi-demo-01|NE=33554791",
+    "metric_name": "lifetime_yield_kwh",
+    "n_obs": 2075,
+    "n_available": 2074
+   },
+   {
+    "site_key": "huawei|hw-nbi-demo-01|NE=33554791",
+    "metric_name": "phase_voltage_v",
+    "n_obs": 2075,
+    "n_available": 2075
+   },
+   {
+    "site_key": "huawei|hw-nbi-demo-01|NE=33554791",
+    "metric_name": "pv_dc_kw",
+    "n_obs": 2075,
+    "n_available": 2075
+   },
+   {
+    "site_key": "huawei|hw-nbi-demo-01|NE=33554791",
+    "metric_name": "string_dc_current_a",
+    "n_obs": 4150,
+    "n_available": 4150
+   },
+   {
+    "site_key": "huawei|hw-nbi-demo-01|NE=33554791",
+    "metric_name": "string_dc_voltage_v",
+    "n_obs": 4150,
+    "n_available": 4150
+   },
+   {
+    "site_key": "huawei|hw-nbi-demo-01|NE=33554792",
+    "metric_name": "daily_yield_kwh",
+    "n_obs": 1908,
+    "n_available": 1908
+   },
+   {
+    "site_key": "huawei|hw-nbi-demo-01|NE=33554792",
+    "metric_name": "grid_frequency_hz",
+    "n_obs": 1908,
+    "n_available": 1908
+   },
+   {
+    "site_key": "huawei|hw-nbi-demo-01|NE=33554792",
+    "metric_name": "inverter_ac_output_kw",
+    "n_obs": 1908,
+    "n_available": 1905
+   },
+   {
+    "site_key": "huawei|hw-nbi-demo-01|NE=33554792",
+    "metric_name": "inverter_state_raw",
+    "n_obs": 1908,
+    "n_available": 1908
+   },
+   {
+    "site_key": "huawei|hw-nbi-demo-01|NE=33554792",
+    "metric_name": "inverter_temperature_c",
+    "n_obs": 1908,
+    "n_available": 1908
+   },
+   {
+    "site_key": "huawei|hw-nbi-demo-01|NE=33554792",
+    "metric_name": "lifetime_yield_kwh",
+    "n_obs": 1908,
+    "n_available": 1908
+   },
+   {
+    "site_key": "huawei|hw-nbi-demo-01|NE=33554792",
+    "metric_name": "phase_voltage_v",
+    "n_obs": 5724,
+    "n_available": 5724
+   },
+   {
+    "site_key": "huawei|hw-nbi-demo-01|NE=33554792",
+    "metric_name": "pv_dc_kw",
+    "n_obs": 1908,
+    "n_available": 1908
+   },
+   {
+    "site_key": "huawei|hw-nbi-demo-01|NE=33554792",
+    "metric_name": "string_dc_current_a",
+    "n_obs": 3816,
+    "n_available": 3816
+   },
+   {
+    "site_key": "huawei|hw-nbi-demo-01|NE=33554792",
+    "metric_name": "string_dc_voltage_v",
+    "n_obs": 3816,
+    "n_available": 3816
+   },
+   {
+    "site_key": "huawei|hw-nbi-demo-02|NE=33554850",
+    "metric_name": "battery_busbar_voltage_v",
+    "n_obs": 2016,
+    "n_available": 2004
+   },
+   {
+    "site_key": "huawei|hw-nbi-demo-02|NE=33554850",
+    "metric_name": "battery_charge_kw",
+    "n_obs": 2016,
+    "n_available": 2016
+   },
+   {
+    "site_key": "huawei|hw-nbi-demo-02|NE=33554850",
+    "metric_name": "battery_discharge_kw",
+    "n_obs": 2016,
+    "n_available": 2016
+   },
+   {
+    "site_key": "huawei|hw-nbi-demo-02|NE=33554850",
+    "metric_name": "battery_state_raw",
+    "n_obs": 2016,
+    "n_available": 2016
+   },
+   {
+    "site_key": "huawei|hw-nbi-demo-02|NE=33554850",
+    "metric_name": "daily_battery_charge_kwh",
+    "n_obs": 2016,
+    "n_available": 2016
+   },
+   {
+    "site_key": "huawei|hw-nbi-demo-02|NE=33554850",
+    "metric_name": "daily_battery_discharge_kwh",
+    "n_obs": 2016,
+    "n_available": 2016
+   },
+   {
+    "site_key": "huawei|hw-nbi-demo-02|NE=33554850",
+    "metric_name": "daily_yield_kwh",
+    "n_obs": 2018,
+    "n_available": 2018
+   },
+   {
+    "site_key": "huawei|hw-nbi-demo-02|NE=33554850",
+    "metric_name": "grid_frequency_hz",
+    "n_obs": 2018,
+    "n_available": 2018
+   },
+   {
+    "site_key": "huawei|hw-nbi-demo-02|NE=33554850",
+    "metric_name": "inverter_ac_output_kw",
+    "n_obs": 2018,
+    "n_available": 2018
+   },
+   {
+    "site_key": "huawei|hw-nbi-demo-02|NE=33554850",
+    "metric_name": "inverter_state_raw",
+    "n_obs": 2018,
+    "n_available": 2018
+   },
+   {
+    "site_key": "huawei|hw-nbi-demo-02|NE=33554850",
+    "metric_name": "inverter_temperature_c",
+    "n_obs": 2018,
+    "n_available": 2018
+   },
+   {
+    "site_key": "huawei|hw-nbi-demo-02|NE=33554850",
+    "metric_name": "lifetime_yield_kwh",
+    "n_obs": 2018,
+    "n_available": 2018
+   },
+   {
+    "site_key": "huawei|hw-nbi-demo-02|NE=33554850",
+    "metric_name": "phase_voltage_v",
+    "n_obs": 6054,
+    "n_available": 6054
+   },
+   {
+    "site_key": "huawei|hw-nbi-demo-02|NE=33554850",
+    "metric_name": "pv_dc_kw",
+    "n_obs": 2018,
+    "n_available": 2018
+   },
+   {
+    "site_key": "huawei|hw-nbi-demo-02|NE=33554850",
+    "metric_name": "soc_pct",
+    "n_obs": 2016,
+    "n_available": 2015
+   },
+   {
+    "site_key": "huawei|hw-nbi-demo-02|NE=33554850",
+    "metric_name": "string_dc_current_a",
+    "n_obs": 4036,
+    "n_available": 4036
+   },
+   {
+    "site_key": "huawei|hw-nbi-demo-02|NE=33554850",
+    "metric_name": "string_dc_voltage_v",
+    "n_obs": 4036,
+    "n_available": 4036
+   },
+   {
+    "site_key": "solaredge|se-acct-demo-01|2718281",
+    "metric_name": "dc_input_voltage_v",
+    "n_obs": 671,
+    "n_available": 405
+   },
+   {
+    "site_key": "solaredge|se-acct-demo-01|2718281",
+    "metric_name": "grid_frequency_hz",
+    "n_obs": 671,
+    "n_available": 671
+   },
+   {
+    "site_key": "solaredge|se-acct-demo-01|2718281",
+    "metric_name": "inverter_ac_output_kw",
+    "n_obs": 671,
+    "n_available": 671
+   },
+   {
+    "site_key": "solaredge|se-acct-demo-01|2718281",
+    "metric_name": "inverter_state_raw",
+    "n_obs": 671,
+    "n_available": 671
+   },
+   {
+    "site_key": "solaredge|se-acct-demo-01|2718281",
+    "metric_name": "inverter_temperature_c",
+    "n_obs": 671,
+    "n_available": 671
+   },
+   {
+    "site_key": "solaredge|se-acct-demo-01|2718281",
+    "metric_name": "lifetime_yield_kwh",
+    "n_obs": 671,
+    "n_available": 671
+   },
+   {
+    "site_key": "solaredge|se-acct-demo-01|2718281",
+    "metric_name": "phase_voltage_v",
+    "n_obs": 671,
+    "n_available": 671
+   },
+   {
+    "site_key": "solaredge|se-acct-demo-01|3141592",
+    "metric_name": "dc_input_voltage_v",
+    "n_obs": 672,
+    "n_available": 405
+   },
+   {
+    "site_key": "solaredge|se-acct-demo-01|3141592",
+    "metric_name": "grid_export_kw",
+    "n_obs": 672,
+    "n_available": 672
+   },
+   {
+    "site_key": "solaredge|se-acct-demo-01|3141592",
+    "metric_name": "grid_frequency_hz",
+    "n_obs": 672,
+    "n_available": 672
+   },
+   {
+    "site_key": "solaredge|se-acct-demo-01|3141592",
+    "metric_name": "grid_import_kw",
+    "n_obs": 672,
+    "n_available": 672
+   },
+   {
+    "site_key": "solaredge|se-acct-demo-01|3141592",
+    "metric_name": "household_load_kw",
+    "n_obs": 672,
+    "n_available": 672
+   },
+   {
+    "site_key": "solaredge|se-acct-demo-01|3141592",
+    "metric_name": "inverter_ac_output_kw",
+    "n_obs": 672,
+    "n_available": 668
+   },
+   {
+    "site_key": "solaredge|se-acct-demo-01|3141592",
+    "metric_name": "inverter_state_raw",
+    "n_obs": 672,
+    "n_available": 672
+   },
+   {
+    "site_key": "solaredge|se-acct-demo-01|3141592",
+    "metric_name": "inverter_temperature_c",
+    "n_obs": 672,
+    "n_available": 672
+   },
+   {
+    "site_key": "solaredge|se-acct-demo-01|3141592",
+    "metric_name": "lifetime_yield_kwh",
+    "n_obs": 672,
+    "n_available": 672
+   },
+   {
+    "site_key": "solaredge|se-acct-demo-01|3141592",
+    "metric_name": "phase_voltage_v",
+    "n_obs": 2016,
+    "n_available": 2016
+   },
+   {
+    "site_key": "solaredge|se-acct-demo-01|3141592",
+    "metric_name": "pv_production_kw",
+    "n_obs": 672,
+    "n_available": 672
+   },
+   {
+    "site_key": "solaredge|se-acct-demo-02|1618033",
+    "metric_name": "battery_charge_kw",
+    "n_obs": 1248,
+    "n_available": 1248
+   },
+   {
+    "site_key": "solaredge|se-acct-demo-02|1618033",
+    "metric_name": "battery_discharge_kw",
+    "n_obs": 1248,
+    "n_available": 1248
+   },
+   {
+    "site_key": "solaredge|se-acct-demo-02|1618033",
+    "metric_name": "battery_state_raw",
+    "n_obs": 576,
+    "n_available": 576
+   },
+   {
+    "site_key": "solaredge|se-acct-demo-02|1618033",
+    "metric_name": "battery_temperature_c",
+    "n_obs": 576,
+    "n_available": 576
+   },
+   {
+    "site_key": "solaredge|se-acct-demo-02|1618033",
+    "metric_name": "dc_input_voltage_v",
+    "n_obs": 672,
+    "n_available": 484
+   },
+   {
+    "site_key": "solaredge|se-acct-demo-02|1618033",
+    "metric_name": "grid_export_kw",
+    "n_obs": 672,
+    "n_available": 672
+   },
+   {
+    "site_key": "solaredge|se-acct-demo-02|1618033",
+    "metric_name": "grid_frequency_hz",
+    "n_obs": 672,
+    "n_available": 672
+   },
+   {
+    "site_key": "solaredge|se-acct-demo-02|1618033",
+    "metric_name": "grid_import_kw",
+    "n_obs": 672,
+    "n_available": 672
+   },
+   {
+    "site_key": "solaredge|se-acct-demo-02|1618033",
+    "metric_name": "household_load_kw",
+    "n_obs": 672,
+    "n_available": 672
+   },
+   {
+    "site_key": "solaredge|se-acct-demo-02|1618033",
+    "metric_name": "inverter_ac_output_kw",
+    "n_obs": 672,
+    "n_available": 672
+   },
+   {
+    "site_key": "solaredge|se-acct-demo-02|1618033",
+    "metric_name": "inverter_state_raw",
+    "n_obs": 672,
+    "n_available": 672
+   },
+   {
+    "site_key": "solaredge|se-acct-demo-02|1618033",
+    "metric_name": "inverter_temperature_c",
+    "n_obs": 672,
+    "n_available": 672
+   },
+   {
+    "site_key": "solaredge|se-acct-demo-02|1618033",
+    "metric_name": "lifetime_battery_charge_kwh",
+    "n_obs": 576,
+    "n_available": 576
+   },
+   {
+    "site_key": "solaredge|se-acct-demo-02|1618033",
+    "metric_name": "lifetime_battery_discharge_kwh",
+    "n_obs": 576,
+    "n_available": 576
+   },
+   {
+    "site_key": "solaredge|se-acct-demo-02|1618033",
+    "metric_name": "lifetime_yield_kwh",
+    "n_obs": 672,
+    "n_available": 672
+   },
+   {
+    "site_key": "solaredge|se-acct-demo-02|1618033",
+    "metric_name": "phase_voltage_v",
+    "n_obs": 672,
+    "n_available": 672
+   },
+   {
+    "site_key": "solaredge|se-acct-demo-02|1618033",
+    "metric_name": "pv_production_kw",
+    "n_obs": 672,
+    "n_available": 672
+   },
+   {
+    "site_key": "solaredge|se-acct-demo-02|1618033",
+    "metric_name": "soc_pct",
+    "n_obs": 1248,
+    "n_available": 1248
+   }
+  ]
+ },
+ "review_candidates": [
+  {
+   "candidate_id": "c82561275e3521b2",
+   "policy_id": "demo_high_inverter_temperature",
+   "policy_version": "demo-1",
+   "site_key": "huawei|hw-nbi-demo-01|NE=33554791",
+   "endpoint_key": "getDevHistoryKpi",
+   "device_key": "huawei|hw-nbi-demo-01|NE=33554791|1000000035350464",
+   "channel": "",
+   "metric_name": "inverter_temperature_c",
+   "duration_s": 12000.0,
+   "peak_value": 74.3,
+   "n_samples": 41,
+   "evidence": {
+    "first_obs_id": 75129,
+    "last_obs_id": 77037,
+    "peak_obs_id": 75825,
+    "sample_obs_ids": [
+     75129,
+     75189,
+     75249,
+     75813,
+     75873,
+     76185,
+     76245,
+     76977,
+     77037
+    ]
+   },
+   "status": "open_for_review",
+   "label": "Internal inverter temperature >= 70 degC for >= 15 min (demo policy)",
+   "disclaimer": "Demo review policy. Not a manufacturer threshold, not a protection setting, not a root-cause claim. Candidates are evidence pointers for a (virtual) technician; values are preserved unchanged.",
+   "start_utc": "2026-07-20T10:05:00.000Z",
+   "end_utc": "2026-07-20T13:25:00.000Z"
+  },
+  {
+   "candidate_id": "7f7cbf4281a3b967",
+   "policy_id": "demo_phase_voltage_high",
+   "policy_version": "demo-1",
+   "site_key": "huawei|hw-nbi-demo-01|NE=33554792",
+   "endpoint_key": "getDevHistoryKpi",
+   "device_key": "huawei|hw-nbi-demo-01|NE=33554792|1000000035351021",
+   "channel": "L1",
+   "metric_name": "phase_voltage_v",
+   "duration_s": 10500.0,
+   "peak_value": 256.5,
+   "n_samples": 36,
+   "evidence": {
+    "first_obs_id": 60822,
+    "last_obs_id": 62332,
+    "peak_obs_id": 61232,
+    "sample_obs_ids": [
+     60822,
+     60878,
+     61162,
+     61218,
+     61274,
+     61894,
+     61950,
+     62006,
+     62290
+    ]
+   },
+   "status": "open_for_review",
+   "label": "Phase voltage > 253 V (230 V + 10 %, illustrative) for >= 10 min (demo policy)",
+   "disclaimer": "Demo review policy. Not a manufacturer threshold, not a protection setting, not a root-cause claim. Candidates are evidence pointers for a (virtual) technician; values are preserved unchanged.",
+   "start_utc": "2026-07-19T08:20:00.000Z",
+   "end_utc": "2026-07-19T11:15:00.000Z"
+  },
+  {
+   "candidate_id": "766bfcf2c11454af",
+   "policy_id": "demo_phase_voltage_high",
+   "policy_version": "demo-1",
+   "site_key": "huawei|hw-nbi-demo-01|NE=33554792",
+   "endpoint_key": "getDevHistoryKpi",
+   "device_key": "huawei|hw-nbi-demo-01|NE=33554792|1000000035351021",
+   "channel": "L1",
+   "metric_name": "phase_voltage_v",
+   "duration_s": 10200.0,
+   "peak_value": 256.0,
+   "n_samples": 35,
+   "evidence": {
+    "first_obs_id": 74190,
+    "last_obs_id": 75938,
+    "peak_obs_id": 74274,
+    "sample_obs_ids": [
+     74190,
+     74246,
+     74614,
+     74670,
+     74726,
+     75430,
+     75486,
+     75542,
+     75910
+    ]
+   },
+   "status": "open_for_review",
+   "label": "Phase voltage > 253 V (230 V + 10 %, illustrative) for >= 10 min (demo policy)",
+   "disclaimer": "Demo review policy. Not a manufacturer threshold, not a protection setting, not a root-cause claim. Candidates are evidence pointers for a (virtual) technician; values are preserved unchanged.",
+   "start_utc": "2026-07-20T08:20:00.000Z",
+   "end_utc": "2026-07-20T11:10:00.000Z"
+  },
+  {
+   "candidate_id": "630537f5dca85f75",
+   "policy_id": "demo_sustained_underproduction_peer",
+   "policy_version": "demo-1",
+   "site_key": "solaredge|se-acct-demo-01|3141592",
+   "endpoint_key": "equipment_data",
+   "device_key": "",
+   "channel": "",
+   "metric_name": "interval_yield_kwh",
+   "duration_s": 259200.0,
+   "peak_value": 0.513,
+   "n_samples": 3,
+   "evidence": [
+    {
+     "local_date": "2026-07-19",
+     "specific_yield_kwh_per_kwp": 3.181,
+     "peer_median_kwh_per_kwp": 6.117,
+     "ratio": 0.52,
+     "day_kwh": 29.263,
+     "coverage": 1.0
+    },
+    {
+     "local_date": "2026-07-20",
+     "specific_yield_kwh_per_kwp": 3.122,
+     "peer_median_kwh_per_kwp": 6.084,
+     "ratio": 0.513,
+     "day_kwh": 28.724,
+     "coverage": 1.0
+    },
+    {
+     "local_date": "2026-07-21",
+     "specific_yield_kwh_per_kwp": 2.874,
+     "peer_median_kwh_per_kwp": 5.408,
+     "ratio": 0.531,
+     "day_kwh": 26.438,
+     "coverage": 0.99
+    }
+   ],
+   "status": "open_for_review",
+   "label": "Daily specific yield (kWh/kWp, from counter-derived intervals) below 60 % of the same-day peer median for >= 2 consecutive days (demo policy; shared-weather peers make a cloudy day a negative example)",
+   "disclaimer": "Demo review policy. Not a manufacturer threshold, not a protection setting, not a root-cause claim. Candidates are evidence pointers for a (virtual) technician; values are preserved unchanged.",
+   "start_utc": "2026-07-18T21:00:00.000Z",
+   "end_utc": "2026-07-21T21:00:00.000Z"
+  }
+ ],
+ "side_datasets": {
+  "golden_equivalence": [
+   {
+    "provider": "fronius",
+    "variant": "snapinverter",
+    "field_rule_id": "frpf.inv.P",
+    "original_value": "4200.0",
+    "original_unit": "W",
+    "metric_name": "inverter_ac_output_kw",
+    "canonical_value": 4.2,
+    "canonical_unit": "kW",
+    "boundary": "ac_inverter_output",
+    "effective_time_utc": "2026-07-14T09:00:00.000Z"
+   },
+   {
+    "provider": "fronius",
+    "variant": "gen24_hybrid",
+    "field_rule_id": "frpf.inv.P.gen24",
+    "original_value": "3950.0",
+    "original_unit": "W",
+    "metric_name": "inverter_ac_output_kw",
+    "canonical_value": 3.95,
+    "canonical_unit": "kW",
+    "boundary": "ac_inverter_output",
+    "effective_time_utc": "2026-07-14T09:00:00.000Z"
+   },
+   {
+    "provider": "huawei",
+    "variant": "residential_inverter_dt38",
+    "field_rule_id": "hw38.active_power",
+    "original_value": "4.2",
+    "original_unit": "kW",
+    "metric_name": "inverter_ac_output_kw",
+    "canonical_value": 4.2,
+    "canonical_unit": "kW",
+    "boundary": "ac_inverter_output",
+    "effective_time_utc": "2026-07-14T09:00:00.000Z"
+   },
+   {
+    "provider": "solaredge",
+    "variant": "inverter_technical_data",
+    "field_rule_id": "setel.totalActivePower",
+    "original_value": "4200.0",
+    "original_unit": "W",
+    "metric_name": "inverter_ac_output_kw",
+    "canonical_value": 4.2,
+    "canonical_unit": "kW",
+    "boundary": "ac_inverter_output",
+    "effective_time_utc": "2026-07-14T09:00:00.000Z"
+   },
+   {
+    "provider": "fronius",
+    "variant": "snapinverter",
+    "field_rule_id": "frpf.P_PV.snap",
+    "original_value": "4200.0",
+    "original_unit": "W",
+    "metric_name": "pv_ac_kw",
+    "canonical_value": 4.2,
+    "canonical_unit": "kW",
+    "boundary": "ac_pv_inverter_output",
+    "effective_time_utc": "2026-07-14T09:00:00.000Z"
+   },
+   {
+    "provider": "fronius",
+    "variant": "gen24_hybrid",
+    "field_rule_id": "frpf.P_PV.gen24",
+    "original_value": "4200.0",
+    "original_unit": "W",
+    "metric_name": "pv_dc_kw",
+    "canonical_value": 4.2,
+    "canonical_unit": "kW",
+    "boundary": "dc_pv_input",
+    "effective_time_utc": "2026-07-14T09:00:00.000Z"
+   },
+   {
+    "provider": "huawei",
+    "variant": "residential_inverter_dt38",
+    "field_rule_id": "hw38.mppt_power",
+    "original_value": "4.37",
+    "original_unit": "kW",
+    "metric_name": "pv_dc_kw",
+    "canonical_value": 4.37,
+    "canonical_unit": "kW",
+    "boundary": "dc_mppt_input",
+    "effective_time_utc": "2026-07-14T09:00:00.000Z"
+   }
+  ],
+  "dst_edge_cases": [
+   {
+    "provider": "fronius",
+    "endpoint_key": "GetPowerFlowRealtimeData",
+    "site_key": "fronius|fr-lan-gw-0002|FR-SITE-0002",
+    "source_time_raw": "2026-10-25T02:50:00+03:00",
+    "source_time_role": "response_time",
+    "status": "accepted",
+    "status_reason": null,
+    "effective_time_utc": "2026-10-24T23:50:00.000Z"
+   },
+   {
+    "provider": "fronius",
+    "endpoint_key": "GetPowerFlowRealtimeData",
+    "site_key": "fronius|fr-lan-gw-0002|FR-SITE-0002",
+    "source_time_raw": "2026-10-25T03:15:00+02:00",
+    "source_time_role": "response_time",
+    "status": "accepted",
+    "status_reason": null,
+    "effective_time_utc": "2026-10-25T01:15:00.000Z"
+   },
+   {
+    "provider": "fronius",
+    "endpoint_key": "GetPowerFlowRealtimeData",
+    "site_key": "fronius|fr-lan-gw-0002|FR-SITE-0002",
+    "source_time_raw": "2026-10-25T03:15:00+03:00",
+    "source_time_role": "response_time",
+    "status": "accepted",
+    "status_reason": null,
+    "effective_time_utc": "2026-10-25T00:15:00.000Z"
+   },
+   {
+    "provider": "fronius",
+    "endpoint_key": "GetPowerFlowRealtimeData",
+    "site_key": "fronius|fr-lan-gw-0002|FR-SITE-0002",
+    "source_time_raw": "2026-10-25T03:45:00+02:00",
+    "source_time_role": "response_time",
+    "status": "accepted",
+    "status_reason": null,
+    "effective_time_utc": "2026-10-25T01:45:00.000Z"
+   },
+   {
+    "provider": "fronius",
+    "endpoint_key": "GetPowerFlowRealtimeData",
+    "site_key": "fronius|fr-lan-gw-0002|FR-SITE-0002",
+    "source_time_raw": "2026-10-25T03:45:00+03:00",
+    "source_time_role": "response_time",
+    "status": "accepted",
+    "status_reason": null,
+    "effective_time_utc": "2026-10-25T00:45:00.000Z"
+   },
+   {
+    "provider": "fronius",
+    "endpoint_key": "GetPowerFlowRealtimeData",
+    "site_key": "fronius|fr-lan-gw-0002|FR-SITE-0002",
+    "source_time_raw": "2026-10-25T04:10:00+02:00",
+    "source_time_role": "response_time",
+    "status": "accepted",
+    "status_reason": null,
+    "effective_time_utc": "2026-10-25T02:10:00.000Z"
+   },
+   {
+    "provider": "solaredge",
+    "endpoint_key": "equipment_data",
+    "site_key": "solaredge|se-acct-demo-01|2718281",
+    "source_time_raw": null,
+    "source_time_role": null,
+    "status": "quarantined",
+    "status_reason": "unusable_time_nonexistent_local_time: local_measurement_time at tel.date = '2026-03-29 03:30:00': 2026-03-29 03:30:00 does not exist in Europe/Bucharest (DST gap); not shifted; no timestamp invented",
+    "effective_time_utc": null
+   },
+   {
+    "provider": "solaredge",
+    "endpoint_key": "equipment_data",
+    "site_key": "solaredge|se-acct-demo-01|2718281",
+    "source_time_raw": null,
+    "source_time_role": null,
+    "status": "quarantined",
+    "status_reason": "unusable_time_ambiguous_local_time: local_measurement_time at tel.date = '2026-10-25 03:15:00': 2026-10-25 03:15:00 occurs twice in Europe/Bucharest (DST fold) and the source gives no offset; not disambiguated; no timestamp invented",
+    "effective_time_utc": null
+   },
+   {
+    "provider": "solaredge",
+    "endpoint_key": "equipment_data",
+    "site_key": "solaredge|se-acct-demo-01|2718281",
+    "source_time_raw": null,
+    "source_time_role": null,
+    "status": "quarantined",
+    "status_reason": "unusable_time_ambiguous_local_time: local_measurement_time at tel.date = '2026-10-25 03:15:00': 2026-10-25 03:15:00 occurs twice in Europe/Bucharest (DST fold) and the source gives no offset; not disambiguated; no timestamp invented",
+    "effective_time_utc": null
+   },
+   {
+    "provider": "solaredge",
+    "endpoint_key": "equipment_data",
+    "site_key": "solaredge|se-acct-demo-01|2718281",
+    "source_time_raw": "2026-03-29 02:45:00",
+    "source_time_role": "local_measurement_time",
+    "status": "accepted",
+    "status_reason": null,
+    "effective_time_utc": "2026-03-29T00:45:00.000Z"
+   },
+   {
+    "provider": "solaredge",
+    "endpoint_key": "equipment_data",
+    "site_key": "solaredge|se-acct-demo-01|2718281",
+    "source_time_raw": "2026-03-29 04:00:00",
+    "source_time_role": "local_measurement_time",
+    "status": "accepted",
+    "status_reason": null,
+    "effective_time_utc": "2026-03-29T01:00:00.000Z"
+   },
+   {
+    "provider": "solaredge",
+    "endpoint_key": "equipment_data",
+    "site_key": "solaredge|se-acct-demo-01|2718281",
+    "source_time_raw": "2026-10-25 01:45:00",
+    "source_time_role": "local_measurement_time",
+    "status": "accepted",
+    "status_reason": null,
+    "effective_time_utc": "2026-10-24T22:45:00.000Z"
+   },
+   {
+    "provider": "solaredge",
+    "endpoint_key": "equipment_data",
+    "site_key": "solaredge|se-acct-demo-01|2718281",
+    "source_time_raw": "2026-10-25 02:00:00",
+    "source_time_role": "local_measurement_time",
+    "status": "accepted",
+    "status_reason": null,
+    "effective_time_utc": "2026-10-24T23:00:00.000Z"
+   },
+   {
+    "provider": "solaredge",
+    "endpoint_key": "equipment_data",
+    "site_key": "solaredge|se-acct-demo-01|2718281",
+    "source_time_raw": "2026-10-25 04:00:00",
+    "source_time_role": "local_measurement_time",
+    "status": "accepted",
+    "status_reason": null,
+    "effective_time_utc": "2026-10-25T02:00:00.000Z"
+   },
+   {
+    "provider": "solaredge",
+    "endpoint_key": "equipment_data",
+    "site_key": "solaredge|se-acct-demo-01|2718281",
+    "source_time_raw": "2026-10-25 04:15:00",
+    "source_time_role": "local_measurement_time",
+    "status": "accepted",
+    "status_reason": null,
+    "effective_time_utc": "2026-10-25T02:15:00.000Z"
+   }
+  ]
+ }
+}

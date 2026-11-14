@@ -1,0 +1,43 @@
+# Review-candidate policies (SYNTHETIC DEMONSTRATION).
+#
+# These are clearly labelled DEMO policies for flagging values a human should look at. They are NOT
+# manufacturer derating/shutdown thresholds, NOT grid-code protection settings, and they never change,
+# hide or "clean" the underlying values. The engine sends no commands to any device.
+policies_version: "demo-2026.11.14-1"
+disclaimer: >-
+  Demo review policy. Not a manufacturer threshold, not a protection setting, not a root-cause claim.
+  Candidates are evidence pointers for a (virtual) technician; values are preserved unchanged.
+policies:
+  - policy_id: demo_high_inverter_temperature
+    version: "demo-1"
+    kind: threshold_sustained
+    metric: inverter_temperature_c
+    op: gte
+    threshold: 70.0
+    min_duration_s: 900
+    max_sample_gap_s: 1200
+    severity: review
+    label: "Internal inverter temperature >= 70 degC for >= 15 min (demo policy)"
+  - policy_id: demo_phase_voltage_high
+    version: "demo-1"
+    kind: threshold_sustained
+    metric: phase_voltage_v
+    op: gt
+    threshold: 253.0
+    min_duration_s: 600
+    max_sample_gap_s: 1200
+    severity: review
+    label: "Phase voltage > 253 V (230 V + 10 %, illustrative) for >= 10 min (demo policy)"
+  - policy_id: demo_sustained_underproduction_peer
+    version: "demo-1"
+    kind: peer_specific_yield
+    interval_metric: interval_yield_kwh
+    capacity_ref: site.pv_kwp
+    min_daily_coverage: 0.9
+    ratio_below: 0.6
+    min_peers: 4
+    min_consecutive_days: 2
+    severity: review
+    label: >-
+      Daily specific yield (kWh/kWp, from counter-derived intervals) below 60 % of the same-day peer median
+      for >= 2 consecutive days (demo policy; shared-weather peers make a cloudy day a negative example)

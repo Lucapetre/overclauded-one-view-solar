@@ -1,0 +1,8 @@
+# Fixture and output files must stay byte-exact: manifests carry sha256 checksums of these files.
+* text=auto eol=lf
+demo_data/** -text
+build/** -text
+tests/ground_truth/** -text
+tests/injection_manifest.json -text
+*.gz binary
+*.sqlite binary

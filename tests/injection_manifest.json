@@ -1,0 +1,816 @@
+{
+ "evaluation_only": true,
+ "synthetic": true,
+ "warning": "Hidden labels for tests. The ingestion engine must never read this file.",
+ "seed": 42,
+ "injections": [
+  {
+   "injection_id": "INJ-HW-01",
+   "site": "H1",
+   "provider": "huawei",
+   "kind": "exact_duplicate_delivery",
+   "expected_engine_response": "count once; record exact duplicates",
+   "delivery_ids": [
+    "H1-0000035",
+    "H1-0039709"
+   ],
+   "window_utc": [
+    "2026-07-16T07:00:00.000Z",
+    "2026-07-16T08:00:00.000Z"
+   ]
+  },
+  {
+   "injection_id": "INJ-HW-02",
+   "site": "H1",
+   "provider": "huawei",
+   "kind": "numeric_strings_allowed_format",
+   "expected_engine_response": "parse '.'-decimal numeric strings deterministically; log format normalisation",
+   "delivery_ids": [
+    "H1-0000057"
+   ],
+   "window_utc": [
+    "2026-07-17T05:00:00.000Z",
+    "2026-07-17T06:00:00.000Z"
+   ]
+  },
+  {
+   "injection_id": "INJ-HW-03",
+   "site": "H1",
+   "provider": "huawei",
+   "kind": "ambiguous_decimal_locale",
+   "expected_engine_response": "comma-formatted values are not guessed: invalid/unresolved",
+   "delivery_ids": [
+    "H1-0000058"
+   ],
+   "window_utc": [
+    "2026-07-17T06:00:00.000Z",
+    "2026-07-17T07:00:00.000Z"
+   ],
+   "item_index": 1
+  },
+  {
+   "injection_id": "INJ-HW-04",
+   "site": "H1",
+   "provider": "huawei",
+   "kind": "missing_required_identifier",
+   "expected_engine_response": "quarantine that record only; keep the other items of the response",
+   "delivery_ids": [
+    "H1-0000107"
+   ],
+   "window_utc": [
+    "2026-07-19T07:00:00.000Z",
+    "2026-07-19T08:00:00.000Z"
+   ],
+   "item_index": 6
+  },
+  {
+   "injection_id": "INJ-HW-05",
+   "site": "H2",
+   "provider": "huawei",
+   "kind": "unannounced_1000x_spike",
+   "expected_engine_response": "flag unit ambiguity; never divide by 1000",
+   "delivery_ids": [
+    "H2-0000265"
+   ],
+   "window_utc": [
+    "2026-07-16T09:05:00.000Z",
+    "2026-07-16T09:20:00.000Z"
+   ],
+   "item_index": [
+    1,
+    2,
+    3
+   ]
+  },
+  {
+   "injection_id": "INJ-HW-06",
+   "site": "H2",
+   "provider": "huawei",
+   "kind": "telemetry_stops",
+   "expected_engine_response": "stale against replay clock; trailing gap unresolved",
+   "delivery_ids": [],
+   "window_utc": [
+    "2026-07-21T12:00:00.000Z",
+    "2026-07-21T21:00:00.000Z"
+   ],
+   "removed_deliveries": 9
+  },
+  {
+   "injection_id": "INJ-HW-07",
+   "site": "H3",
+   "provider": "huawei",
+   "kind": "soc_out_of_range",
+   "expected_engine_response": "mark SOC invalid; never clamp; keep other metrics",
+   "delivery_ids": [
+    "H3-0000664"
+   ],
+   "window_utc": [
+    "2026-07-20T10:10:00.000Z",
+    "2026-07-20T10:11:00.000Z"
+   ],
+   "item_index": 2
+  },
+  {
+   "injection_id": "INJ-HW-08",
+   "site": "H3",
+   "provider": "huawei",
+   "kind": "missing_optional_field",
+   "expected_engine_response": "optional busbar voltage missing; others kept",
+   "delivery_ids": [
+    "H3-0000458"
+   ],
+   "window_utc": [
+    "2026-07-16T03:00:00.000Z",
+    "2026-07-16T04:00:00.000Z"
+   ]
+  },
+  {
+   "injection_id": "INJ-HW-09",
+   "site": "H3",
+   "provider": "huawei",
+   "kind": "http200_provider_failure_then_backfill",
+   "expected_engine_response": "recognise failure envelope (not zero output); later retries backfill",
+   "delivery_ids": [
+    "H3-0000560",
+    "H3-0000562",
+    "H3-0000564",
+    "H3-0039710",
+    "H3-0039711",
+    "H3-0039712"
+   ],
+   "window_utc": [
+    "2026-07-18T06:00:00.000Z",
+    "2026-07-18T09:00:00.000Z"
+   ]
+  },
+  {
+   "injection_id": "INJ-HW-10",
+   "site": "H3",
+   "provider": "huawei",
+   "kind": "truncated_json_body_then_redelivery",
+   "expected_engine_response": "preserve raw evidence, isolate failure, do not repair punctuation",
+   "delivery_ids": [
+    "H3-0000521"
+   ],
+   "window_utc": [
+    "2026-07-17T11:00:00.000Z",
+    "2026-07-17T12:00:00.000Z"
+   ]
+  },
+  {
+   "injection_id": "INJ-HW-11",
+   "site": "H3",
+   "provider": "huawei",
+   "kind": "same_identity_conflicting_values",
+   "expected_engine_response": "preserve both versions and flag conflict; do not choose",
+   "delivery_ids": [
+    "H3-0000467",
+    "H3-0039714"
+   ],
+   "window_utc": [
+    "2026-07-16T08:15:00.000Z",
+    "2026-07-16T08:25:00.000Z"
+   ],
+   "item_index": [
+    3,
+    4
+   ]
+  },
+  {
+   "injection_id": "INJ-FR-01",
+   "site": "F1",
+   "provider": "fronius",
+   "kind": "exact_duplicate_delivery",
+   "expected_engine_response": "count once",
+   "delivery_ids": [
+    "F1-0005496",
+    "F1-0011307",
+    "F1-0002410",
+    "F1-0009574",
+    "F1-0003834",
+    "F1-0007395",
+    "F1-0001263",
+    "F1-0011805",
+    "F1-0002365",
+    "F1-0011359",
+    "F1-0039715",
+    "F1-0039716",
+    "F1-0039717",
+    "F1-0039718",
+    "F1-0039719",
+    "F1-0039720",
+    "F1-0039721",
+    "F1-0039722",
+    "F1-0039723",
+    "F1-0039724"
+   ],
+   "window_utc": null
+  },
+  {
+   "injection_id": "INJ-FR-02",
+   "site": "F1",
+   "provider": "fronius",
+   "kind": "truncated_ndjson_line",
+   "expected_engine_response": "quarantine the line; continue with the file",
+   "delivery_ids": [
+    "F1-0003209"
+   ],
+   "window_utc": [
+    "2026-07-16T07:23:00.000Z",
+    "2026-07-16T07:24:00.000Z"
+   ]
+  },
+  {
+   "injection_id": "INJ-FR-03",
+   "site": "F1",
+   "provider": "fronius",
+   "kind": "missing_required_nullable_key",
+   "expected_engine_response": "schema damage on P_Grid only; other metrics retained",
+   "delivery_ids": [
+    "F1-0010021",
+    "F1-0010023",
+    "F1-0010024",
+    "F1-0010025",
+    "F1-0010026"
+   ],
+   "window_utc": [
+    "2026-07-20T06:00:00.000Z",
+    "2026-07-20T06:05:00.000Z"
+   ]
+  },
+  {
+   "injection_id": "INJ-FR-04",
+   "site": "F2",
+   "provider": "fronius",
+   "kind": "invalid_field_type",
+   "expected_engine_response": "invalid value isolated; no guessing",
+   "delivery_ids": [
+    "F2-0020605",
+    "F2-0020607",
+    "F2-0020608",
+    "F2-0020609"
+   ],
+   "window_utc": [
+    "2026-07-19T09:00:00.000Z",
+    "2026-07-19T09:04:00.000Z"
+   ]
+  },
+  {
+   "injection_id": "INJ-FR-05",
+   "site": "F2",
+   "provider": "fronius",
+   "kind": "out_of_order_delayed_records",
+   "expected_engine_response": "order by source time; keep arrival time; recompute derived windows",
+   "delivery_ids": [
+    "F2-0017221",
+    "F2-0017223",
+    "F2-0017224",
+    "F2-0017225",
+    "F2-0017226",
+    "F2-0017227",
+    "F2-0017229",
+    "F2-0017230",
+    "F2-0017231",
+    "F2-0017232",
+    "F2-0017233",
+    "F2-0017235",
+    "F2-0017236",
+    "F2-0017237",
+    "F2-0017238",
+    "F2-0017239",
+    "F2-0017241",
+    "F2-0017242",
+    "F2-0017243",
+    "F2-0017244",
+    "F2-0017245",
+    "F2-0017247",
+    "F2-0017248",
+    "F2-0017249",
+    "F2-0017250",
+    "F2-0017251",
+    "F2-0017253",
+    "F2-0017254",
+    "F2-0017255",
+    "F2-0017256",
+    "F2-0017257",
+    "F2-0017259",
+    "F2-0017260",
+    "F2-0017261",
+    "F2-0017262",
+    "F2-0017263",
+    "F2-0017265",
+    "F2-0017266",
+    "F2-0017267",
+    "F2-0017268",
+    "F2-0017269",
+    "F2-0017271",
+    "F2-0017272",
+    "F2-0017273",
+    "F2-0017274",
+    "F2-0017275",
+    "F2-0017277",
+    "F2-0017278",
+    "F2-0017279",
+    "F2-0017280",
+    "F2-0017281",
+    "F2-0017283",
+    "F2-0017284",
+    "F2-0017285",
+    "F2-0017286",
+    "F2-0017287",
+    "F2-0017289",
+    "F2-0017290",
+    "F2-0017291",
+    "F2-0017292"
+   ],
+   "window_utc": [
+    "2026-07-17T10:00:00.000Z",
+    "2026-07-17T11:00:00.000Z"
+   ]
+  },
+  {
+   "injection_id": "INJ-FR-06",
+   "site": "F2",
+   "provider": "fronius",
+   "kind": "unusable_time",
+   "expected_engine_response": "quarantine; do not invent a timestamp",
+   "delivery_ids": [
+    "F2-0018734"
+   ],
+   "window_utc": [
+    "2026-07-18T07:00:00.000Z",
+    "2026-07-18T07:01:00.000Z"
+   ]
+  },
+  {
+   "injection_id": "INJ-FR-07",
+   "site": "F3",
+   "provider": "fronius",
+   "kind": "frozen_logger_stale_response",
+   "expected_engine_response": "response time lags capture time: stale; repeated content counted once",
+   "delivery_ids": [
+    "F3-0032991",
+    "F3-0032992",
+    "F3-0032993",
+    "F3-0032994",
+    "F3-0032995",
+    "F3-0032997",
+    "F3-0032998",
+    "F3-0032999",
+    "F3-0033000",
+    "F3-0033001",
+    "F3-0033003",
+    "F3-0033004",
+    "F3-0033005",
+    "F3-0033006",
+    "F3-0033007",
+    "F3-0033009",
+    "F3-0033010",
+    "F3-0033011",
+    "F3-0033012",
+    "F3-0033013"
+   ],
+   "window_utc": [
+    "2026-07-19T13:01:00.000Z",
+    "2026-07-19T13:21:00.000Z"
+   ]
+  },
+  {
+   "injection_id": "INJ-FR-08",
+   "site": "F3",
+   "provider": "fronius",
+   "kind": "missing_optional_field",
+   "expected_engine_response": "SOC missing; other metrics kept",
+   "delivery_ids": [
+    "F3-0028093",
+    "F3-0028095",
+    "F3-0028096",
+    "F3-0028097",
+    "F3-0028098",
+    "F3-0028099",
+    "F3-0028101",
+    "F3-0028102",
+    "F3-0028103",
+    "F3-0028104"
+   ],
+   "window_utc": [
+    "2026-07-16T17:00:00.000Z",
+    "2026-07-16T17:10:00.000Z"
+   ]
+  },
+  {
+   "injection_id": "INJ-SE-01",
+   "site": "S1",
+   "provider": "solaredge",
+   "kind": "delayed_backfill",
+   "expected_engine_response": "initial empty windows are not zeros; late records backfill without stale marking",
+   "delivery_ids": [
+    "S1-0037431",
+    "S1-0037436",
+    "S1-0037441",
+    "S1-0037446",
+    "S1-0039725",
+    "S1-0039726",
+    "S1-0039727",
+    "S1-0039728"
+   ],
+   "window_utc": [
+    "2026-07-18T07:00:00.000Z",
+    "2026-07-18T11:00:00.000Z"
+   ]
+  },
+  {
+   "injection_id": "INJ-SE-02",
+   "site": "S1",
+   "provider": "solaredge",
+   "kind": "missing_time",
+   "expected_engine_response": "quarantine affected telemetry item",
+   "delivery_ids": [
+    "S1-0037666"
+   ],
+   "window_utc": [
+    "2026-07-20T06:15:00.000Z",
+    "2026-07-20T06:16:00.000Z"
+   ],
+   "item_index": 1
+  },
+  {
+   "injection_id": "INJ-SE-03",
+   "site": "S2",
+   "provider": "solaredge",
+   "kind": "declared_unit_change_kw_to_w",
+   "expected_engine_response": "convert using declared unit metadata",
+   "delivery_ids": [
+    "S2-0038102",
+    "S2-0038103",
+    "S2-0038104",
+    "S2-0038105",
+    "S2-0038107",
+    "S2-0038108",
+    "S2-0038109",
+    "S2-0038110",
+    "S2-0038112",
+    "S2-0038113",
+    "S2-0038114",
+    "S2-0038115",
+    "S2-0038117",
+    "S2-0038118",
+    "S2-0038119",
+    "S2-0038120",
+    "S2-0038122",
+    "S2-0038123",
+    "S2-0038124",
+    "S2-0038125",
+    "S2-0038127",
+    "S2-0038128",
+    "S2-0038129",
+    "S2-0038130",
+    "S2-0038132",
+    "S2-0038133",
+    "S2-0038134",
+    "S2-0038135",
+    "S2-0038137",
+    "S2-0038138",
+    "S2-0038139",
+    "S2-0038140",
+    "S2-0038142",
+    "S2-0038143",
+    "S2-0038144",
+    "S2-0038145",
+    "S2-0038147",
+    "S2-0038148",
+    "S2-0038149",
+    "S2-0038150",
+    "S2-0038152",
+    "S2-0038153",
+    "S2-0038154",
+    "S2-0038155",
+    "S2-0038157",
+    "S2-0038158",
+    "S2-0038159",
+    "S2-0038160",
+    "S2-0038162",
+    "S2-0038163",
+    "S2-0038164",
+    "S2-0038165",
+    "S2-0038167",
+    "S2-0038168",
+    "S2-0038169",
+    "S2-0038170",
+    "S2-0038172",
+    "S2-0038173",
+    "S2-0038174",
+    "S2-0038175",
+    "S2-0038177",
+    "S2-0038178",
+    "S2-0038179",
+    "S2-0038180",
+    "S2-0038182",
+    "S2-0038183",
+    "S2-0038184",
+    "S2-0038185",
+    "S2-0038187",
+    "S2-0038188",
+    "S2-0038189",
+    "S2-0038190",
+    "S2-0038192",
+    "S2-0038193",
+    "S2-0038194",
+    "S2-0038195",
+    "S2-0038197",
+    "S2-0038198",
+    "S2-0038199",
+    "S2-0038200",
+    "S2-0038202",
+    "S2-0038203",
+    "S2-0038204",
+    "S2-0038205",
+    "S2-0038207",
+    "S2-0038208",
+    "S2-0038209",
+    "S2-0038210",
+    "S2-0038212",
+    "S2-0038213",
+    "S2-0038214",
+    "S2-0038215",
+    "S2-0038217",
+    "S2-0038218",
+    "S2-0038219",
+    "S2-0038220"
+   ],
+   "window_utc": [
+    "2026-07-16T21:00:00.000Z",
+    "2026-07-17T21:00:00.000Z"
+   ]
+  },
+  {
+   "injection_id": "INJ-SE-04",
+   "site": "S2",
+   "provider": "solaredge",
+   "kind": "exact_duplicate_delivery",
+   "expected_engine_response": "count once",
+   "delivery_ids": [
+    "S2-0037931",
+    "S2-0039729"
+   ],
+   "window_utc": [
+    "2026-07-15T11:00:00.000Z",
+    "2026-07-15T12:00:00.000Z"
+   ]
+  },
+  {
+   "injection_id": "INJ-SE-05",
+   "site": "S2",
+   "provider": "solaredge",
+   "kind": "http_429_then_retry_success",
+   "expected_engine_response": "rate-limited state, no zeros, one commit",
+   "delivery_ids": [
+    "S2-0038021",
+    "S2-0039730"
+   ],
+   "window_utc": [
+    "2026-07-16T05:00:00.000Z",
+    "2026-07-16T06:00:00.000Z"
+   ]
+  },
+  {
+   "injection_id": "INJ-SE-06",
+   "site": "S2",
+   "provider": "solaredge",
+   "kind": "registered_alias_schema_version",
+   "expected_engine_response": "apply registered mapping version and show it in the audit",
+   "delivery_ids": [
+    "S2-0038461",
+    "S2-0038466",
+    "S2-0038471",
+    "S2-0038476",
+    "S2-0038481",
+    "S2-0038486",
+    "S2-0038491",
+    "S2-0038496",
+    "S2-0038501",
+    "S2-0038506",
+    "S2-0038511",
+    "S2-0038516",
+    "S2-0038521",
+    "S2-0038526",
+    "S2-0038531",
+    "S2-0038536",
+    "S2-0038541",
+    "S2-0038546",
+    "S2-0038551",
+    "S2-0038556",
+    "S2-0038561",
+    "S2-0038566",
+    "S2-0038571",
+    "S2-0038576"
+   ],
+   "window_utc": [
+    "2026-07-19T21:00:00.000Z",
+    "2026-07-20T21:00:00.000Z"
+   ]
+  },
+  {
+   "injection_id": "INJ-SE-07",
+   "site": "S2",
+   "provider": "solaredge",
+   "kind": "unknown_schema_change",
+   "expected_engine_response": "unknown key to review; power missing",
+   "delivery_ids": [
+    "S2-0038631"
+   ],
+   "window_utc": [
+    "2026-07-21T07:00:00.000Z",
+    "2026-07-21T08:00:00.000Z"
+   ]
+  },
+  {
+   "injection_id": "INJ-SE-08",
+   "site": "S3",
+   "provider": "solaredge",
+   "kind": "unexpected_lifetime_counter_reset",
+   "expected_engine_response": "flag reset; crossing interval unknown; resume after new baseline",
+   "delivery_ids": [
+    "S3-0039205",
+    "S3-0039211",
+    "S3-0039217",
+    "S3-0039223",
+    "S3-0039229",
+    "S3-0039235",
+    "S3-0039241",
+    "S3-0039247",
+    "S3-0039253",
+    "S3-0039259",
+    "S3-0039265",
+    "S3-0039271",
+    "S3-0039277",
+    "S3-0039283",
+    "S3-0039289",
+    "S3-0039295",
+    "S3-0039301",
+    "S3-0039307",
+    "S3-0039313",
+    "S3-0039319",
+    "S3-0039325",
+    "S3-0039331",
+    "S3-0039337",
+    "S3-0039343",
+    "S3-0039349",
+    "S3-0039355",
+    "S3-0039361",
+    "S3-0039367",
+    "S3-0039373",
+    "S3-0039379",
+    "S3-0039385",
+    "S3-0039391",
+    "S3-0039397",
+    "S3-0039403",
+    "S3-0039409",
+    "S3-0039415",
+    "S3-0039421",
+    "S3-0039427",
+    "S3-0039433",
+    "S3-0039439",
+    "S3-0039445",
+    "S3-0039451",
+    "S3-0039457",
+    "S3-0039463",
+    "S3-0039469",
+    "S3-0039475",
+    "S3-0039481",
+    "S3-0039487",
+    "S3-0039493",
+    "S3-0039499",
+    "S3-0039505",
+    "S3-0039511",
+    "S3-0039517",
+    "S3-0039523",
+    "S3-0039529",
+    "S3-0039535",
+    "S3-0039541",
+    "S3-0039547",
+    "S3-0039553",
+    "S3-0039559",
+    "S3-0039565",
+    "S3-0039571",
+    "S3-0039577",
+    "S3-0039583",
+    "S3-0039589",
+    "S3-0039595",
+    "S3-0039601",
+    "S3-0039607",
+    "S3-0039613",
+    "S3-0039619",
+    "S3-0039625",
+    "S3-0039631",
+    "S3-0039637",
+    "S3-0039643",
+    "S3-0039649",
+    "S3-0039655",
+    "S3-0039661",
+    "S3-0039667",
+    "S3-0039673",
+    "S3-0039679",
+    "S3-0039685",
+    "S3-0039691",
+    "S3-0039697",
+    "S3-0039703"
+   ],
+   "window_utc": [
+    "2026-07-18T09:15:00.000Z",
+    "2026-07-18T09:30:00.000Z"
+   ]
+  },
+  {
+   "injection_id": "INJ-SE-09",
+   "site": "S3",
+   "provider": "solaredge",
+   "kind": "http_403_denied_endpoint",
+   "expected_engine_response": "access_denied state, no substitute zeros, no bypass",
+   "delivery_ids": [
+    "S3-0039278",
+    "S3-0039284",
+    "S3-0039290",
+    "S3-0039296",
+    "S3-0039302",
+    "S3-0039308",
+    "S3-0039314",
+    "S3-0039320",
+    "S3-0039326",
+    "S3-0039332",
+    "S3-0039338",
+    "S3-0039344",
+    "S3-0039350",
+    "S3-0039356",
+    "S3-0039362",
+    "S3-0039368",
+    "S3-0039374",
+    "S3-0039380",
+    "S3-0039386",
+    "S3-0039392",
+    "S3-0039398",
+    "S3-0039404",
+    "S3-0039410",
+    "S3-0039416"
+   ],
+   "window_utc": [
+    "2026-07-18T21:00:00.000Z",
+    "2026-07-19T21:00:00.000Z"
+   ]
+  },
+  {
+   "injection_id": "INJ-SE-10",
+   "site": "S3",
+   "provider": "solaredge",
+   "kind": "http_400_time_range_error_then_fix",
+   "expected_engine_response": "request validation error distinct from access denial",
+   "delivery_ids": [
+    "S3-0039440",
+    "S3-0039731"
+   ],
+   "window_utc": [
+    "2026-07-20T00:00:00.000Z",
+    "2026-07-20T01:00:00.000Z"
+   ]
+  },
+  {
+   "injection_id": "PHY-01",
+   "site": "H1",
+   "provider": "huawei",
+   "kind": "physical_high_inverter_temperature",
+   "expected_engine_response": "retain values; create review candidate under demo policy",
+   "window_local": "2026-07-20 afternoon (hot day)"
+  },
+  {
+   "injection_id": "PHY-02",
+   "site": "H2",
+   "provider": "huawei",
+   "kind": "physical_phase_voltage_high",
+   "expected_engine_response": "retain values; create review candidate (phase L1)",
+   "window_local": "days 5-6 11:00-14:30 local"
+  },
+  {
+   "injection_id": "PHY-03",
+   "site": "S2",
+   "provider": "solaredge",
+   "kind": "physical_sustained_underproduction",
+   "expected_engine_response": "retain values; peer-based review candidate",
+   "window_local": "from 2026-07-19 08:00 local (one string lost)"
+  },
+  {
+   "injection_id": "NEG-01",
+   "site": "*",
+   "provider": "*",
+   "kind": "negative_example_cloudy_day",
+   "expected_engine_response": "no underproduction candidate on the shared overcast day",
+   "window_local": "2026-07-18"
+  },
+  {
+   "injection_id": "NEG-02",
+   "site": "*",
+   "provider": "*",
+   "kind": "negative_example_night",
+   "expected_engine_response": "night-time zero/null is normal; no candidate"
+  }
+ ]
+}
