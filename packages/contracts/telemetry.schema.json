@@ -1,0 +1,199 @@
+{
+  "$defs": {
+    "Measurement": {
+      "additionalProperties": false,
+      "properties": {
+        "availability": {
+          "default": "available",
+          "enum": [
+            "available",
+            "missing",
+            "unsupported",
+            "invalid"
+          ],
+          "title": "Availability",
+          "type": "string"
+        },
+        "boundary": {
+          "enum": [
+            "ac",
+            "dc",
+            "not_applicable"
+          ],
+          "title": "Boundary",
+          "type": "string"
+        },
+        "origin": {
+          "default": "measured",
+          "enum": [
+            "measured",
+            "derived"
+          ],
+          "title": "Origin",
+          "type": "string"
+        },
+        "quality_flags": {
+          "items": {
+            "maxLength": 128,
+            "type": "string"
+          },
+          "title": "Quality Flags",
+          "type": "array"
+        },
+        "requirement": {
+          "enum": [
+            "mandatory",
+            "optional"
+          ],
+          "title": "Requirement",
+          "type": "string"
+        },
+        "unit": {
+          "enum": [
+            "kW",
+            "%",
+            "V",
+            "degC"
+          ],
+          "title": "Unit",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Value"
+        }
+      },
+      "required": [
+        "value",
+        "unit",
+        "requirement",
+        "boundary"
+      ],
+      "title": "Measurement",
+      "type": "object"
+    },
+    "Metric": {
+      "enum": [
+        "pv_power",
+        "home_load",
+        "grid_import",
+        "grid_export",
+        "battery_charge",
+        "battery_discharge",
+        "battery_soc",
+        "voltage",
+        "temperature"
+      ],
+      "title": "Metric",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "device_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}$",
+      "title": "Device Id",
+      "type": "string"
+    },
+    "interval_end": {
+      "format": "date-time",
+      "title": "Interval End",
+      "type": "string"
+    },
+    "interval_start": {
+      "format": "date-time",
+      "title": "Interval Start",
+      "type": "string"
+    },
+    "measurements": {
+      "additionalProperties": {
+        "$ref": "#/$defs/Measurement"
+      },
+      "maxProperties": 9,
+      "propertyNames": {
+        "$ref": "#/$defs/Metric"
+      },
+      "title": "Measurements",
+      "type": "object"
+    },
+    "quality_flags": {
+      "items": {
+        "maxLength": 128,
+        "type": "string"
+      },
+      "title": "Quality Flags",
+      "type": "array"
+    },
+    "raw_record_ref": {
+      "maxLength": 512,
+      "minLength": 1,
+      "title": "Raw Record Ref",
+      "type": "string"
+    },
+    "received_at": {
+      "format": "date-time",
+      "title": "Received At",
+      "type": "string"
+    },
+    "record_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}$",
+      "title": "Record Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "site_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}$",
+      "title": "Site Id",
+      "type": "string"
+    },
+    "source_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}$",
+      "title": "Source Id",
+      "type": "string"
+    },
+    "source_mode": {
+      "enum": [
+        "live",
+        "replay",
+        "synthetic"
+      ],
+      "title": "Source Mode",
+      "type": "string"
+    },
+    "vendor_codes": {
+      "items": {
+        "maxLength": 128,
+        "type": "string"
+      },
+      "maxItems": 32,
+      "title": "Vendor Codes",
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema_version",
+    "record_id",
+    "site_id",
+    "device_id",
+    "source_id",
+    "interval_start",
+    "interval_end",
+    "received_at",
+    "source_mode",
+    "raw_record_ref",
+    "measurements"
+  ],
+  "title": "TelemetryRecord",
+  "type": "object"
+}

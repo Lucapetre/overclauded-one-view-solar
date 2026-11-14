@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0",
+  "record_id": "north-01-20260715T1215",
+  "site_id": "north-01",
+  "device_id": "meter-north-01",
+  "source_id": "synthetic-demo",
+  "interval_start": "2026-07-15T12:00:00Z",
+  "interval_end": "2026-07-15T12:15:00Z",
+  "received_at": "2026-07-15T12:15:00Z",
+  "source_mode": "synthetic",
+  "raw_record_ref": "fixture://summer-2026/north-01/1215",
+  "measurements": {
+    "pv_power": {"value": 6, "unit": "kW", "requirement": "mandatory", "boundary": "ac"},
+    "grid_import": {"value": 0, "unit": "kW", "requirement": "optional", "boundary": "ac"},
+    "grid_export": {"value": 4, "unit": "kW", "requirement": "optional", "boundary": "ac"}
+  },
+  "quality_flags": [],
+  "vendor_codes": []
+}

@@ -1,0 +1,168 @@
+{
+  "$defs": {
+    "Area": {
+      "additionalProperties": false,
+      "properties": {
+        "alias": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Alias",
+          "type": "string"
+        },
+        "area_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}$",
+          "title": "Area Id",
+          "type": "string"
+        },
+        "topology_mode": {
+          "enum": [
+            "simulated",
+            "authorized",
+            "unknown"
+          ],
+          "title": "Topology Mode",
+          "type": "string"
+        }
+      },
+      "required": [
+        "area_id",
+        "alias",
+        "topology_mode"
+      ],
+      "title": "Area",
+      "type": "object"
+    },
+    "Metric": {
+      "enum": [
+        "pv_power",
+        "home_load",
+        "grid_import",
+        "grid_export",
+        "battery_charge",
+        "battery_discharge",
+        "battery_soc",
+        "voltage",
+        "temperature"
+      ],
+      "title": "Metric",
+      "type": "string"
+    },
+    "Site": {
+      "additionalProperties": false,
+      "properties": {
+        "alias": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Alias",
+          "type": "string"
+        },
+        "area_id": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Area Id"
+        },
+        "capabilities": {
+          "items": {
+            "$ref": "#/$defs/Metric"
+          },
+          "maxItems": 9,
+          "minItems": 1,
+          "title": "Capabilities",
+          "type": "array"
+        },
+        "measurement_requirements": {
+          "additionalProperties": {
+            "enum": [
+              "mandatory",
+              "optional"
+            ],
+            "type": "string"
+          },
+          "propertyNames": {
+            "$ref": "#/$defs/Metric"
+          },
+          "title": "Measurement Requirements",
+          "type": "object"
+        },
+        "reporting_interval_seconds": {
+          "exclusiveMinimum": 0,
+          "maximum": 86400,
+          "title": "Reporting Interval Seconds",
+          "type": "integer"
+        },
+        "site_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}$",
+          "title": "Site Id",
+          "type": "string"
+        },
+        "stale_after_seconds": {
+          "exclusiveMinimum": 0,
+          "title": "Stale After Seconds",
+          "type": "integer"
+        },
+        "topology_mode": {
+          "enum": [
+            "simulated",
+            "authorized",
+            "unknown"
+          ],
+          "title": "Topology Mode",
+          "type": "string"
+        }
+      },
+      "required": [
+        "site_id",
+        "alias",
+        "area_id",
+        "topology_mode",
+        "reporting_interval_seconds",
+        "stale_after_seconds",
+        "capabilities",
+        "measurement_requirements"
+      ],
+      "title": "Site",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "area": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Area"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "device_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}$",
+      "title": "Device Id",
+      "type": "string"
+    },
+    "site": {
+      "$ref": "#/$defs/Site"
+    },
+    "source_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}$",
+      "title": "Source Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "site",
+    "device_id",
+    "source_id"
+  ],
+  "title": "SiteRegistration",
+  "type": "object"
+}

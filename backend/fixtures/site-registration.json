@@ -1,0 +1,19 @@
+{
+  "site": {
+    "site_id": "phase1-home-01",
+    "alias": "Phase 1 demonstration home",
+    "area_id": null,
+    "topology_mode": "unknown",
+    "reporting_interval_seconds": 900,
+    "stale_after_seconds": 1800,
+    "capabilities": ["pv_power", "home_load", "grid_import", "grid_export"],
+    "measurement_requirements": {
+      "pv_power": "mandatory",
+      "home_load": "optional",
+      "grid_import": "optional",
+      "grid_export": "optional"
+    }
+  },
+  "device_id": "meter-phase1-home-01",
+  "source_id": "phase1-pipeline"
+}
