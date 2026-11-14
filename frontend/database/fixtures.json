@@ -1,4 +1,48 @@
 {
+  "requestTypes": [
+    {
+      "id": "solar",
+      "label": "Solar production or inverter performance",
+      "family": "Production",
+      "owner": "Solar O&M",
+      "routeTo": "Solar Care"
+    },
+    {
+      "id": "device-warning",
+      "label": "Inverter warning or device temperature",
+      "family": "Temperature",
+      "owner": "Solar O&M",
+      "routeTo": "Solar Care"
+    },
+    {
+      "id": "grid",
+      "label": "Grid connection or voltage",
+      "family": "Voltage",
+      "owner": "Grid operator",
+      "routeTo": "Grid Response"
+    },
+    {
+      "id": "electrical",
+      "label": "Home electrical issue",
+      "family": "Local issue",
+      "owner": "Customer electrician",
+      "routeTo": "Field Service"
+    },
+    {
+      "id": "billing",
+      "label": "Billing or contract question",
+      "family": "Billing",
+      "owner": "Supplier support",
+      "routeTo": "Supplier Support"
+    },
+    {
+      "id": "other",
+      "label": "Other or not sure",
+      "family": "Other",
+      "owner": "Unassigned review",
+      "routeTo": "PPC Triage"
+    }
+  ],
   "incidents": [
     {
       "id": "I101",
@@ -301,9 +345,69 @@
       "role": "support",
       "sites": [
         "S01",
-        "S02"
+        "S02",
+        "S03",
+        "S04",
+        "S05",
+        "S06",
+        "S07",
+        "S08"
       ],
       "area": "North",
+      "active": true
+    },
+    {
+      "id": "u12",
+      "name": "Irina Matei",
+      "email": "support.central@solarlenes.demo",
+      "role": "support",
+      "sites": [
+        "S09",
+        "S10",
+        "S11",
+        "S12",
+        "S13",
+        "S14",
+        "S15",
+        "S16"
+      ],
+      "area": "Central",
+      "active": true
+    },
+    {
+      "id": "u13",
+      "name": "Paul Dumitru",
+      "email": "support.south@solarlenes.demo",
+      "role": "support",
+      "sites": [
+        "S17",
+        "S18",
+        "S19",
+        "S20",
+        "S21",
+        "S22",
+        "S23",
+        "S24"
+      ],
+      "area": "South",
+      "active": true
+    },
+    {
+      "id": "u14",
+      "name": "Carmen Voicu",
+      "email": "dispatch.central@solarlenes.demo",
+      "role": "dispatcher",
+      "sites": [],
+      "area": "Central",
+      "active": true
+    },
+    {
+      "id": "u15",
+      "name": "Dorin Ilie",
+      "email": "dispatch.south@solarlenes.demo",
+      "role": "dispatcher",
+      "sites": [],
+      "area": "South",
       "active": true
     }
   ],

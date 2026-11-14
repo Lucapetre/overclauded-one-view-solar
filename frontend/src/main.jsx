@@ -51,10 +51,14 @@ import {
   roles,
   users,
   sites,
+  inverters,
+  requestTypes,
+  routeRequest,
   crews,
   canSee,
   canDispatch,
   canReview,
+  canReviewRequest,
   rank,
   recommend,
   eligible,
@@ -1293,8 +1297,10 @@ function Plan({ db, user, current, notify, requireLogin }) {
 function Support({ db, user, current, notify, requireLogin, setSelected }) {
   const [followup, setFollowup] = useState({}),
     [description, setDescription] = useState(""),
+    [requestType, setRequestType] = useState("solar"),
     [consent, setConsent] = useState(false),
     [danger, setDanger] = useState(false),
+    [urgent, setUrgent] = useState(false),
     [file, setFile] = useState(null),
     [busy, setBusy] = useState(false);
   async function submit(e) {
@@ -1337,17 +1343,27 @@ function Support({ db, user, current, notify, requireLogin, setSelected }) {
         });
         await putMedia(id, file);
       }
+      const request = routeRequest(requestType);
+      const priority = danger
+        ? "immediate_danger"
+        : urgent
+          ? "urgent"
+          : "standard";
+      const owner = danger ? "Unassigned review" : request.owner;
+      const routedTo = danger ? "PPC Triage" : request.routeTo;
       mutate((d) => {
         const incidentId = "I" + Date.now();
         d.incidents.unshift({
           id: incidentId,
           site: current.id,
-          title: danger
-            ? "Customer reports immediate danger"
-            : "Customer support request",
-          family: "Local issue",
-          tier: danger ? "P0" : "P2",
-          owner: "Unassigned review",
+          title: `Customer request: ${request.label}`,
+          family: request.family,
+          tier: danger ? "P0" : urgent ? "P1" : "P2",
+          owner,
+          requestType,
+          priority,
+          routedTo,
+          reportedBy: user.id,
           confirmedOwner: "",
           evidence: description,
           strength: "Customer report",
@@ -1368,6 +1384,9 @@ function Support({ db, user, current, notify, requireLogin, setSelected }) {
           incident: incidentId,
           site: current.id,
           user: user.id,
+          requestType,
+          priority,
+          routedTo,
           description,
           media: !!file,
           filename: file?.name,
@@ -1378,10 +1397,13 @@ function Support({ db, user, current, notify, requireLogin, setSelected }) {
         audit(d, user, "Submitted support request", incidentId);
       });
       setDescription("");
+      setRequestType("solar");
       setFile(null);
       setConsent(false);
+      setUrgent(false);
+      setDanger(false);
       notify(
-        "Request added to the shared demo queue. A staff account can review and reply.",
+        `Request routed to ${routedTo}. A staff account can review and reply.`,
       );
     } catch (e) {
       notify(e.message);
@@ -1424,6 +1446,19 @@ function Support({ db, user, current, notify, requireLogin, setSelected }) {
           )}
           <form onSubmit={submit}>
             <label>
+              Request type
+              <select
+                value={requestType}
+                onChange={(e) => setRequestType(e.target.value)}
+              >
+                {requestTypes.map((request) => (
+                  <option key={request.id} value={request.id}>
+                    {request.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
               What have you noticed?
               <textarea
                 required
@@ -1445,6 +1480,16 @@ function Support({ db, user, current, notify, requireLogin, setSelected }) {
                   capture="environment"
                   onChange={(e) => setFile(e.target.files?.[0] || null)}
                 />
+              </label>
+            )}
+            {!danger && (
+              <label className="checkbox">
+                <input
+                  type="checkbox"
+                  checked={urgent}
+                  onChange={(e) => setUrgent(e.target.checked)}
+                />
+                This request needs urgent review
               </label>
             )}
             <p className="small-note">
@@ -1478,15 +1523,35 @@ function Support({ db, user, current, notify, requireLogin, setSelected }) {
         <section className="card">
           <h3>Your support history</h3>
           {db.visits
-            .filter((v) => v.site === current.id)
+            .filter((v) => v.site === current.id && v.user === user?.id)
             .map((v) => (
               <div className="request-card" key={v.id}>
                 <div className="section-head">
-                  <Pill tone="green">{v.status}</Pill>
+                  <div className="detail-meta">
+                    <Pill tone="green">{v.status}</Pill>
+                    <Pill
+                      tone={
+                        v.priority === "immediate_danger" || v.priority === "urgent"
+                          ? "orange"
+                          : ""
+                      }
+                    >
+                      {v.priority === "immediate_danger"
+                        ? "Immediate danger"
+                        : v.priority === "urgent"
+                          ? "Urgent"
+                          : "Standard"}
+                    </Pill>
+                  </div>
                   <small>
                     {new Date(v.created).toLocaleDateString("en-GB")}
                   </small>
                 </div>
+                <p className="small-note">
+                  {requestTypes.find((request) => request.id === v.requestType)?.label ||
+                    "Other or not sure"}{" "}
+                  · Routed to {v.routedTo || "PPC Triage"}
+                </p>
                 <p>{v.description}</p>
                 {v.replies.map((r, i) => (
                   <div className="reply" key={i}>
@@ -1822,8 +1887,21 @@ function Radar({ db, user, visibleSites, incidents, setSelected, notify }) {
                 const n = +s.id.slice(1) - 1,
                   group = Math.floor(n / 8),
                   j = n % 8;
-                const x = [110, 420, 195][group] + (j % 4) * 48,
-                  y = [120, 140, 280][group] + Math.floor(j / 4) * 54;
+                const fallbackX = [110, 420, 195][group] + (j % 4) * 48,
+                  fallbackY = [120, 140, 280][group] + Math.floor(j / 4) * 54,
+                  inverter =
+                    db.inverters?.find((item) => item.site === s.id) ||
+                    inverters.find((item) => item.site === s.id),
+                  x = inverter ? inverter.mapX * 720 : fallbackX,
+                  y = inverter ? inverter.mapY * 380 : fallbackY,
+                  customers = db.users
+                    .filter(
+                      (account) =>
+                        account.role === "client" &&
+                        account.sites.includes(s.id),
+                    )
+                    .map((account) => account.name)
+                    .join(", ") || "No demo client linked";
                 const incident = incidents.find(
                     (i) => i.site === s.id && i.status !== "Closed",
                   ),
@@ -1839,24 +1917,27 @@ function Radar({ db, user, visibleSites, incidents, setSelected, notify }) {
                     key={s.id}
                     role="button"
                     tabIndex="0"
-                    aria-label={`${s.id} ${s.name}${s.stale ? " stale" : ""}`}
+                    aria-label={`${s.id} ${s.name}; client: ${customers}; inverter: ${inverter?.model || "not mapped"}${s.stale ? "; telemetry stale" : ""}`}
                     onKeyDown={(e) =>
                       e.key === "Enter" &&
                       (incident
                         ? setSelected(incident.id)
                         : notify(
-                            `${s.id}: no supported alerts among monitored inputs.`,
+                            `${s.id} · ${customers} · ${inverter?.model || "No inverter mapped"} · no supported alerts among monitored inputs.`,
                           ))
                     }
                     onClick={() =>
                       incident
                         ? setSelected(incident.id)
                         : notify(
-                            `${s.id}: ${s.stale ? "stale telemetry" : "no supported alerts among monitored inputs"}.`,
+                            `${s.id} · ${customers} · ${inverter?.model || "No inverter mapped"} · ${s.stale ? "stale telemetry" : "no supported alerts among monitored inputs"}.`,
                           )
                     }
                     style={{ cursor: "pointer" }}
                   >
+                    <title>
+                      {`${s.name} · Client: ${customers} · Inverter: ${inverter?.manufacturer || ""} ${inverter?.model || "not mapped"} · ${inverter?.serial || "synthetic"}`}
+                    </title>
                     <circle cx={x} cy={y} r="15" fill={color} opacity=".12" />
                     <circle
                       cx={x}
@@ -2373,8 +2454,11 @@ function Visits({ db, user, notify, setSelected }) {
   const [selected, setSelectedVisit] = useState(null),
     [reply, setReply] = useState(""),
     [outcome, setOutcome] = useState("Clarification requested");
-  const visits = db.visits.filter((v) => canSee(user, v.site)),
-    visit = visits.find((v) => v.id === selected);
+  const visits = db.visits.filter((v) => canReviewRequest(user, v)),
+    visit = visits.find((v) => v.id === selected),
+    canRespond =
+      canReview(user) ||
+      (user.role === "support" && visit?.routedTo === "Supplier Support");
   return (
     <div className="two-col">
       <section className="card">
@@ -2409,7 +2493,14 @@ function Visits({ db, user, notify, setSelected }) {
                 {v.site} · {v.description.slice(0, 55)}
               </b>
               <small>
-                {v.status} · {v.media ? "Video attached" : "Description only"}
+                {requestTypes.find((request) => request.id === v.requestType)?.label ||
+                  "Other or not sure"}{" "}
+                · {v.priority === "immediate_danger"
+                  ? "Immediate danger"
+                  : v.priority === "urgent"
+                    ? "Urgent"
+                    : "Standard"}{" "}
+                · {v.status} · {v.media ? "Video attached" : "Description only"}
               </small>
             </span>
             <ChevronRight size={18} />
@@ -2423,14 +2514,31 @@ function Visits({ db, user, notify, setSelected }) {
               <h3>{visit.site} · Review request</h3>
               <Pill>{visit.status}</Pill>
             </div>
+            <div className="info-box">
+              <b>
+                {requestTypes.find((request) => request.id === visit.requestType)?.label ||
+                  "Other or not sure"}
+              </b>
+              <br />
+              Priority:{" "}
+              {visit.priority === "immediate_danger"
+                ? "Immediate danger"
+                : visit.priority === "urgent"
+                  ? "Urgent"
+                  : "Standard"}
+              <br />
+              Routed to: {visit.routedTo || "PPC Triage"}
+            </div>
             <p>{visit.description}</p>
             {visit.media && user.role !== "support" && <Media id={visit.id} />}
-            <button
-              className="text-btn"
-              onClick={() => setSelected(visit.incident)}
-            >
-              View shared incident <ArrowUpRight size={16} />
-            </button>
+            {user.role !== "support" && (
+              <button
+                className="text-btn"
+                onClick={() => setSelected(visit.incident)}
+              >
+                View shared incident <ArrowUpRight size={16} />
+              </button>
+            )}
             {visit.replies.map((r, i) => (
               <div className="reply" key={i}>
                 <b>{r.author}</b>
@@ -2438,7 +2546,7 @@ function Visits({ db, user, notify, setSelected }) {
                 <small>{r.outcome}</small>
               </div>
             ))}
-            {canReview(user) ? (
+            {canRespond ? (
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -2451,19 +2559,21 @@ function Visits({ db, user, notify, setSelected }) {
                       time: new Date().toISOString(),
                     });
                     v.status = outcome;
-                    let i = d.incidents.find((x) => x.id === v.incident);
-                    i.status =
-                      outcome === "Clarification requested"
-                        ? "Awaiting customer"
-                        : outcome === "Remote resolution proposed"
-                          ? "Monitoring"
-                          : "Awaiting owner";
-                    i.revision++;
-                    i.timeline.push({
-                      text: outcome + ": " + reply,
-                      actor: user.name,
-                      time: new Date().toISOString(),
-                    });
+                    if (user.role !== "support") {
+                      let i = d.incidents.find((x) => x.id === v.incident);
+                      i.status =
+                        outcome === "Clarification requested"
+                          ? "Awaiting customer"
+                          : outcome === "Remote resolution proposed"
+                            ? "Monitoring"
+                            : "Awaiting owner";
+                      i.revision++;
+                      i.timeline.push({
+                        text: outcome + ": " + reply,
+                        actor: user.name,
+                        time: new Date().toISOString(),
+                      });
+                    }
                     audit(d, user, "Replied to virtual visit", visit.incident);
                   });
                   setReply("");
@@ -2489,9 +2599,13 @@ function Visits({ db, user, notify, setSelected }) {
                     onChange={(e) => setOutcome(e.target.value)}
                   >
                     {[
-                      "Clarification requested",
-                      "Remote resolution proposed",
-                      "Escalation proposed",
+                      ...(user.role === "support"
+                        ? ["Supplier response sent", "Clarification requested"]
+                        : [
+                            "Clarification requested",
+                            "Remote resolution proposed",
+                            "Escalation proposed",
+                          ]),
                     ].map((s) => (
                       <option key={s}>{s}</option>
                     ))}

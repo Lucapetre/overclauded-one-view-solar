@@ -28,6 +28,7 @@ Resolve scope server-side on every read AND write. CEO has all scopes; area mana
 | POST /api/visits/{id}/media | Quarantine, validate and store privately |
 | GET /api/media/{id} | Authorized streaming; no public storage URL |
 | POST /api/visits/{id}/replies | Qualified human response and timeline |
+| POST /api/visits/{id}/call | Authorize participants and issue short-lived WebRTC room tokens |
 | GET /api/areas | Coverage denominators and source dates |
 | GET /api/crews | Scope, qualifications, availability and shift |
 | POST /api/assignments | Eligible crew proposal only |
@@ -45,6 +46,7 @@ Error envelope: `{ "code": "CAPACITY_CONFLICT", "message": "Choose another windo
 5. Add an ingestion/replay engine for the eight families; deduplicate active episodes. The frontend seed does not run detection. Keep unknown codes unmodified and abstain when evidence is absent.
 6. Add real support contacts, staffing and reviewed safety copy before any real deployment. Do not issue generic equipment shutdown or reset instructions. No device-write API is in scope.
 7. Poll authorized changes every five seconds, or implement authorized push. Cross-device persistence requires the backend; localStorage/IndexedDB only demonstrate the shared workflow in one browser.
+8. For live calls, create provider rooms and short-lived participant tokens server-side; never expose provider API secrets to the frontend. Validate ticket scope and consent before issuing tokens, verify provider webhooks, and keep recording disabled unless all participants opt in. The current virtual-visit UI is asynchronous only.
 
 ## Validation completed in this frontend
 

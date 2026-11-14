@@ -95,8 +95,40 @@ export const users = [
     name: "Victor Ene",
     email: "support@solarlenes.demo",
     role: "support",
-    sites: ["S01", "S02"],
+    sites: Array.from({ length: 8 }, (_, i) => `S${String(i + 1).padStart(2, "0")}`),
     area: "North",
+  },
+  {
+    id: "u12",
+    name: "Irina Matei",
+    email: "support.central@solarlenes.demo",
+    role: "support",
+    sites: Array.from({ length: 8 }, (_, i) => `S${String(i + 9).padStart(2, "0")}`),
+    area: "Central",
+  },
+  {
+    id: "u13",
+    name: "Paul Dumitru",
+    email: "support.south@solarlenes.demo",
+    role: "support",
+    sites: Array.from({ length: 8 }, (_, i) => `S${String(i + 17).padStart(2, "0")}`),
+    area: "South",
+  },
+  {
+    id: "u14",
+    name: "Carmen Voicu",
+    email: "dispatch.central@solarlenes.demo",
+    role: "dispatcher",
+    sites: [],
+    area: "Central",
+  },
+  {
+    id: "u15",
+    name: "Dorin Ilie",
+    email: "dispatch.south@solarlenes.demo",
+    role: "dispatcher",
+    sites: [],
+    area: "South",
   },
 ];
 export const sites = Array.from({ length: 24 }, (_, i) => ({
@@ -112,6 +144,76 @@ export const sites = Array.from({ length: 24 }, (_, i) => ({
   stale: [5, 7, 14, 22].includes(i),
   pv: 3.6 + (i % 5) * 0.3,
 }));
+export const requestTypes = [
+  {
+    id: "solar",
+    label: "Solar production or inverter performance",
+    family: "Production",
+    owner: "Solar O&M",
+    routeTo: "Solar Care",
+  },
+  {
+    id: "device-warning",
+    label: "Inverter warning or device temperature",
+    family: "Temperature",
+    owner: "Solar O&M",
+    routeTo: "Solar Care",
+  },
+  {
+    id: "grid",
+    label: "Grid connection or voltage",
+    family: "Voltage",
+    owner: "Grid operator",
+    routeTo: "Grid Response",
+  },
+  {
+    id: "electrical",
+    label: "Home electrical issue",
+    family: "Local issue",
+    owner: "Customer electrician",
+    routeTo: "Field Service",
+  },
+  {
+    id: "billing",
+    label: "Billing or contract question",
+    family: "Billing",
+    owner: "Supplier support",
+    routeTo: "Supplier Support",
+  },
+  {
+    id: "other",
+    label: "Other or not sure",
+    family: "Other",
+    owner: "Unassigned review",
+    routeTo: "PPC Triage",
+  },
+];
+export function routeRequest(id) {
+  return requestTypes.find((request) => request.id === id) || requestTypes.at(-1);
+}
+export const inverters = sites.map((site, i) => {
+  const index = i % 8;
+  const group = Math.floor(i / 8);
+  const x = [110, 420, 195][group] + (index % 4) * 48;
+  const y = [120, 140, 280][group] + Math.floor(index / 4) * 54;
+  const manufacturer = ["Huawei", "Fronius", "SolarEdge"][i % 3];
+  const model =
+    manufacturer === "Huawei"
+      ? `SUN2000-${site.capacity}KTL-M1`
+      : manufacturer === "Fronius"
+        ? `Primo ${site.capacity}.0-1`
+        : `SE${site.capacity}K`;
+  return {
+    id: `INV-${site.id}`,
+    site: site.id,
+    manufacturer,
+    model,
+    serial: `DEMO-${site.id}-2024`,
+    ratedKw: site.capacity,
+    mapX: x / 720,
+    mapY: y / 380,
+  };
+});
 export const crews = [
   {
     name: "Solar Care",
@@ -252,6 +354,7 @@ export function seed() {
         },
       ],
     })),
+    inverters: inverters.map((inverter) => ({ ...inverter })),
     visits: [],
     plans: [],
     preferences: {},
@@ -274,6 +377,12 @@ export const canDispatch = (u) =>
   ["ceo", "manager", "dispatcher"].includes(u?.role);
 export const canReview = (u) =>
   ["ceo", "manager", "dispatcher", "technician"].includes(u?.role);
+export function canReviewRequest(user, visit) {
+  if (!user || !canSee(user, visit.site)) return false;
+  if (user.role === "technician") return visit.routedTo === user.crew;
+  if (user.role === "support") return visit.routedTo === "Supplier Support";
+  return ["ceo", "manager", "dispatcher"].includes(user.role);
+}
 export function rank(incidents) {
   return [...incidents].sort(
     (a, b) => a.tier.localeCompare(b.tier) || b.age - a.age,

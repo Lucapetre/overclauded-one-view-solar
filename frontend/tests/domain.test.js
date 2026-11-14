@@ -4,8 +4,11 @@ import {
   users,
   seed,
   sites,
+  inverters,
+  routeRequest,
   crews,
   canSee,
+  canReviewRequest,
   canDispatch,
   canReview,
   rank,
@@ -78,6 +81,33 @@ test("qualified crews cannot receive overlapping confirmed work", () => {
     eligible(crews[0], i, [{ crew: "Solar Care", status: "Confirmed" }]),
     false,
   );
+});
+test("customer request types route to the matching worker team", () => {
+  assert.equal(routeRequest("solar").routeTo, "Solar Care");
+  assert.equal(routeRequest("grid").routeTo, "Grid Response");
+  assert.equal(routeRequest("billing").routeTo, "Supplier Support");
+  assert.equal(routeRequest("unknown").routeTo, "PPC Triage");
+});
+test("request inboxes are filtered by worker route and site scope", () => {
+  const solarRequest = { site: "S01", routedTo: "Solar Care" };
+  const billingRequest = { site: "S01", routedTo: "Supplier Support" };
+  assert.equal(canReviewRequest(users[7], solarRequest), true);
+  assert.equal(canReviewRequest(users[7], billingRequest), false);
+  assert.equal(canReviewRequest(users[10], billingRequest), true);
+  assert.equal(canReviewRequest(users[11], billingRequest), false);
+});
+test("each synthetic site has one inverter plotted for its linked clients", () => {
+  const db = seed();
+  assert.equal(db.inverters.length, sites.length);
+  for (const site of sites) {
+    const inverter = db.inverters.find((item) => item.site === site.id);
+    assert.ok(inverter);
+    assert.ok(inverter.mapX >= 0 && inverter.mapX <= 1);
+    assert.ok(inverter.mapY >= 0 && inverter.mapY <= 1);
+  }
+  for (const account of db.users.filter((item) => item.role === "client")) {
+    assert.ok(inverters.some((item) => item.site === account.sites[0]));
+  }
 });
 test("time formatting supports fractional duration", () => {
   assert.equal(timeLabel(13.25), "13:15");

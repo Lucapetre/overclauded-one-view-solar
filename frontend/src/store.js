@@ -1,11 +1,32 @@
 import { seed } from "./domain";
 const KEY = "solarlenes-demo-v1";
 export function readDB() {
+  let stored;
   try {
-    return JSON.parse(localStorage.getItem(KEY)) || seed();
+    stored = JSON.parse(localStorage.getItem(KEY));
   } catch {
     return seed();
   }
+  if (!stored || typeof stored !== "object") return seed();
+  const defaults = seed();
+  const previousUsers = stored.users || [];
+  return {
+    ...defaults,
+    ...stored,
+    users: defaults.users.map((user) => ({
+      ...user,
+      ...previousUsers.find((saved) => saved.id === user.id),
+    })),
+    inverters: Array.isArray(stored.inverters)
+      ? stored.inverters
+      : defaults.inverters,
+    visits: (stored.visits || []).map((visit) => ({
+      requestType: "other",
+      priority: "standard",
+      routedTo: "PPC Triage",
+      ...visit,
+    })),
+  };
 }
 export function saveDB(db) {
   localStorage.setItem(KEY, JSON.stringify(db));
