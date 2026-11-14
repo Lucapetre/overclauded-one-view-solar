@@ -1,0 +1,60 @@
+# Requirement & capability registry (SYNTHETIC DEMONSTRATION).
+#
+# Four classifications are deliberately kept apart:
+#   integration_required     - engineering choice of THIS ingestion contract (needed to identify / interpret a record)
+#   vendor_response_required - a key the pinned API response/version declares required (value may still be null)
+#   optional                 - may be absent or unsupported without invalidating anything else
+#   regulatory_reference     - connection/reporting context from Romanian rules; NOT a manufacturer telemetry API field
+#
+# Nothing here asserts that a law requires a manufacturer API field. Field-level legal applicability is
+# explicitly marked "unverified" unless stated otherwise; confirm with the mentor/DSO for any deployment.
+registry_version: "2026.11.14-1"
+
+sources:
+  R1: {title: "Order 228/2018 technical connection norm, Art. 15 and annex technical-data table", url: "https://legislatie.just.ro/Public/DetaliiDocumentAfis/209500", accessed: "2026-11-14", supports: "connection/technical data supplied to the network operator; not a vendor API schema"}
+  R2: {title: "ANRE press release 10 Nov 2026 (prosumer rules; DSO monthly import/export reading)", url: "https://anre.ro/comunicat-de-presa-anre-aproba-noi-reguli-pentru-prosumatori-compensare-lunara-utilizarea-excedentului-pentru-mai-multe-locuri-de-consum-si-plata-sumelor-restante/", accessed: "2026-11-14", supports: "DSO meter reading context; not inverter telemetry"}
+  R3: {title: "Huawei SmartPVMS 25.2.0 Northbound API Reference, issue 2025-07-28 (public mirror)", url: "https://www.scribd.com/document/980589962/SmartPVMS-25-2-0-Northbound-API-Reference", accessed: "2026-11-14", supports: "device data shapes; dt38/dt39 fields"}
+  R4: {title: "Huawei FAQ: Northbound API application permissions", url: "https://info.support.huawei.com/DpinfoAppDoc/pro_erp_slice001/doc/fusion_solar/faq/installer/en/en-us_topic_0000001867081537.html", accessed: "2026-11-14", supports: "access prerequisites only (control instructions deliberately NOT implemented)"}
+  R5: {title: "Fronius Solar API overview", url: "https://www.fronius.com/en/help-center/solar-energy/products/monitoring-control/solutions/open-interfaces/fronius-solar-api-json-", accessed: "2026-11-14", supports: "interface existence and scope"}
+  R6: {title: "Fronius Solar API V1, 42,0410,2012,EN rev 021-21012025 (public mirror)", url: "https://www.scribd.com/document/1001917583/42-0410-2012-3", accessed: "2026-11-14", supports: "PowerFlow / CommonInverterData fields, signs, required-nullable keys"}
+  R7: {title: "SolarEdge Monitoring Server API (March 2026)", url: "https://knowledge-center.solaredge.com/sites/kc/files/se_monitoring_api.pdf", accessed: "2026-11-14", supports: "Site Power Flow, Storage Information, Inverter Technical Data"}
+
+requirements:
+  # ---------------- integration_required (our ingestion contract) ----------------
+  - {id: INT-01, item: "provider_profile_id + endpoint_key in transport envelope", classification: integration_required, applies_to: "all profiles", source: "this ingestion contract", notes: "routes the payload to a pinned profile/mapping version"}
+  - {id: INT-02, item: "account_id + site_id binding registered in sites.json", classification: integration_required, applies_to: "all profiles", source: "this ingestion contract", notes: "no fuzzy name matching; unregistered binding is quarantined"}
+  - {id: INT-03, item: "device identifier resolvable to a registered device (site-scoped)", classification: integration_required, applies_to: "device-scoped endpoints", source: "this ingestion contract", notes: "provider/account/site-qualified device key; IDs kept as strings"}
+  - {id: INT-04, item: "usable source or capture time with a declared time role", classification: integration_required, applies_to: "all endpoints", source: "this ingestion contract", notes: "missing / ambiguous / nonexistent local times are quarantined, never invented"}
+  - {id: INT-05, item: "declared capability map per site (meter, battery, power-flow support)", classification: integration_required, applies_to: "all sites", source: "this ingestion contract", notes: "distinguishes not_installed / unsupported from missing"}
+  # ---------------- vendor_response_required (pinned API versions) ----------------
+  - {id: VR-FR-01, item: "Head.Timestamp, Head.Status", classification: vendor_response_required, applies_to: "fronius_solar_api_v1_rev021", source: R6, notes: "Head.Timestamp is a response timestamp"}
+  - {id: VR-FR-02, item: "Body.Data.Site.P_Grid / P_Load / P_Akku / P_PV / E_Day / E_Year / E_Total keys", classification: vendor_response_required, applies_to: "fronius_solar_api_v1_rev021 GetPowerFlowRealtimeData", source: R6, notes: "required keys whose values may legitimately be null; a MISSING key is schema damage, a null is not a fault"}
+  - {id: VR-HW-01, item: "success, failCode, data, params, message", classification: vendor_response_required, applies_to: "huawei_smartpvms_nbi_2025_07_28", source: R3, notes: "HTTP 200 with success=false is a provider failure, not zero output"}
+  - {id: VR-SE-01, item: "siteCurrentPowerFlow.unit / connections / node currentPower", classification: vendor_response_required, applies_to: "solaredge_monitoring_api_2026_03 currentPowerFlow", source: R7, notes: "empty object = unsupported site"}
+  - {id: VR-NOTE, item: "mandatory request parameters (e.g. devTypeId, startTime/endTime)", classification: vendor_response_required, applies_to: "request side", source: "R3, R7", notes: "a mandatory REQUEST parameter is not a mandatory MEASUREMENT"}
+  # ---------------- optional ----------------
+  - {id: OPT-01, item: "battery SOC / mode / power / temperature", classification: optional, applies_to: "sites with a battery and a profile that exposes it", source: "R3, R6, R7", notes: "absence keeps other metrics valid"}
+  - {id: OPT-02, item: "inverter internal temperature", classification: optional, applies_to: "huawei dt38, solaredge technical data", source: "R3, R7", notes: "NOT available from Fronius power-flow endpoint; stays unavailable"}
+  - {id: OPT-03, item: "phase voltages beyond L1", classification: optional, applies_to: "three-phase devices only", source: "R3, R7", notes: "single-phase devices: not_installed"}
+  - {id: OPT-04, item: "household load and grid exchange", classification: optional, applies_to: "sites with a meter on a profile that models it", source: "R6, R7", notes: "Huawei meter endpoint not verified/modelled here: unavailable; never inferred from inverter output"}
+  # ---------------- regulatory_reference (context; NOT an API requirement) ----------------
+  - {id: REG-01, item: "connection point reference", classification: regulatory_reference, applies_to: "regulatory_metadata.json", source: R1, rule_version: "Order 228/2018 Art.15 + annex", legal_field_applicability: unverified}
+  - {id: REG-02, item: "grid nominal voltage", classification: regulatory_reference, applies_to: "regulatory_metadata.json", source: R1, rule_version: "Order 228/2018 Art.15 + annex", legal_field_applicability: unverified}
+  - {id: REG-03, item: "generator nominal active power (kW) and apparent power (kVA)", classification: regulatory_reference, applies_to: "regulatory_metadata.json", source: R1, rule_version: "Order 228/2018 Art.15 + annex", legal_field_applicability: unverified}
+  - {id: REG-04, item: "inverter rated / max AC power, nominal AC voltage", classification: regulatory_reference, applies_to: "regulatory_metadata.json", source: R1, rule_version: "Order 228/2018 Art.15 + annex", legal_field_applicability: unverified}
+  - {id: REG-05, item: "DC input voltage range, maximum DC input current", classification: regulatory_reference, applies_to: "regulatory_metadata.json", source: R1, rule_version: "Order 228/2018 Art.15 + annex", legal_field_applicability: unverified}
+  - {id: REG-06, item: "battery capacity and operating limits (where installed)", classification: regulatory_reference, applies_to: "regulatory_metadata.json", source: R1, rule_version: "Order 228/2018 Art.15 + annex", legal_field_applicability: unverified}
+  - {id: REG-07, item: "monthly imported/exported energy reading", classification: regulatory_reference, applies_to: "distribution operator metering (NOT inverter telemetry)", source: R2, rule_version: "ANRE communication 2026-11-10", legal_field_applicability: "verify with mentor"}
+
+# Declared capability map per profile variant (what the PROFILE can supply; sites.json declares what is INSTALLED).
+capability_map:
+  huawei_smartpvms_nbi_2025_07_28:
+    residential_inverter_dt38: {inverter_ac_output_kw: supported, pv_dc_kw: supported, daily_yield_kwh: supported, lifetime_yield_kwh: supported, inverter_temperature_c: supported, phase_voltage_v: supported_applicable_phases, string_dc_voltage_v: supported, grid_import_kw: unavailable_not_modelled, grid_export_kw: unavailable_not_modelled, household_load_kw: unavailable_not_modelled}
+    residential_battery_dt39: {soc_pct: supported, battery_charge_kw: supported_assumed_demo_sign, battery_discharge_kw: supported_assumed_demo_sign, battery_temperature_c: unavailable_not_in_selected_fields}
+  fronius_solar_api_v1_rev021:
+    snapinverter: {inverter_ac_output_kw: supported, pv_ac_kw: supported, pv_dc_kw: unavailable_boundary, grid_import_kw: requires_meter, grid_export_kw: requires_meter, household_load_kw: requires_meter, daily_yield_kwh: model_dependent, lifetime_yield_kwh: supported, inverter_temperature_c: unavailable_in_endpoint}
+    gen24_hybrid: {inverter_ac_output_kw: supported_hybrid_net_ac, pv_dc_kw: supported, pv_ac_kw: unavailable_boundary, battery_charge_kw: supported, battery_discharge_kw: supported, soc_pct: optional, daily_yield_kwh: null_on_model, lifetime_yield_kwh: supported, inverter_temperature_c: unavailable_in_endpoint}
+  solaredge_monitoring_api_2026_03:
+    inverter_technical_data: {inverter_ac_output_kw: supported, lifetime_yield_kwh: supported, inverter_temperature_c: supported, phase_voltage_v: supported_applicable_phases}
+    site_power_flow: {grid_import_kw: requires_meter, grid_export_kw: requires_meter, household_load_kw: requires_meter, pv_production_kw: supported_boundary_unspecified, battery_charge_kw: requires_storage, soc_pct: requires_storage}
+    storage_information: {battery_charge_kw: supported, battery_discharge_kw: supported, soc_pct: supported, battery_temperature_c: supported}

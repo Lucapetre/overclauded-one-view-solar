@@ -12,6 +12,13 @@ export type IngestResult = { "record_id": string; "status": "accepted" | "duplic
 export type Login = { "username": string; "password": string; };
 export type Measurement = { "value": number | null; "unit": "kW" | "%" | "V" | "degC"; "requirement": "mandatory" | "optional"; "availability"?: "available" | "missing" | "unsupported" | "invalid"; "origin"?: "measured" | "derived"; "boundary": "ac" | "dc" | "not_applicable"; "quality_flags"?: Array<string>; };
 export type Metric = "pv_power" | "home_load" | "grid_import" | "grid_export" | "battery_charge" | "battery_discharge" | "battery_soc" | "voltage" | "temperature";
+export type ProviderFrame = { "provider": string; "account_id": string; "site_id": string; "site_key": string; "endpoint_key": string; "device_id": string | null; "channel": string | null; "metric_name": string; "aggregation": string; "frame_start_utc": string; "frame_end_utc": string; "frame_start_local": string; "value": number | null; "unit": string; "n_obs": number; "original_cadence_s"?: number | null; "coverage_ratio": number; "value_origin": string; "frame_status": string; };
+export type ProviderFrames = { "site": ProviderSite; "total": number; "limit": number; "offset": number; "items": Array<ProviderFrame>; };
+export type ProviderLatest = { "site": ProviderSite; "frames": Array<ProviderFrame>; "source_health": Array<ProviderSourceHealth>; "display_timezone"?: "Europe/Bucharest"; };
+export type ProviderObservation = { "obs_id": number; "provider": string; "account_id": string; "site_id": string; "device_id": string | null; "endpoint_key": string; "provider_profile_id": string; "provider_profile_version": string; "mapping_version": string; "profile_variant": string | null; "entity_scope": string; "channel": string | null; "source_time_role": string; "measurement_time_utc": string | null; "response_time_utc": string | null; "capture_time_utc": string | null; "received_at_utc": string | null; "effective_time_utc": string; "effective_time_basis": string; "metric_name": string; "metric_kind": string; "canonical_value": number | null; "canonical_text": string | null; "canonical_unit": string; "boundary": string | null; "value_origin": string; "availability_status": string; "quality_flags": string | null; "is_conflicted": number; "assumption_basis": string | null; "requirement_class": "integration_required" | "vendor_response_required" | "optional"; "field_rule_id": string; "record_status": string | null; };
+export type ProviderObservations = { "site": ProviderSite; "total": number; "limit": number; "offset": number; "items": Array<ProviderObservation>; };
+export type ProviderSite = { "site_id": string; "site_key": string; "provider": string; "account_id": string; "native_site_id": string; "display_name": string; "provider_profile_id": string; "capabilities": { [key: string]: string; }; "source_mode": "synthetic" | "replay"; "as_of_utc": string; };
+export type ProviderSourceHealth = { "endpoint_key": string; "device_key": string; "cadence_s": number | null; "latest_source_ms": number | null; "latest_received_ms": number | null; "latest_source_age_s": number | null; "stale_threshold_s": number | null; "freshness_status": string; "access_status": string; "notes": string | null; };
 export type PublicProvenance = { "source_mode": "live" | "replay" | "synthetic"; "source_id": string; "source_date": string; };
 export type SessionView = { "user": User; "csrf_token": string; "expires_at": string; };
 export type Site = { "site_id": string; "alias": string; "area_id": string | null; "topology_mode": "simulated" | "authorized" | "unknown"; "reporting_interval_seconds": number; "stale_after_seconds": number; "capabilities": Array<Metric>; "measurement_requirements": { [key: string]: "mandatory" | "optional"; }; };
@@ -33,6 +40,18 @@ export type ApiRoutes = {
   };
   "/api/v1/sites": {
     get: { response: Array<Site>; body: never; query: {  }; params: {  } };
+  };
+  "/api/v1/provider/sites": {
+    get: { response: Array<ProviderSite>; body: never; query: {  }; params: {  } };
+  };
+  "/api/v1/sites/{site_id}/provider/latest": {
+    get: { response: ProviderLatest; body: never; query: {  }; params: { "site_id": string; } };
+  };
+  "/api/v1/sites/{site_id}/provider/observations": {
+    get: { response: ProviderObservations; body: never; query: { "from": string; "to": string; "metric"?: string | null; "endpoint"?: string | null; "device"?: string | null; "channel"?: string | null; "limit"?: number; "offset"?: number; }; params: { "site_id": string; } };
+  };
+  "/api/v1/sites/{site_id}/provider/frames": {
+    get: { response: ProviderFrames; body: never; query: { "from": string; "to": string; "metric"?: string | null; "endpoint"?: string | null; "device"?: string | null; "channel"?: string | null; "limit"?: number; "offset"?: number; }; params: { "site_id": string; } };
   };
   "/api/v1/sites/{site_id}": {
     get: { response: Site; body: never; query: {  }; params: { "site_id": string; } };

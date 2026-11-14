@@ -10,6 +10,7 @@ from backend.db import Database, stamp
 from backend.errors import ApiError
 from backend.ingestion import ingest
 from backend.models import SiteRegistration, utc
+from backend.providers import import_provider_snapshot
 from backend.provisioning import create_user, grant_access, register_site
 from backend.seed import seed_demo
 
@@ -30,6 +31,15 @@ def main():
         help="Set analytical replay time; wall-clock session time is unchanged",
     )
     replay.add_argument("timestamp")
+    provider = commands.add_parser(
+        "import-provider",
+        help="Import a phase 1 scraper snapshot and frames without losing canonical semantics",
+    )
+    provider.add_argument("--database", type=Path, required=True)
+    provider.add_argument("--sites", type=Path, default=Path("demo_data/sites.json"))
+    provider.add_argument(
+        "--frames", type=Path, default=Path("build/site_frames_15min.csv")
+    )
     register = commands.add_parser(
         "register-site", help="Register a phase 1 site's capabilities and energy stream"
     )
@@ -53,7 +63,16 @@ def main():
     settings = Settings()
     database = Database(settings.database_path)
     database.migrate()
-    if arguments.command == "register-site":
+    if arguments.command == "import-provider":
+        print(
+            json.dumps(
+                import_provider_snapshot(
+                    database, arguments.database, arguments.sites, arguments.frames
+                ),
+                indent=2,
+            )
+        )
+    elif arguments.command == "register-site":
         registration = SiteRegistration.model_validate_json(arguments.path.read_text())
         register_site(database, registration)
         print(f"Registered site {registration.site.site_id}")

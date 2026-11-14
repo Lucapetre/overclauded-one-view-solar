@@ -4,6 +4,10 @@ import type {
   EnergyHistory,
   EnergySnapshot,
   ErrorEnvelope,
+  ProviderFrames,
+  ProviderLatest,
+  ProviderObservations,
+  ProviderSite,
   SessionView,
   Site,
 } from "./index";
@@ -98,7 +102,42 @@ export class SolarClient {
   areaSummary(areaId: string, signal?: AbortSignal): Promise<AreaSummary> {
     return this.request(`/api/v1/areas/${encodeURIComponent(areaId)}/summary`, { signal });
   }
+
+  providerSites(signal?: AbortSignal): Promise<ProviderSite[]> {
+    return this.request("/api/v1/provider/sites", { signal });
+  }
+
+  providerLatest(siteId: string, signal?: AbortSignal): Promise<ProviderLatest> {
+    return this.request(`/api/v1/sites/${encodeURIComponent(siteId)}/provider/latest`, { signal });
+  }
+
+  providerObservations(siteId: string, options: ProviderHistoryQuery, signal?: AbortSignal): Promise<ProviderObservations> {
+    return this.providerHistory(siteId, "observations", options, signal);
+  }
+
+  providerFrames(siteId: string, options: ProviderHistoryQuery, signal?: AbortSignal): Promise<ProviderFrames> {
+    return this.providerHistory(siteId, "frames", options, signal);
+  }
+
+  private providerHistory<T>(siteId: string, kind: "observations" | "frames", options: ProviderHistoryQuery, signal?: AbortSignal): Promise<T> {
+    const query = new URLSearchParams();
+    for (const [key, value] of Object.entries(options)) {
+      if (value !== undefined) query.set(key, String(value));
+    }
+    return this.request(`/api/v1/sites/${encodeURIComponent(siteId)}/provider/${kind}?${query}`, { signal });
+  }
 }
+
+export type ProviderHistoryQuery = {
+  from: string;
+  to: string;
+  metric?: string;
+  endpoint?: string;
+  device?: string;
+  channel?: string;
+  limit?: number;
+  offset?: number;
+};
 
 /** Poll visible views every five seconds; stop on unmount or sign-out. */
 export function poll<T>(

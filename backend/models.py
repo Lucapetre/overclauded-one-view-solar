@@ -130,7 +130,7 @@ class Site(Model):
     topology_mode: Literal["simulated", "authorized", "unknown"]
     reporting_interval_seconds: Annotated[int, Field(gt=0, le=86400)]
     stale_after_seconds: Annotated[int, Field(gt=0)]
-    capabilities: list[Metric] = Field(min_length=1, max_length=len(Metric))
+    capabilities: list[Metric] = Field(max_length=len(Metric))
     measurement_requirements: dict[Metric, Requirement]
 
     @model_validator(mode="after")

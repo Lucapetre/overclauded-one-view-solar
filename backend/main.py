@@ -29,6 +29,13 @@ from backend.models import (
     TelemetryRecord,
     utc,
 )
+from backend.provider_models import (
+    ProviderFrames,
+    ProviderLatest,
+    ProviderObservations,
+    ProviderSite,
+)
+from backend.providers import provider_history, provider_latest, provider_sites
 from backend.security import (
     COOKIE,
     accessible_sites,
@@ -189,6 +196,119 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             return [
                 site_from_row(row) for row in accessible_sites(connection, session.user)
             ]
+
+    @app.get(
+        "/api/v1/provider/sites",
+        response_model=list[ProviderSite],
+        tags=["provider data"],
+    )
+    def imported_sites(session: Session):
+        with database.connect() as connection:
+            return provider_sites(connection, session.user)
+
+    @app.get(
+        "/api/v1/sites/{site_id}/provider/latest",
+        response_model=ProviderLatest,
+        tags=["provider data"],
+    )
+    def imported_latest(site_id: str, session: Session):
+        with database.connect() as connection:
+            return provider_latest(connection, session.user, site_id)
+
+    def imported_history(
+        site_id,
+        session,
+        start,
+        end,
+        metric,
+        endpoint,
+        device,
+        channel,
+        limit,
+        offset,
+        observations,
+    ):
+        try:
+            start, end = utc(start), utc(end)
+        except ValueError as exc:
+            raise ApiError(422, "invalid_time_range", str(exc)) from exc
+        with database.connect() as connection:
+            return provider_history(
+                connection,
+                session.user,
+                site_id,
+                start,
+                end,
+                metric,
+                endpoint,
+                device,
+                channel,
+                limit,
+                offset,
+                observations=observations,
+            )
+
+    @app.get(
+        "/api/v1/sites/{site_id}/provider/observations",
+        response_model=ProviderObservations,
+        tags=["provider data"],
+    )
+    def imported_observations(
+        site_id: str,
+        session: Session,
+        start: Annotated[datetime, Query(alias="from")],
+        end: Annotated[datetime, Query(alias="to")],
+        metric: Annotated[str | None, Query(max_length=128)] = None,
+        endpoint: Annotated[str | None, Query(max_length=128)] = None,
+        device: Annotated[str | None, Query(max_length=128)] = None,
+        channel: Annotated[str | None, Query(max_length=128)] = None,
+        limit: Annotated[int, Query(ge=1, le=1000)] = 100,
+        offset: Annotated[int, Query(ge=0, le=1000000)] = 0,
+    ):
+        return imported_history(
+            site_id,
+            session,
+            start,
+            end,
+            metric,
+            endpoint,
+            device,
+            channel,
+            limit,
+            offset,
+            True,
+        )
+
+    @app.get(
+        "/api/v1/sites/{site_id}/provider/frames",
+        response_model=ProviderFrames,
+        tags=["provider data"],
+    )
+    def imported_frames(
+        site_id: str,
+        session: Session,
+        start: Annotated[datetime, Query(alias="from")],
+        end: Annotated[datetime, Query(alias="to")],
+        metric: Annotated[str | None, Query(max_length=128)] = None,
+        endpoint: Annotated[str | None, Query(max_length=128)] = None,
+        device: Annotated[str | None, Query(max_length=128)] = None,
+        channel: Annotated[str | None, Query(max_length=128)] = None,
+        limit: Annotated[int, Query(ge=1, le=1000)] = 100,
+        offset: Annotated[int, Query(ge=0, le=1000000)] = 0,
+    ):
+        return imported_history(
+            site_id,
+            session,
+            start,
+            end,
+            metric,
+            endpoint,
+            device,
+            channel,
+            limit,
+            offset,
+            False,
+        )
 
     @app.get("/api/v1/sites/{site_id}", response_model=Site, tags=["sites"])
     def site(site_id: str, session: Session):

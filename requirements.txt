@@ -1,0 +1,2 @@
+# One dependency definition for both pipeline and API.
+-e .[dev]

@@ -73,7 +73,6 @@
             "$ref": "#/$defs/Metric"
           },
           "maxItems": 9,
-          "minItems": 1,
           "title": "Capabilities",
           "type": "array"
         },

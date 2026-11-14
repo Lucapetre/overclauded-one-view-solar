@@ -1,8 +1,62 @@
 # One View Solar
 
-Phase 2 backend for the customer and PPC Operations applications: validate normalized phase 1 telemetry, persist it in SQLite, and expose authorized FastAPI queries. The architecture follows pages 5, 12 and 13 of [the build plan](./Challenge1_Build_Plan.pdf).
+Combined phase 1 provider scraper and phase 2 backend for the customer and PPC Operations applications. Provider payloads become canonical measurements, then authorized FastAPI queries expose those measurements and their quality information to either frontend. The architecture follows pages 5, 12 and 13 of [the build plan](./Challenge1_Build_Plan.pdf).
 
-The repository does not contain the phase 1 pipeline or either frontend. This implementation supplies a versioned handoff contract, synthetic fixtures, generated TypeScript types and a frontend API client. The phase 1 producer must map its output to that contract; its mandatory/optional policy is registered per site rather than guessed by this service.
+The [phase 1 walkthrough](./STEP1_README.md), [data dictionary](./DATA_DICTIONARY.md) and [source notes](./SOURCE_NOTES.md) describe the registry-driven scraper, nine fictional Huawei/Fronius/SolarEdge sites, and its generated datasets. All bundled provider data are synthetic. Both frontend UIs remain separate work; generated TypeScript types and an API client are included here.
+
+## Run the combined pipeline
+
+Install the combined dependencies, import the bundled scraper outputs, create an application account, and explicitly grant that account a site:
+
+```sh
+python3 -m venv .venv
+.venv/bin/python -m pip install -e '.[dev]'
+.venv/bin/python -m backend import-provider --database build/scraper.sqlite.gz
+.venv/bin/python -m backend create-user alice --role customer
+.venv/bin/python -m backend grant-site alice provider-ca9967cfc42fcc3e2841efe0
+.venv/bin/python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000
+```
+
+The example grant is the fictional Fronius hybrid site `FR-SITE-0003`. Import output lists every backend site ID alongside its original provider/account/site identity. Importing creates no user grants and does not translate manufacturer permissions or the dataset's role labels into application access. Site IDs are stable hashes of the complete original identity; provider and account scopes cannot collide just because native site labels match.
+
+The importer accepts a plain scraper SQLite file or the bundled gzip copy. It saves an immutable local snapshot under the API database directory and imports the 62,880 exported 15-minute frames for all nine source sites. Repeated imports of the same database, site registry and frame file return `duplicate`. A subsequent explicit import of new output switches provider reads to the new snapshot atomically. Plain SQLite input is copied with SQLite backup so committed WAL pages are included. Snapshot files and credentials stay outside Git.
+
+To regenerate and ingest the original native-shaped payloads before importing:
+
+```sh
+.venv/bin/python generate_demo.py --seed 42 --sites-per-provider 3 --start 2026-07-15 --days 7 --out demo_data
+.venv/bin/python scraper.py --config config/provider_profiles.yaml --input demo_data --out build --as-of 2026-07-22T00:00:00+03:00
+.venv/bin/python -m backend import-provider --database build/scraper.sqlite --sites demo_data/sites.json --frames build/site_frames_15min.csv
+```
+
+The API uses a read-only canonical snapshot and the actual scraper replay clock. It does not change provider mappings, reconstruct sensor timestamps, reinterpret DC as AC, or infer PV production from a hybrid inverter's net AC output. The Git attributes preserve fixture bytes because manifests contain SHA256 checksums.
+
+### Provider endpoints
+
+| Method and path | Response |
+| --- | --- |
+| `GET /api/v1/provider/sites` | Accessible imported sites, original identity, declared capabilities, source mode and replay time |
+| `GET /api/v1/sites/{site_id}/provider/latest` | Latest frame per endpoint/device/channel/metric, plus source freshness and access health |
+| `GET /api/v1/sites/{site_id}/provider/observations?from=…&to=…` | Canonical measurements preserving units, boundaries, channels, origin, quality flags, conflicts and requirement classes |
+| `GET /api/v1/sites/{site_id}/provider/frames?from=…&to=…` | Source 15-minute frames preserving aggregation, cadence, coverage and frame status |
+
+History endpoints accept optional `metric`, `endpoint`, `device` and `channel` filters, plus `limit` (1–1000, default 100) and `offset`. Time ranges must be offset-aware and span at most 31 elapsed days. Observation ranges are half-open; frames are included when their interval overlaps the range. Results include `total`, `limit` and `offset` for pagination. Internal database paths, raw records and source file paths are not returned.
+
+Use these provider endpoints for the scraper dataset. They retain `integration_required`, `vendor_response_required` and `optional` exactly, and keep the separate native AC/DC/phase/unspecified boundaries. Missing measurements remain null, conflicted observations remain visibly conflicted, and access-denied/stale frames are not fabricated zero readings. Regulatory reference information remains distinct from telemetry requirements. Frames retain their original aggregation: for example temperature maxima are not relabeled as temperature means.
+
+The older `/energy` endpoints below continue to serve the compact, normalized interval contract and its separate 24-site demo. They do not flatten imported provider observations into that narrower schema. Imported sites have unknown topology and receive no inferred area grouping.
+
+Frontend example after login:
+
+```ts
+const sites = await api.providerSites();
+const snapshot = await api.providerLatest(sites[0].site_id);
+const page = await api.providerObservations(sites[0].site_id, {
+  from: "2026-07-15T00:00:00+03:00",
+  to: "2026-07-16T00:00:00+03:00",
+  metric: "pv_dc_kw",
+});
+```
 
 ## Run locally
 
@@ -33,7 +87,7 @@ North includes six recent feeds, one stale feed and one unavailable feed. `north
 
 ## Phase 1 handoff
 
-Use [the example telemetry record](./backend/fixtures/telemetry.json), [JSON Schema](./packages/contracts/telemetry.schema.json) or [OpenAPI](./packages/contracts/openapi.json). The field names below define the proposed phase 1 to phase 2 interface.
+For a producer that already supplies compatible interval records, use [the compact telemetry example](./backend/fixtures/telemetry.json), [JSON Schema](./packages/contracts/telemetry.schema.json) or [OpenAPI](./packages/contracts/openapi.json). For the merged scraper, use `import-provider` and the canonical endpoints above so its richer semantics are preserved.
 
 Every record carries schema version `1.0`, stable record/site/device/source identifiers, timezone-aware interval start/end and receipt timestamps, source mode (`live`, `replay` or `synthetic`), a private raw-record reference, and a measurements object. Unknown vendor codes and quality flags are preserved. IDs contain letters, digits, dots, underscores, colons or hyphens and are at most 96 characters. Record IDs must be unique within a source.
 
@@ -189,6 +243,6 @@ Type-check the frontend contracts with TypeScript installed in the consuming fro
 npm exec --yes --package typescript -- tsc --noEmit --strict --target ES2020 --module ESNext --moduleResolution bundler --lib ES2020,DOM packages/contracts/index.ts packages/contracts/client.ts
 ```
 
-The [tests](./tests) cover quarantine and validation, mandatory/optional behavior, immutable/conflicting records, concurrent retries, site and area isolation, session expiry and CSRF, replay time, missing and stale feeds, AC/DC boundaries, battery capability gates, energy integration, coverage, DST ranges and local provisioning.
+The [tests](./tests) cover both original pipelines plus the handoff: synthetic generation and provider mapping, quarantine and validation, requirement classes, immutable/conflicting records, concurrent retries, site and area isolation, session expiry and CSRF, replay time, missing and stale feeds, AC/DC boundaries, battery capability gates, energy integration, coverage, DST ranges, local provisioning, read-only snapshots, WAL updates and authorized canonical queries. The original scraper fixtures and phase 2 fixtures are loaded together without replacing one another.
 
 Forecasting, incident detection, recommendation scheduling, media handling and dispatch remain separate modules. Phase 2 provides the shared data interface they will consume.
