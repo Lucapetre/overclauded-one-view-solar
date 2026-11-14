@@ -149,3 +149,36 @@ test("backend and demo request types and lessons stay aligned", () => {
       assert.ok(question.answer >= 0 && question.answer < question.options.length);
   }
 });
+
+import {
+  consumptionShape,
+  estimateDay,
+  typicalDailyConsumption,
+} from "../src/dailyForecast.js";
+
+test("daily forecast estimates production, consumption and profit from hourly data", () => {
+  const hours = Array.from({ length: 24 }, (_, h) => ({
+    time: `2026-11-15T${String(h).padStart(2, "0")}:00`,
+    kw: h >= 10 && h < 14 ? 2 : 0,
+  }));
+  const flat = Array(24).fill(1);
+  const day = estimateDay(hours, 24, flat, { importPrice: 1.3, exportPrice: 0.55 });
+  assert.equal(day.production, 8);
+  assert.equal(day.consumption, 24);
+  assert.equal(day.selfUse, 4); // 1 kWh used per sunny hour
+  assert.equal(day.exported, 4);
+  assert.equal(day.imported, 20);
+  assert.ok(Math.abs(day.profit - (4 * 1.3 + 4 * 0.55)) < 1e-9);
+  assert.ok(Math.abs(day.selfShare - 4 / 24) < 1e-9);
+  const gap = hours.map((hour, i) => (i === 12 ? { ...hour, kw: null } : hour));
+  assert.equal(estimateDay(gap, 24, flat, { importPrice: 1.3, exportPrice: 0.55 }), null);
+  assert.equal(estimateDay(hours, null, flat, { importPrice: 1.3, exportPrice: 0.55 }), null);
+});
+
+test("consumption shapes and typical consumption follow the kind of site", () => {
+  assert.equal(consumptionShape("home").length, 24);
+  assert.notDeepEqual(consumptionShape("business", "Restaurant"), consumptionShape("home"));
+  assert.deepEqual(consumptionShape("business", "Factory"), consumptionShape("business", "Warehouse"));
+  assert.ok(Math.abs(typicalDailyConsumption({ monthly_import_kwh: 195 }) - 10) < 1e-9);
+  assert.equal(typicalDailyConsumption({}), null);
+});

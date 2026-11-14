@@ -10,6 +10,16 @@ from backend.models import Metric
 from backend.ops import open_incident, profile_source
 from backend.security import hash_password
 
+# Fictional business names, matching the browser-only demo's business sites.
+BUSINESS_ALIASES = {
+    "north-04": "Bistro Soare",
+    "north-06": "Pipera Office Park",
+    "north-08": "Bucureștii Noi Warehouse",
+    "central-03": "Old Town Bistro",
+    "central-07": "Militari Factory",
+    "south-05": "Berceni Factory",
+    "south-08": "Progresul Supermarket",
+}
 REPLAY_AT = datetime(2026, 7, 15, 12, 15, tzinfo=UTC)
 SHIFT = "08:00-18:00"
 CREWS = (
@@ -209,9 +219,7 @@ def seed_demo(database: Database, password: str | None = None) -> dict[str, str]
                     "INSERT OR IGNORE INTO sites VALUES (?,?,?,?,?,?,?,?)",
                     (
                         site_id,
-                        "Demo bistro central-03"
-                        if site_id == "central-03"
-                        else f"Demo home {site_id}",
+                        BUSINESS_ALIASES.get(site_id, f"Demo home {site_id}"),
                         area,
                         "simulated",
                         900,
@@ -220,6 +228,17 @@ def seed_demo(database: Database, password: str | None = None) -> dict[str, str]
                         json.dumps(requirements),
                     ),
                 )
+                if site_id in BUSINESS_ALIASES:
+                    # Rename business sites seeded by earlier versions; never touch custom names.
+                    connection.execute(
+                        "UPDATE sites SET alias=? WHERE site_id=? AND alias IN (?,?)",
+                        (
+                            BUSINESS_ALIASES[site_id],
+                            site_id,
+                            f"Demo home {site_id}",
+                            f"Demo bistro {site_id}",
+                        ),
+                    )
                 connection.execute(
                     "INSERT OR IGNORE INTO devices VALUES (?,?,?)",
                     (f"meter-{site_id}", site_id, "synthetic-demo"),

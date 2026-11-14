@@ -97,12 +97,14 @@ import {
 } from "./store";
 import {
   ContractCard,
+  DailyForecast,
   EnergyBars,
   ForecastCard,
   FriendlyEnergy,
   LessonDeck,
 } from "./features";
 import { words } from "./friendly";
+import { consumptionShape, typicalDailyConsumption } from "./dailyForecast";
 import { demoBuckets, PERIODS } from "./periods";
 import lessonSource from "../../backend/fixtures/lessons.json";
 import "./styles.css";
@@ -637,41 +639,22 @@ function Home({
             </span>
           </div>
         </section>
-        <section className="solar-opportunity">
-          <div className="section-head">
-            <span className="opportunity-icon">
-              <Zap size={23} />
-            </span>
-            <span className="tiny-label">YOUR NEXT SMART MOVE</span>
-            <ArrowUpRight size={19} />
-          </div>
-          <h2>
-            Let the sun
-            <br />
-            take the next shift.
-          </h2>
-          <p>
-            Move your EV charge to a sunnier window. Same full battery, a better
-            use of energy.
-          </p>
-          <div className="saving">
-            <b>4.50</b>
-            <span>
-              RON
-              <br />
-              estimated saving
-            </span>
-          </div>
-          <div className="opportunity-time">
-            <Clock size={16} />
-            <span>13:00 – 15:00</span>
-            <Pill>Best window</Pill>
-          </div>
-          <button className="btn dark full" onClick={() => nav("Plan")}>
-            Explore my energy plan <ArrowRight size={17} />
-          </button>
-          <small>Illustrative 6 kWh charge · Advice, not automation</small>
-        </section>
+        <DailyForecast
+          kwp={contract?.installed_kwp || current.capacity}
+          dailyConsumption={typicalDailyConsumption(current.profile)}
+          shape={consumptionShape(current.segment, current.businessType)}
+          prices={
+            contract
+              ? {
+                  importPrice: contract.import_price_ron_kwh,
+                  exportPrice: contract.export_price_ron_kwh,
+                }
+              : defaultPrices
+          }
+          pricesFromContract={Boolean(contract)}
+          consumptionLabel={w.consumption}
+          onPlan={() => nav("Plan")}
+        />
       </div>
       <section className="card friendly-strip">
         <FriendlyEnergy
@@ -769,26 +752,11 @@ function Home({
           </div>
         </section>
       </div>
-      <div className="two-col mt">
+      <div className="mt">
         <ForecastCard
           kwp={contract?.installed_kwp || current.capacity}
           contract={contract}
           accountType={accountType}
-        />
-        <ContractCard
-          key={current.id}
-          contract={contract}
-          defaultKwp={current.capacity}
-          onSave={async (value) => {
-            if (!user) {
-              requireLogin(() => {});
-              throw Error("Log in with a demo account to save a contract.");
-            }
-            mutate((d) => {
-              d.contracts = { ...d.contracts, [current.id]: value };
-            });
-            notify("Contract saved. Estimates now use your prices.");
-          }}
         />
       </div>
       <div className="preview-note">
@@ -1150,6 +1118,7 @@ function Plan({ db, user, current, notify, requireLogin }) {
   }
   return (
     <div className="two-col">
+      <div>
       <section className="card form-card">
         <div className="eyebrow">01 / YOUR TASK</div>
         <h2>What are we planning?</h2>
@@ -1272,6 +1241,24 @@ function Plan({ db, user, current, notify, requireLogin }) {
           Find my window <ArrowRight size={17} />
         </button>
       </section>
+      <div className="mt">
+        <ContractCard
+          key={current.id}
+          contract={contract || null}
+          defaultKwp={current.capacity}
+          onSave={async (value) => {
+            if (!user) {
+              requireLogin(() => {});
+              throw Error("Log in with a demo account to save a contract.");
+            }
+            mutate((d) => {
+              d.contracts = { ...d.contracts, [current.id]: value };
+            });
+            notify("Contract saved. Estimates now use your prices.");
+          }}
+        />
+      </div>
+      </div>
       <div>
         <section className="card plan-result">
           <div className="eyebrow">02 / YOUR SOLAR OPPORTUNITY</div>
@@ -1305,7 +1292,7 @@ function Plan({ db, user, current, notify, requireLogin }) {
                 <p>
                   {contract
                     ? `From your ${contract.supplier} contract:`
-                    : "Assumed (add your contract on Home to replace these):"}{" "}
+                    : "Assumed (add your contract below the task form to replace these):"}{" "}
                   import {prices.importPrice.toFixed(2)} RON/kWh, export{" "}
                   {prices.exportPrice.toFixed(2)} RON/kWh.
                   Baseline cost {best.baseline.toFixed(2)} RON − proposed cost{" "}

@@ -201,7 +201,8 @@ def execute(arguments, database: Database, settings: Settings):
             descriptor = os.open(
                 destination, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600
             )
-            os.fchmod(descriptor, 0o600)
+            if hasattr(os, "fchmod"):  # Not available on Windows.
+                os.fchmod(descriptor, 0o600)
             with os.fdopen(descriptor, "w") as stream:
                 json.dump(previous, stream, indent=2)
         print(

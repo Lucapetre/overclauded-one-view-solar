@@ -1,6 +1,6 @@
 // Shared customer features used by both the connected app and the workflow demo.
 import "./features.css";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useId, useState } from "react";
 import {
   ArrowRight,
   BookOpen,
@@ -9,12 +9,14 @@ import {
   CloudSun,
   Coins,
   FileText,
+  House,
   Lightbulb,
   Sun,
   X,
 } from "lucide-react";
 import { friendlyEnergy } from "./friendly";
 import { dailyForecast, LOCATION, MODEL, skyLabel, WEATHER_URL } from "./forecast";
+import { estimateDay } from "./dailyForecast";
 
 const fmt = (value, digits = 1) =>
   value == null || !Number.isFinite(value)
@@ -30,13 +32,31 @@ const money = (value) =>
         maximumFractionDigits: 2,
       }).format(value);
 const SERIES = [
-  { key: "production", label: "Solar production", color: "#c9a30f" },
-  { key: "consumption", label: "Consumption", color: "#7d70b8" },
+  { key: "production", label: "Solar production", color: "#d6b32d" },
+  { key: "consumption", label: "Consumption", color: "#a49bc5" },
 ];
 
-/** Grouped bars on one kWh axis. Missing buckets draw no bar. */
+// Split a series into runs of known values so missing periods break the line.
+function runs(points) {
+  const out = [];
+  let current = [];
+  for (const point of points) {
+    if (point.value == null || !Number.isFinite(point.value)) {
+      if (current.length) out.push(current);
+      current = [];
+    } else current.push(point);
+  }
+  if (current.length) out.push(current);
+  return out;
+}
+
+/**
+ * Period energy totals drawn like the "Today" chart: a filled production line and a
+ * consumption line on one kWh axis. Missing periods leave a gap, never a zero.
+ */
 export function EnergyBars({ buckets, consumptionLabel = "Consumption" }) {
   const [hover, setHover] = useState(null);
+  const gradient = "energyFill" + useId().replace(/[^A-Za-z0-9_-]/g, "");
   const series = SERIES.filter((item) =>
     buckets.some((bucket) => bucket[item.key] != null),
   );
@@ -53,15 +73,22 @@ export function EnergyBars({ buckets, consumptionLabel = "Consumption" }) {
   const step = 10 ** Math.floor(Math.log10(max));
   const top = Math.ceil(max / step) * step;
   const W = 660,
-    H = 195,
-    left = 44,
-    bottom = 158,
-    plotH = 138;
-  const slot = (W - left - 12) / buckets.length;
-  const barW = Math.max(2, Math.min(14, (slot - 4) / series.length - 2));
-  const every = Math.ceil(buckets.length / 8);
+    left = 45,
+    right = 640,
+    bottom = 155,
+    plotH = 120;
+  const n = buckets.length;
+  const x = (i) => (n === 1 ? (left + right) / 2 : left + (i * (right - left)) / (n - 1));
+  const y = (value) => bottom - (value / top) * plotH;
+  const slot = n === 1 ? right - left : (right - left) / (n - 1);
+  const every = Math.ceil(n / 7);
   const name = (item) =>
     item.key === "consumption" ? consumptionLabel : item.label;
+  const lines = series.map((item) => ({
+    item,
+    runs: runs(buckets.map((bucket, i) => ({ i, value: bucket[item.key] }))),
+  }));
+  const pts = (run) => run.map((p) => `${x(p.i)},${y(p.value)}`).join(" ");
   return (
     <>
       <div className="chart-legend">
@@ -71,77 +98,125 @@ export function EnergyBars({ buckets, consumptionLabel = "Consumption" }) {
             {name(item)}
           </span>
         ))}
-        <span className="forecast-label">kWh per bar</span>
+        <span className="forecast-label">Energy in kWh</span>
       </div>
       <div className="chart-wrap">
         <svg
-          viewBox={`0 0 ${W} ${H}`}
+          viewBox={`0 0 ${W} 195`}
           role="img"
-          aria-label={`Energy in kWh for ${buckets.length} periods`}
+          aria-label={`Energy in kWh over ${n} periods, production and consumption`}
+          onMouseLeave={() => setHover(null)}
         >
-          {[0, 0.5, 1].map((f) => (
-            <g key={f}>
+          <defs>
+            <linearGradient id={gradient} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#e8c848" stopOpacity=".25" />
+              <stop offset="100%" stopColor="#e8c848" stopOpacity=".01" />
+            </linearGradient>
+          </defs>
+          {[0, 1, 2, 3].map((i) => (
+            <g key={i}>
               <line
-                x1={left}
-                x2={W - 8}
-                y1={bottom - f * plotH}
-                y2={bottom - f * plotH}
+                x1="40"
+                x2={right}
+                y1={bottom - (i * plotH) / 3}
+                y2={bottom - (i * plotH) / 3}
                 stroke="#eceeeb"
-                strokeDasharray={f ? "3 4" : undefined}
+                strokeDasharray="3 4"
               />
-              <text x="0" y={bottom + 4 - f * plotH}>
-                {fmt(top * f, top < 10 ? 1 : 0)}
+              <text x="0" y={bottom + 4 - (i * plotH) / 3}>
+                {fmt((top * i) / 3, top < 10 ? 1 : 0)}
               </text>
             </g>
           ))}
-          {buckets.map((bucket, i) => {
-            const x0 =
-              left + i * slot + (slot - series.length * (barW + 2) + 2) / 2;
-            return (
-              <g key={bucket.label + i}>
-                {series.map((item, j) => {
-                  const value = bucket[item.key];
-                  if (value == null) return null;
-                  const h = Math.max(1, (value / top) * plotH);
-                  const r = Math.min(4, barW / 2, h);
-                  const x = x0 + j * (barW + 2),
-                    y = bottom - h;
-                  return (
-                    <path
-                      key={item.key}
-                      fill={item.color}
-                      d={`M${x} ${bottom}V${y + r}Q${x} ${y} ${x + r} ${y}H${x + barW - r}Q${x + barW} ${y} ${x + barW} ${y + r}V${bottom}Z`}
-                    />
-                  );
-                })}
-                {i % every === 0 && (
-                  <text x={left + i * slot + slot / 2} y="180" textAnchor="middle">
-                    {bucket.label}
-                  </text>
+          {lines.map(({ item, runs: parts }) =>
+            parts.map((run, k) => (
+              <g key={`${item.key}${k}`}>
+                {item.key === "production" && run.length > 1 && (
+                  <polygon
+                    points={`${x(run[0].i)},${bottom} ${pts(run)} ${x(run.at(-1).i)},${bottom}`}
+                    fill={`url(#${gradient})`}
+                  />
                 )}
-                <rect
-                  x={left + i * slot}
-                  y="10"
-                  width={slot}
-                  height={bottom - 10}
-                  fill="transparent"
-                  onMouseEnter={() => setHover(bucket)}
-                  onMouseLeave={() => setHover(null)}
-                />
+                {run.length > 1 ? (
+                  <polyline
+                    points={pts(run)}
+                    fill="none"
+                    stroke={item.color}
+                    strokeWidth={item.key === "production" ? 2.5 : 2.4}
+                    strokeLinejoin="round"
+                    strokeLinecap="round"
+                  />
+                ) : (
+                  <circle
+                    cx={x(run[0].i)}
+                    cy={y(run[0].value)}
+                    r="4"
+                    fill={item.color}
+                  />
+                )}
               </g>
-            );
-          })}
+            )),
+          )}
+          {buckets.map((bucket, i) =>
+            i === n - 1 || (i % every === 0 && n - 1 - i >= every / 2) ? (
+              <text
+                key={`label${i}`}
+                x={x(i)}
+                y="185"
+                textAnchor={
+                  n > 1 && i === 0 ? "start" : n > 1 && i === n - 1 ? "end" : "middle"
+                }
+              >
+                {bucket.label}
+              </text>
+            ) : null,
+          )}
+          {hover != null && (
+            <g pointerEvents="none">
+              <line
+                x1={x(hover)}
+                x2={x(hover)}
+                y1={bottom - plotH}
+                y2={bottom}
+                stroke="#c8cdc2"
+              />
+              {series.map((item) =>
+                buckets[hover][item.key] == null ? null : (
+                  <circle
+                    key={item.key}
+                    cx={x(hover)}
+                    cy={y(buckets[hover][item.key])}
+                    r="4.5"
+                    fill={item.color}
+                    stroke="#fff"
+                    strokeWidth="2"
+                  />
+                ),
+              )}
+            </g>
+          )}
+          {buckets.map((bucket, i) => (
+            <rect
+              key={`hit${i}`}
+              x={x(i) - slot / 2}
+              y={bottom - plotH - 10}
+              width={slot}
+              height={plotH + 10}
+              fill="transparent"
+              onMouseEnter={() => setHover(i)}
+            />
+          ))}
         </svg>
-        {hover && (
+        {hover != null && (
           <span className="chart-tooltip">
-            {hover.label}
+            {buckets[hover].label}
             {series.map((item) => (
               <React.Fragment key={item.key}>
                 {" · "}
                 {name(item)}{" "}
-                {hover[item.key] == null
+                {buckets[hover][item.key] == null
                   ? "unavailable"
-                  : `${fmt(hover[item.key])} kWh`}
+                  : `${fmt(buckets[hover][item.key])} kWh`}
               </React.Fragment>
             ))}
           </span>
@@ -177,6 +252,175 @@ export function EnergyBars({ buckets, consumptionLabel = "Consumption" }) {
         </div>
       </details>
     </>
+  );
+}
+
+// One shared live-weather request for every forecast card on the page (refreshed after 30 min).
+let weatherCache = null;
+export function useWeather() {
+  const [state, setState] = useState(() =>
+    weatherCache?.data ? { weather: weatherCache.data } : {},
+  );
+  const [attempt, setAttempt] = useState(0);
+  useEffect(() => {
+    let alive = true;
+    if (!weatherCache || Date.now() - weatherCache.at > 30 * 60000) {
+      const entry = { at: Date.now() };
+      entry.promise = fetch(WEATHER_URL, { credentials: "omit" })
+        .then((response) => {
+          if (!response.ok) throw Error("weather");
+          return response.json();
+        })
+        .then((data) => {
+          entry.data = data;
+          return data;
+        });
+      weatherCache = entry;
+    }
+    const entry = weatherCache;
+    entry.promise
+      .then((data) => alive && setState({ weather: data }))
+      .catch(() => {
+        if (weatherCache === entry) weatherCache = null;
+        if (alive) setState({ failed: true });
+      });
+    return () => {
+      alive = false;
+    };
+  }, [attempt]);
+  return {
+    ...state,
+    retry: () => {
+      setState({});
+      setAttempt((value) => value + 1);
+    },
+  };
+}
+
+/**
+ * Home widget: today's (or tomorrow's) estimated production, consumption and profit.
+ * prices = { importPrice, exportPrice } in RON/kWh; shape = 24 hourly consumption weights.
+ */
+export function DailyForecast({
+  kwp,
+  dailyConsumption,
+  shape,
+  prices,
+  pricesFromContract,
+  consumptionLabel = "Consumption",
+  onPlan,
+}) {
+  const { weather, failed, retry } = useWeather();
+  const [index, setIndex] = useState(0);
+  const days = dailyForecast(weather, kwp, null);
+  const day = days[index];
+  const estimate = day
+    ? estimateDay(day.hours, dailyConsumption, shape, prices)
+    : null;
+  const share = estimate ? Math.round(estimate.selfShare * 100) : 0;
+  return (
+    <section className="solar-opportunity daily-forecast">
+      <div className="section-head">
+        <span className="opportunity-icon">
+          <CloudSun size={21} />
+        </span>
+        <span className="tiny-label">DAILY FORECAST</span>
+        <div className="df-toggle" role="group" aria-label="Forecast day">
+          {["Today", "Tomorrow"].map((label, i) => (
+            <button
+              key={label}
+              className={i === index ? "active" : ""}
+              aria-pressed={i === index}
+              onClick={() => setIndex(i)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+      {failed ? (
+        <div className="df-state">
+          <p>The weather forecast could not be loaded, so there is no estimate right now.</p>
+          <button className="text-btn" onClick={retry}>
+            Try again
+          </button>
+        </div>
+      ) : !weather ? (
+        <div className="df-state">
+          <p>Loading today’s weather forecast…</p>
+        </div>
+      ) : !day || !estimate ? (
+        <div className="df-state">
+          <p>Not enough forecast data for this day yet.</p>
+        </div>
+      ) : (
+        <>
+          <h2>
+            {skyLabel(day.cloud)}
+            <span>
+              {" "}
+              · up to {fmt(day.temperatureMax, 0)} °C
+            </span>
+          </h2>
+          <p className="df-meta">
+            {day.season} · {day.daylightHours} h of daylight ·{" "}
+            {fmt(day.humidity, 0)}% humidity
+          </p>
+          <div className="df-metrics">
+            <div>
+              <small>
+                <Sun size={14} /> Production
+              </small>
+              <b>
+                {fmt(estimate.production)} <span>kWh</span>
+              </b>
+            </div>
+            <div>
+              <small>
+                <House size={14} /> {consumptionLabel}
+              </small>
+              <b>
+                {fmt(estimate.consumption)} <span>kWh</span>
+              </b>
+            </div>
+          </div>
+          <div
+            className="df-cover"
+            role="img"
+            aria-label={`Solar covers about ${share}% of the day's use`}
+          >
+            <i style={{ width: `${share}%` }} />
+          </div>
+          <small className="df-cover-label">
+            Solar covers about <b>{share}%</b> of the day’s use ·{" "}
+            {fmt(estimate.exported)} kWh exported
+          </small>
+          <div className="saving">
+            <b>{money(estimate.profit)}</b>
+            <span>
+              RON
+              <br />
+              estimated profit
+            </span>
+          </div>
+          <p className="df-breakdown">
+            {money(estimate.savings)} RON saved on your bill +{" "}
+            {money(estimate.exportEarnings)} RON from export
+          </p>
+          {onPlan && (
+            <button className="btn dark full" onClick={onPlan}>
+              Plan my energy <ArrowRight size={17} />
+            </button>
+          )}
+          <small>
+            {pricesFromContract
+              ? "Your contract prices"
+              : "Assumed prices · add your contract in Plan"}{" "}
+            · Live weather · Estimate
+          </small>
+        </>
+      )}
+    </section>
   );
 }
 
@@ -220,23 +464,7 @@ export function FriendlyEnergy({ kwh, subject, accountType, loading }) {
 
 /** Production outlook from live weather: sky, season, humidity and temperature. */
 export function ForecastCard({ kwp, kwpAssumed, contract, accountType }) {
-  const [weather, setWeather] = useState(null);
-  const [failed, setFailed] = useState(false);
-  const [attempt, setAttempt] = useState(0);
-  useEffect(() => {
-    const controller = new AbortController();
-    setFailed(false);
-    fetch(WEATHER_URL, { signal: controller.signal, credentials: "omit" })
-      .then((response) => {
-        if (!response.ok) throw Error("weather");
-        return response.json();
-      })
-      .then(setWeather)
-      .catch(() => {
-        if (!controller.signal.aborted) setFailed(true);
-      });
-    return () => controller.abort();
-  }, [attempt]);
+  const { weather, failed, retry } = useWeather();
   const prices = contract
     ? {
         importPrice: contract.import_price_ron_kwh,
@@ -263,7 +491,7 @@ export function ForecastCard({ kwp, kwpAssumed, contract, accountType }) {
             The weather service could not be reached, so there is no forecast
             right now.
           </p>
-          <button className="text-btn" onClick={() => setAttempt(attempt + 1)}>
+          <button className="text-btn" onClick={retry}>
             Try again
           </button>
         </div>
