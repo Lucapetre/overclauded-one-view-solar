@@ -129,6 +129,14 @@ Copy [the registration example](./backend/fixtures/site-registration.json), set 
 
 Account creation prompts for a password of 12–256 characters and grants no data access. For noninteractive local provisioning, set `SOLAR_ACCOUNT_PASSWORD`. Staff accounts may receive an explicit area grant with `grant-area <username> <area_id>`. Customers cannot receive area-wide grants. These commands require local filesystem access and have no public administration endpoint. Existing site configuration cannot be changed by rerunning registration with a different contract.
 
+Run `create-user` once for each username. If `alice` already exists, sign in with her current password and skip account creation. To choose a different password, use the local administrator command below; it prompts for a new password of 12–256 characters and revokes existing sessions while preserving access grants:
+
+```sh
+.venv/bin/python -m backend set-password alice
+```
+
+Repeating `grant-site` is safe. CLI account errors report the database path so commands using different `SOLAR_DATABASE` settings or working directories can be distinguished.
+
 ### Deliver records
 
 For a worker in the same process, call [the ingestion function](./backend/ingestion.py). It is the same implementation used by HTTP and local imports:

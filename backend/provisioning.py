@@ -89,18 +89,24 @@ def register_site(database: Database, registration: SiteRegistration):
 
 
 def create_user(database: Database, username: str, password: str, role: str):
-    if not 1 <= len(username) <= 96 or not 12 <= len(password) <= 256:
+    if not 1 <= len(username) <= 96:
         raise ApiError(
             422,
             "invalid_account",
-            "Username must be 1–96 characters; password must be 12–256 characters",
+            "Username must be 1–96 characters",
         )
-    user = User(user_id=uuid.uuid4().hex, username=username, role=role)
     with database.connect() as connection:
+        connection.execute("BEGIN IMMEDIATE")
         if connection.execute(
             "SELECT 1 FROM users WHERE username=?", (username,)
         ).fetchone():
-            raise ApiError(409, "account_exists", "Username already exists")
+            raise ApiError(
+                409,
+                "account_exists",
+                "Username already exists. Sign in with the existing password or use set-password to change it",
+            )
+        validate_password(password)
+        user = User(user_id=uuid.uuid4().hex, username=username, role=role)
         connection.execute(
             "INSERT INTO users VALUES (?,?,?,?)",
             (user.user_id, user.username, hash_password(password), user.role),
@@ -114,13 +120,50 @@ def create_user(database: Database, username: str, password: str, role: str):
         )
 
 
+def validate_password(password: str):
+    if not 12 <= len(password) <= 256:
+        raise ApiError(422, "invalid_password", "Password must be 12–256 characters")
+
+
+def set_password(database: Database, username: str, password: str):
+    """Local administrator password change; existing sessions are revoked."""
+    with database.connect() as connection:
+        connection.execute("BEGIN IMMEDIATE")
+        row = connection.execute(
+            "SELECT user_id FROM users WHERE username=?", (username,)
+        ).fetchone()
+        if not row:
+            raise ApiError(
+                404,
+                "not_found",
+                "User not found. Create the account with create-user first",
+            )
+        validate_password(password)
+        connection.execute(
+            "UPDATE users SET password_hash=? WHERE user_id=?",
+            (hash_password(password), row["user_id"]),
+        )
+        connection.execute("DELETE FROM sessions WHERE user_id=?", (row["user_id"],))
+        database.audit(
+            connection,
+            "local-admin",
+            "user.password.changed",
+            row["user_id"],
+            "local-provisioning",
+        )
+
+
 def grant_access(database: Database, username: str, subject: str, kind: str):
     with database.connect() as connection:
         user = connection.execute(
             "SELECT user_id,role FROM users WHERE username=?", (username,)
         ).fetchone()
         if not user:
-            raise ApiError(404, "not_found", "User not found")
+            raise ApiError(
+                404,
+                "not_found",
+                "User not found. Create the account with create-user first",
+            )
         if kind == "area":
             if user["role"] == "customer":
                 raise ApiError(

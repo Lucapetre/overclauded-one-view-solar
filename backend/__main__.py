@@ -11,11 +11,11 @@ from backend.errors import ApiError
 from backend.ingestion import ingest
 from backend.models import SiteRegistration, utc
 from backend.providers import import_provider_snapshot
-from backend.provisioning import create_user, grant_access, register_site
+from backend.provisioning import create_user, grant_access, register_site, set_password
 from backend.seed import seed_demo
 
 
-def main():
+def main(argv=None):
     parser = argparse.ArgumentParser(description="Local phase 2 database tools")
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("migrate", help="Apply pending migrations")
@@ -53,16 +53,38 @@ def main():
         choices=["customer", "dispatcher", "technician", "supervisor"],
         required=True,
     )
+    password = commands.add_parser(
+        "set-password",
+        help="Change an existing account's password and revoke its sessions",
+    )
+    password.add_argument("username")
     for kind in ("site", "area"):
         grant = commands.add_parser(
             f"grant-{kind}", help=f"Grant explicit {kind} access to a user"
         )
         grant.add_argument("username")
         grant.add_argument("subject")
-    arguments = parser.parse_args()
+    arguments = parser.parse_args(argv)
     settings = Settings()
     database = Database(settings.database_path)
-    database.migrate()
+    try:
+        database.migrate()
+        execute(arguments, database, settings)
+    except ApiError as exc:
+        parser.exit(
+            2,
+            f"Error [{exc.code}]: {exc.message}\nDatabase: {database.path.resolve()}\n",
+        )
+    except EOFError:
+        parser.exit(
+            2,
+            "No password was entered. Use an interactive terminal or set SOLAR_ACCOUNT_PASSWORD.\n",
+        )
+    except KeyboardInterrupt:
+        parser.exit(130, "\nCommand cancelled.\n")
+
+
+def execute(arguments, database: Database, settings: Settings):
     if arguments.command == "import-provider":
         print(
             json.dumps(
@@ -76,12 +98,34 @@ def main():
         registration = SiteRegistration.model_validate_json(arguments.path.read_text())
         register_site(database, registration)
         print(f"Registered site {registration.site.site_id}")
-    elif arguments.command == "create-user":
+    elif arguments.command in ("create-user", "set-password"):
+        with database.connect() as connection:
+            existing = connection.execute(
+                "SELECT 1 FROM users WHERE username=?", (arguments.username,)
+            ).fetchone()
+        if arguments.command == "create-user" and existing:
+            raise ApiError(
+                409,
+                "account_exists",
+                "Username already exists. Sign in with the existing password or use set-password to change it",
+            )
+        if arguments.command == "set-password" and not existing:
+            raise ApiError(
+                404,
+                "not_found",
+                "User not found. Create the account with create-user first",
+            )
         password = os.getenv("SOLAR_ACCOUNT_PASSWORD") or getpass.getpass(
-            "New account password: "
+            "New password (12–256 characters): "
         )
-        create_user(database, arguments.username, password, arguments.role)
-        print(f"Created account {arguments.username} with no site or area grants")
+        if arguments.command == "create-user":
+            create_user(database, arguments.username, password, arguments.role)
+            print(f"Created account {arguments.username} with no site or area grants")
+        else:
+            set_password(database, arguments.username, password)
+            print(
+                f"Updated password for {arguments.username}; existing sessions revoked"
+            )
     elif arguments.command.startswith("grant-"):
         grant_access(
             database,
