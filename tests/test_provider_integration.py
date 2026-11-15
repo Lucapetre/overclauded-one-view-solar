@@ -256,3 +256,31 @@ def test_missing_snapshot_returns_a_service_error(
     response = client.get(f"/api/v1/sites/{site}/provider/observations", params=query())
     assert response.status_code == 503
     assert response.json()["code"] == "provider_snapshot_unavailable"
+
+
+def test_latest_and_history_respect_the_scenario_clock(
+    database, provider_import, client, signed_in
+):
+    from datetime import UTC, datetime
+
+    from backend.clock import advance_scenario, start_scenario
+
+    _, identities, _ = provider_import
+    site = identities["FR-SITE-0003"]["site_id"]
+    grant_access(database, "customer", site, "site")
+    start_scenario(database, "provider-clock", datetime(2026, 7, 16, 9, 5, tzinfo=UTC))
+    signed_in()
+    early = client.get(f"/api/v1/sites/{site}/provider/latest").json()
+    assert early["site"]["as_of_utc"] == "2026-07-16T09:05:00Z"
+    # The 09:00-09:15 frame is not complete yet: only earlier frames are known.
+    assert all(f["frame_end_utc"] <= "2026-07-16T09:05:00Z" for f in early["frames"])
+    assert not [f for f in early["frames"] if f["value"] == 3.3]
+    history = client.get(f"/api/v1/sites/{site}/provider/frames", params=query()).json()
+    assert history["items"] == []
+    advance_scenario(database, to=datetime(2026, 7, 16, 9, 20, tzinfo=UTC))
+    later = client.get(f"/api/v1/sites/{site}/provider/latest").json()
+    assert later["site"]["as_of_utc"] == "2026-07-16T09:20:00Z"
+    assert all(f["frame_end_utc"] <= "2026-07-16T09:20:00Z" for f in later["frames"])
+    assert any(f["value"] == 3.3 for f in later["frames"])
+    health = {h["freshness_status"] for h in later["source_health"]}
+    assert health and health <= {"fresh", "stale", "missing"}

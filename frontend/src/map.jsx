@@ -57,6 +57,7 @@ const escapeHtml = (text) =>
   );
 
 function statusText(site) {
+  if (site.marker?.label) return site.marker.label;
   if (site.status === "incident")
     return `Open incident${site.tier ? " · " + site.tier : ""}`;
   return site.status === "stale" ? "Telemetry stale" : "No open incident";
@@ -73,13 +74,16 @@ function popupContent(site, cluster, actionLabel, onAction) {
     return el;
   };
   line("b", site.name);
+  if (site.fullName && site.fullName !== site.name) line("small", site.fullName);
   line(
     "small",
-    [site.id, site.zone || "Bucharest", site.area].filter(Boolean).join(" · "),
+    [site.marker ? null : site.id, site.zone || (site.marker ? null : "Bucharest"), site.area]
+      .filter(Boolean)
+      .join(" · "),
   );
   line(
     "span",
-    `${site.segment === "business" ? `Business · ${site.businessType || "commercial"}` : "Home"} · ${fmt(site.kwp)} kWp`,
+    `${site.segment === "business" ? `Business · ${site.businessType || "commercial"}` : "Home"} · ${Number.isFinite(site.kwp) ? `${fmt(site.kwp)} kWp` : "capacity unknown"}`,
   );
   if (cluster)
     line(
@@ -87,7 +91,8 @@ function popupContent(site, cluster, actionLabel, onAction) {
       `Group: ${cluster.name} (${(CLUSTER_KINDS[cluster.kind]?.label || cluster.kind).toLowerCase()})`,
     );
   line("span", statusText(site), "bm-popup-status");
-  if (site.detail) line("small", site.detail);
+  if (site.lines) for (const text of site.lines) line("small", text);
+  else if (site.detail) line("small", site.detail);
   const button = line("button", actionLabel, "btn yellow");
   button.type = "button";
   button.addEventListener("click", () => onAction(site.id));
@@ -114,6 +119,16 @@ function incidentNote(sites) {
  *        view is fitted to include them.
  * showBoundaries: draw the sector/county boundaries (default true).
  * boundaries: GeoJSON FeatureCollection with properties.area_id (default: OSM file).
+ *
+ * Optional, for the operations status projection (all default to the old look):
+ * site.marker: { tone: "urgent"|"review"|"monitor"|"gap"|"unknown"|"clear", glyph,
+ *   telemetry: state|null (second badge), label }; site.lines: popup lines;
+ *   site.fullName. relatedIds: other sites of the selected episode (ring).
+ * onMarkerClick(id): called when a marker is clicked (the popup still opens).
+ * overlays: { crews: [{ id, name, initials, latitude, longitude, label }],
+ *   routes: [{ id, points: [[lat, lng]], stops: [{ sequence, latitude, longitude,
+ *   label }], style: { color, weight, opacity, dashArray }, label }] }.
+ * legend: "status" shows the status-projection legend instead of the old one.
  */
 export function BucharestMap({
   sites,
@@ -126,15 +141,25 @@ export function BucharestMap({
   areas = null,
   showBoundaries = true,
   boundaries = AREA_BOUNDARIES,
+  relatedIds = null,
+  onMarkerClick = null,
+  overlays = null,
+  legend = "default",
+  ariaLabel = null,
 }) {
   const container = useRef(null),
     mapRef = useRef(null),
     layersRef = useRef(null),
     markersRef = useRef(new Map()),
-    selectRef = useRef(onSelect);
+    selectRef = useRef(onSelect),
+    clickRef = useRef(onMarkerClick);
   selectRef.current = onSelect;
+  clickRef.current = onMarkerClick;
   const selectedRef = useRef(selectedId);
   selectedRef.current = selectedId;
+  const relatedKey = (relatedIds || []).join("|");
+  const relatedRef = useRef(new Set());
+  relatedRef.current = new Set(relatedIds || []);
   const [tiles, setTiles] = useState("loading");
 
   const areasKey = (areas || []).join("|");
@@ -172,6 +197,7 @@ export function BucharestMap({
     for (const [name, z] of [
       ["bm-areas", 350],
       ["bm-clusters", 380],
+      ["bm-routes", 420],
       ["bm-labels", 450],
     ])
       map.createPane(name).style.zIndex = z;
@@ -179,6 +205,7 @@ export function BucharestMap({
     layersRef.current = {
       areas: L.layerGroup().addTo(map),
       clusters: L.layerGroup().addTo(map),
+      routes: L.layerGroup().addTo(map),
       markers: L.layerGroup().addTo(map),
     };
     mapRef.current = map;
@@ -246,7 +273,7 @@ export function BucharestMap({
   const siteKey = sites
     .map(
       (s) =>
-        `${s.id}:${s.latitude}:${s.longitude}:${s.status}:${s.tier}:${s.name}:${s.cluster || ""}:${s.detail || ""}`,
+        `${s.id}:${s.latitude}:${s.longitude}:${s.status}:${s.tier}:${s.name}:${s.cluster || ""}:${s.detail || ""}:${s.marker ? `${s.marker.tone}/${s.marker.glyph}/${s.marker.telemetry}` : ""}:${(s.lines || []).join("/")}`,
     )
     .join("|");
   const clusterKey = clusters.map((c) => `${c.id}:${c.kind}:${c.name}`).join("|");
@@ -263,15 +290,16 @@ export function BucharestMap({
     const clusterById = new Map(clusters.map((c) => [c.id, c]));
 
     const makeMarker = (site, target) => {
-      const status = markerStatus(site);
+      const status = site.marker?.tone || markerStatus(site);
       const business = site.segment === "business";
       const size = business ? 30 : 22;
+      const tele = site.marker?.telemetry;
       const icon = L.divIcon({
         className: "bm-icon",
         iconSize: [size, size],
         iconAnchor: [size / 2, size / 2],
         popupAnchor: [0, -size / 2],
-        html: `<span class="bm-pin ${business ? "bm-business" : "bm-home"} bm-${status}${site.id === selectedId ? " is-selected" : ""}">${escapeHtml(glyph(site, status))}</span>`,
+        html: `<span class="bm-pin ${business ? "bm-business" : "bm-home"} bm-${status}${site.id === selectedId ? " is-selected" : ""}${relatedRef.current.has(site.id) ? " is-related" : ""}">${escapeHtml(site.marker ? site.marker.glyph : glyph(site, status))}${tele ? `<i class="bm-tele bm-tele-${escapeHtml(tele)}" aria-hidden="true"></i>` : ""}</span>`,
       });
       const marker = L.marker([site.latitude, site.longitude], {
         icon,
@@ -295,11 +323,11 @@ export function BucharestMap({
           "aria-label",
           `${site.name}, ${business ? "business" : "home"}, ${statusText(site)}`,
         );
-        el?.querySelector(".bm-pin")?.classList.toggle(
-          "is-selected",
-          site.id === selectedRef.current,
-        );
+        const pin = el?.querySelector(".bm-pin");
+        pin?.classList.toggle("is-selected", site.id === selectedRef.current);
+        pin?.classList.toggle("is-related", relatedRef.current.has(site.id));
       });
+      marker.on("click", () => clickRef.current?.(site.id));
       marker.addTo(target);
       markersRef.current.set(site.id, marker);
       return marker;
@@ -420,14 +448,64 @@ export function BucharestMap({
     };
   }, [siteKey, clusterKey, actionLabel, scoped]);
 
-  // Highlight the selected marker without refitting the view.
+  // Highlight the selected marker (and its episode's other sites) without refitting.
   useEffect(() => {
-    for (const [id, marker] of markersRef.current)
-      marker
-        .getElement()
-        ?.querySelector(".bm-pin")
-        ?.classList.toggle("is-selected", id === selectedId);
-  }, [selectedId, siteKey]);
+    for (const [id, marker] of markersRef.current) {
+      const pin = marker.getElement()?.querySelector(".bm-pin");
+      pin?.classList.toggle("is-selected", id === selectedId);
+      pin?.classList.toggle("is-related", relatedRef.current.has(id));
+    }
+  }, [selectedId, siteKey, relatedKey]);
+
+  // Crew bases and schematic routes (operations overlays); never refits the view.
+  const overlayKey = JSON.stringify(overlays || null);
+  useEffect(() => {
+    const layer = layersRef.current?.routes;
+    if (!layer) return;
+    layer.clearLayers();
+    if (!overlays) return;
+    for (const route of overlays.routes || []) {
+      if (route.points.length > 1)
+        L.polyline(route.points, {
+          pane: "bm-routes",
+          color: route.style.color,
+          weight: route.style.weight,
+          opacity: route.style.opacity,
+          dashArray: route.style.dashArray || undefined,
+          bubblingMouseEvents: false,
+        })
+          .bindTooltip(route.label, { sticky: true })
+          .addTo(layer);
+      for (const stop of route.stops)
+        L.marker([stop.latitude, stop.longitude], {
+          pane: "bm-labels",
+          interactive: false,
+          keyboard: false,
+          icon: L.divIcon({
+            className: "bm-area-label-icon",
+            iconSize: [18, 18],
+            // Up and to the right of the site pin so the pin stays readable.
+            iconAnchor: [-6, 22],
+            html: `<span class="bm-stop${route.style.dashArray ? " is-proposed" : ""}${route.highlighted ? " is-highlighted" : ""}" title="${escapeHtml(stop.label)}">${escapeHtml(stop.sequence)}</span>`,
+          }),
+        }).addTo(layer);
+    }
+    for (const crew of overlays.crews || [])
+      L.marker([crew.latitude, crew.longitude], {
+        keyboard: true,
+        icon: L.divIcon({
+          className: "bm-icon",
+          iconSize: [26, 26],
+          iconAnchor: [13, 13],
+          html: `<span class="bm-crew">${escapeHtml(crew.initials)}</span>`,
+        }),
+      })
+        .bindTooltip(crew.label, { direction: "top", offset: [0, -13] })
+        .on("add", function () {
+          this.getElement()?.setAttribute("aria-label", crew.label);
+        })
+        .addTo(layer);
+  }, [overlayKey]);
 
   const kindsShown = [
     ...new Set(
@@ -444,7 +522,10 @@ export function BucharestMap({
         className={"bm-map" + (tiles === "failed" ? " bm-offline" : "")}
         style={{ height }}
         role="region"
-        aria-label="Map of Bucharest Sectors 1 to 6 and Ilfov County with synthetic installations. Use the plus and minus buttons to zoom; drag to pan."
+        aria-label={
+          ariaLabel ||
+          "Map of Bucharest Sectors 1 to 6 and Ilfov County with synthetic installations. Use the plus and minus buttons to zoom; drag to pan."
+        }
       />
       {tiles === "failed" && (
         <p className="bm-tiles-note" role="status">
@@ -452,11 +533,20 @@ export function BucharestMap({
           are shown on a plain background at their positions.
         </p>
       )}
-      <MapLegend
-        kinds={kindsShown}
-        boundaries={scoped.length > 0}
-        faded={limited}
-      />
+      {legend === "status" ? (
+        <StatusLegend
+          boundaries={scoped.length > 0}
+          faded={limited}
+          crews={Boolean(overlays?.crews?.length)}
+          routes={overlays?.routes || []}
+        />
+      ) : (
+        <MapLegend
+          kinds={kindsShown}
+          boundaries={scoped.length > 0}
+          faded={limited}
+        />
+      )}
       {note && <p className="small-note bm-note">{note}</p>}
     </div>
   );
@@ -549,6 +639,102 @@ export function MapLegend({ kinds = [], boundaries = false, faded = false }) {
             <b>8</b>
           </span>
           Group of sites: zoom in or click it to see each one
+        </span>
+      )}
+    </div>
+  );
+}
+
+/** Status-projection marker tones (operations), worst first; same as opsView MARKER_LEGEND. */
+export const STATUS_LEGEND = [
+  { tone: "urgent", glyph: "P1", label: "P0/P1 active issue" },
+  { tone: "review", glyph: "P2", label: "P2 active issue" },
+  { tone: "monitor", glyph: "P3", label: "P3 monitoring" },
+  { tone: "gap", glyph: "!", label: "Data gap" },
+  { tone: "unknown", glyph: "?", label: "Unknown (not evaluated)" },
+  { tone: "clear", glyph: "–", label: "No active issue under evaluated rules (not a health certificate)" },
+];
+
+function RouteSwatch({ dashed }) {
+  return (
+    <svg className="bm-kind-swatch" width="24" height="14" aria-hidden="true">
+      <line
+        x1="1"
+        y1="7"
+        x2="23"
+        y2="7"
+        stroke={dashed ? "#b8860b" : "#2f4a3c"}
+        strokeWidth="3"
+        strokeDasharray={dashed ? "5 4" : undefined}
+      />
+    </svg>
+  );
+}
+
+/** Legend for the status-projection map: tones, the telemetry dot, crews, routes. */
+export function StatusLegend({ boundaries = false, faded = false, crews = false, routes = [] }) {
+  const proposed = routes.some((r) => r.state !== "applied");
+  const applied = routes.some((r) => r.state === "applied");
+  return (
+    <div className="map-legend bm-legend" aria-label="Map legend">
+      {STATUS_LEGEND.map((item) => (
+        <span key={item.tone}>
+          <i className={`bm-pin bm-home bm-${item.tone}`} aria-hidden="true">
+            {item.glyph}
+          </i>
+          {item.label}
+        </span>
+      ))}
+      <span>
+        <i className="bm-pin bm-home bm-urgent" aria-hidden="true">
+          P1
+          <i className="bm-tele bm-tele-access_error" />
+        </i>
+        Corner dot: telemetry not fresh (both badges shown)
+      </span>
+      <span>
+        <i className="bm-pin bm-home bm-legend-shape" aria-hidden="true" />
+        Home
+      </span>
+      <span>
+        <i className="bm-pin bm-business bm-legend-shape" aria-hidden="true" />
+        Business
+      </span>
+      {crews && (
+        <span>
+          <i className="bm-crew bm-legend-crew" aria-hidden="true">
+            C
+          </i>
+          Crew base location — not live GPS
+        </span>
+      )}
+      {proposed && (
+        <span>
+          <RouteSwatch dashed />
+          Proposed route (draft)
+        </span>
+      )}
+      {applied && (
+        <span>
+          <RouteSwatch />
+          Applied route
+        </span>
+      )}
+      {routes.length > 0 && (
+        <span className="bm-legend-hint">
+          Numbered visit order; straight lines are schematic, not road routing
+        </span>
+      )}
+      {boundaries && (
+        <span>
+          <AreaSwatch />
+          Sector / county boundary
+        </span>
+      )}
+      {faded && (
+        <span>
+          <AreaSwatch out />
+          Outside your scope (faded)
         </span>
       )}
     </div>

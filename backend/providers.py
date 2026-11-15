@@ -16,6 +16,7 @@ from contextlib import contextmanager
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+from backend.clock import scenario_now
 from backend.db import Database, stamp
 from backend.errors import ApiError
 from backend.models import Metric, Site, SiteRegistration, User
@@ -308,15 +309,22 @@ def binding(connection, user: User, site_id: str):
     ).fetchone()
     if not row:
         raise ApiError(404, "not_found", "Resource not found")
-    return row, ProviderSite.model_validate_json(row["identity"])
+    identity = ProviderSite.model_validate_json(row["identity"])
+    known = scenario_now(connection)
+    if known is not None and known < identity.as_of_utc:
+        # In a scenario run the snapshot is only known up to the analytical clock.
+        identity = identity.model_copy(update={"as_of_utc": known})
+    return row, identity
 
 
 def provider_latest(connection, user: User, site_id: str) -> ProviderLatest:
     row, identity = binding(connection, user, site_id)
+    known = scenario_now(connection)
+    cap = stamp(known) if known is not None else "9999"
     frames = connection.execute(
         "SELECT payload FROM (SELECT payload,ROW_NUMBER() OVER (PARTITION BY endpoint_key,device_id,channel,metric_name ORDER BY frame_start DESC) AS rank "
-        "FROM provider_frames WHERE site_id=? AND import_id=?) WHERE rank=1",
-        (site_id, row["import_id"]),
+        "FROM provider_frames WHERE site_id=? AND import_id=? AND frame_end<=?) WHERE rank=1",
+        (site_id, row["import_id"], cap),
     ).fetchall()
     with readonly(Path(row["database_path"])) as source:
         fields = ",".join(ProviderSourceHealth.model_fields)
@@ -327,10 +335,45 @@ def provider_latest(connection, user: User, site_id: str) -> ProviderLatest:
                 (row["site_key"],),
             )
         ]
+    if known is not None:
+        health = [_health_at(connection, row, item, known) for item in health]
     return ProviderLatest(
         site=identity,
         frames=[ProviderFrame.model_validate_json(item["payload"]) for item in frames],
         source_health=health,
+    )
+
+
+def _health_at(connection, row, item: ProviderSourceHealth, known: datetime):
+    """Source health re-judged at the analytical clock (the scrape computed it later)."""
+    latest = connection.execute(
+        "SELECT MAX(frame_end) FROM provider_frames WHERE site_id=? AND import_id=? "
+        "AND endpoint_key=? AND frame_end<=?",
+        (row["site_id"], row["import_id"], item.endpoint_key, stamp(known)),
+    ).fetchone()[0]
+    if latest is None:
+        return item.model_copy(
+            update={
+                "latest_source_ms": None,
+                "latest_received_ms": None,
+                "latest_source_age_s": None,
+                "freshness_status": "missing",
+                "notes": "judged at the analytical clock: no frame known yet",
+            }
+        )
+    last = datetime.fromisoformat(latest)
+    age = (known - last).total_seconds()
+    threshold = item.stale_threshold_s
+    return item.model_copy(
+        update={
+            "latest_source_ms": int(last.timestamp() * 1000),
+            "latest_received_ms": None,
+            "latest_source_age_s": age,
+            "freshness_status": "fresh"
+            if threshold is None or age <= threshold
+            else "stale",
+            "notes": "judged at the analytical clock from the latest known 15-min frame",
+        }
     )
 
 
@@ -356,6 +399,11 @@ def provider_history(
             "Use a positive time range of at most 31 elapsed days",
         )
     row, identity = binding(connection, user, site_id)
+    known = scenario_now(connection)
+    if known is not None:
+        end = min(end, known)  # nothing after the analytical clock
+        if end <= start:
+            end = start
     filters = []
     values = []
     for column, value in (
@@ -399,10 +447,17 @@ def provider_history(
             site=identity, total=total, limit=limit, offset=offset, items=items
         )
     base = (
-        " FROM provider_frames WHERE site_id=? AND import_id=? AND frame_start<? AND frame_end>?"
+        " FROM provider_frames WHERE site_id=? AND import_id=? AND frame_start<? AND frame_end>? AND frame_end<=?"
         + suffix
     )
-    arguments = [site_id, row["import_id"], stamp(end), stamp(start), *values]
+    arguments = [
+        site_id,
+        row["import_id"],
+        stamp(end),
+        stamp(start),
+        stamp(known) if known else "9999",
+        *values,
+    ]
     total = connection.execute("SELECT COUNT(*)" + base, arguments).fetchone()[0]
     items = [
         ProviderFrame.model_validate_json(item[0])

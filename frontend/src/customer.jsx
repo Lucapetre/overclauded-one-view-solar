@@ -351,6 +351,7 @@ export function ContractAndForecast({ api, site, accountType, readOnly, onError 
         <ContractCard
           key={site.site_id}
           contract={contract}
+          version={view.version}
           onSave={save}
           readOnly={readOnly}
         />

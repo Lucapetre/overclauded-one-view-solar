@@ -89,8 +89,12 @@ def ops_sites(connection, user: User):
         "EXISTS (SELECT 1 FROM user_sites us WHERE us.site_id=s.site_id AND us.user_id=?) "
         "OR EXISTS (SELECT 1 FROM user_areas ua WHERE ua.area_id=s.area_id AND ua.user_id=?) "
         "OR EXISTS (SELECT 1 FROM crews c JOIN crew_members m ON m.crew_id=c.crew_id "
-        "WHERE c.area_id=s.area_id AND m.user_id=?) ORDER BY s.site_id",
-        (user.user_id, user.user_id, user.user_id),
+        "WHERE c.area_id=s.area_id AND m.user_id=?) "
+        # A planned assignment authorizes its crew for that site.
+        "OR EXISTS (SELECT 1 FROM assignments a JOIN incidents i ON i.incident_id=a.incident_id "
+        "JOIN crew_members m ON m.crew_id=a.crew_id WHERE i.site_id=s.site_id AND m.user_id=? "
+        f"AND a.status IN {ACTIVE_SQL}) ORDER BY s.site_id",
+        (user.user_id, user.user_id, user.user_id, user.user_id),
     ).fetchall()
 
 
@@ -100,6 +104,12 @@ def _scope(connection, user: User) -> tuple[str, tuple]:
     if not ids:
         return "IN (NULL)", ()
     return f"IN ({','.join('?' * len(ids))})", ids
+
+
+def _bump(connection, reason: str, subject: str):
+    from backend.dispatch import bump
+
+    bump(connection, reason, subject)
 
 
 def log_incident(
@@ -310,12 +320,26 @@ def _require_open(row):
         raise ApiError(409, "incident_resolved", "This incident is already resolved")
 
 
+def _require_legacy_workflow(connection, incident_id: str):
+    """Correlated work must keep the plan constraints and documented closure audit."""
+    if connection.execute(
+        "SELECT 1 FROM episodes WHERE incident_id=?", (incident_id,)
+    ).fetchone():
+        raise ApiError(
+            409,
+            "episode_workflow_required",
+            "Use a reviewed crew plan, assignment progress or documented episode closure "
+            "for correlated incidents",
+        )
+
+
 def assign_incident(
     database, connection, user: User, incident_id: str, crew_id: str | None, rid: str
 ) -> IncidentDetail:
     require_role(user, "dispatcher")
     connection.execute("BEGIN IMMEDIATE")
     row = _visible_incident(connection, user, incident_id)
+    _require_legacy_workflow(connection, incident_id)
     _require_open(row)
     if row["assignment_id"]:
         raise ApiError(
@@ -367,6 +391,7 @@ def assign_incident(
         now,
     )
     database.audit(connection, user.user_id, "incident.assigned", incident_id, rid)
+    _bump(connection, "incident.assigned", incident_id)
     return get_incident(connection, user, incident_id)
 
 
@@ -377,6 +402,7 @@ def auto_dispatch(database, connection, user: User, rid: str) -> AutoDispatchRes
     incidents = connection.execute(
         INCIDENT_SELECT
         + f"WHERE i.site_id {clause} AND i.status != 'resolved' AND a.assignment_id IS NULL"
+        + " AND NOT EXISTS (SELECT 1 FROM episodes e WHERE e.incident_id=i.incident_id)"
         + SEVERITY_ORDER,
         ids,
     ).fetchall()
@@ -424,6 +450,8 @@ def auto_dispatch(database, connection, user: User, rid: str) -> AutoDispatchRes
                 incident_id=row["incident_id"], crew_name=crew["name"], tier=row["tier"]
             )
         )
+    if assigned:
+        _bump(connection, "incident.auto_assigned", "auto-dispatch")
     return AutoDispatchResult(assigned=assigned, skipped=skipped)
 
 
@@ -455,6 +483,7 @@ def send_team(
     require_role(user, "technician")
     connection.execute("BEGIN IMMEDIATE")
     row = _visible_incident(connection, user, incident_id)
+    _require_legacy_workflow(connection, incident_id)
     _require_open(row)
     crew = _technician_crew(connection, user, row)
     now = stamp()
@@ -497,6 +526,7 @@ def send_team(
         now,
     )
     database.audit(connection, user.user_id, "incident.team_sent", incident_id, rid)
+    _bump(connection, "incident.team_sent", incident_id)
     return get_incident(connection, user, incident_id)
 
 
@@ -524,6 +554,7 @@ def schedule_meeting(
         )
     connection.execute("BEGIN IMMEDIATE")
     row = _visible_incident(connection, user, incident_id)
+    _require_legacy_workflow(connection, incident_id)
     _require_open(row)
     crew = _technician_crew(connection, user, row)
     begins, ends = stamp(start), stamp(end)
@@ -568,15 +599,27 @@ def schedule_meeting(
     database.audit(
         connection, user.user_id, "incident.meeting_scheduled", incident_id, rid
     )
+    _bump(connection, "incident.meeting_scheduled", incident_id)
     return get_incident(connection, user, incident_id)
 
 
 def resolve_incident(
-    database, connection, user: User, incident_id: str, rid: str
+    database,
+    connection,
+    user: User,
+    incident_id: str,
+    rid: str,
+    detail: str | None = None,
+    began: bool = False,
 ) -> IncidentDetail:
+    """Authorized closure. A correlated episode records it as its resolution provenance;
+    children of a closed parent stay open."""
     require_operations(user)
-    connection.execute("BEGIN IMMEDIATE")
+    if not began:
+        connection.execute("BEGIN IMMEDIATE")
     row = _visible_incident(connection, user, incident_id)
+    if not began or detail is None:
+        _require_legacy_workflow(connection, incident_id)
     if row["status"] == "resolved":
         raise ApiError(409, "already_resolved", "This incident is already resolved")
     if user.role == "technician" and not (
@@ -588,8 +631,10 @@ def resolve_incident(
             "crew_member_required",
             "Only a member of the assigned crew can resolve this incident",
         )
+    from backend.dispatch import on_resolved
+
     now = stamp()
-    detail = f"Resolved by {user.username}"
+    detail = detail or f"Resolved by {user.username}"
     if row["assignment_id"]:
         connection.execute(
             "UPDATE assignments SET status='completed', completed_at=? WHERE assignment_id=?",
@@ -598,6 +643,7 @@ def resolve_incident(
         detail += f"; crew {row['crew_name']} completed the assignment and is free"
     _set_status(connection, incident_id, "resolved", now)
     log_incident(connection, incident_id, user.username, "resolved", detail, now)
+    on_resolved(connection, incident_id, user, detail)
     database.audit(connection, user.user_id, "incident.resolved", incident_id, rid)
     return get_incident(connection, user, incident_id)
 
@@ -632,9 +678,33 @@ def ops_map(connection, user: User) -> OpsMap:
             ids,
         )
     }
+    from backend import dispatch
+
+    view = dispatch.projection(connection, user)
+    status = {item["site_id"]: item for item in view["sites"] + view["unmapped"]}
+
+    def overlay(site_id):
+        item = status.get(site_id)
+        if not item:
+            return {}
+        return {
+            "condition": item["condition"],
+            "telemetry_state": item["telemetry"]["state"],
+            "workflow": item["workflow"],
+            "highest_priority": item["highest_priority"],
+            "episode_ids": item["episode_ids"],
+        }
+
     source = profile_source()
     in_scope = {row["cluster"] for row in rows}
     return OpsMap(
+        revision=view["revision"],
+        status_as_of=view["status_as_of"],
+        status_sites=view["sites"],
+        unmapped=view["unmapped"],
+        counts=view["counts"],
+        crews=dispatch.crew_markers(connection, user),
+        routes=dispatch.routes(connection, user),
         center=MapCenter(**source["center"]),
         note=source["note"],
         clusters=[
@@ -670,6 +740,7 @@ def ops_map(connection, user: User) -> OpsMap:
                 worst_tier=open_counts[row["site_id"]]["worst_tier"]
                 if row["site_id"] in open_counts
                 else None,
+                **overlay(row["site_id"]),
             )
             for row in rows
         ],
@@ -751,6 +822,7 @@ def _crew_view(connection, crew) -> Crew:
         )
         if active
         else None,
+        profile=_crew_profile(connection, crew["crew_id"]),
         report=CrewReport(
             assigned_total=sum(row["n"] for row in counts),
             completed_total=sum(
@@ -760,6 +832,40 @@ def _crew_view(connection, crew) -> Crew:
             completed_by_tier=TierCounts(**completed_by_tier),
         ),
     )
+
+
+def _crew_profile(connection, crew_id: str) -> dict | None:
+    """Synthetic planning profile (qualifications, base, current shift) when provisioned."""
+    from backend.clock import analytical_now
+    from backend.dispatch import _node_position
+
+    row = connection.execute(
+        "SELECT * FROM crew_profiles WHERE crew_id=?", (crew_id,)
+    ).fetchone()
+    if not row:
+        return None
+    now = stamp(analytical_now(connection))
+    shift = connection.execute(
+        "SELECT shift_start, shift_end FROM crew_shifts WHERE crew_id=? AND shift_end>? "
+        "ORDER BY shift_start LIMIT 1",
+        (crew_id, now),
+    ).fetchone()
+    return {
+        "kind": row["kind"],
+        "organisation": row["organisation"],
+        "authorised_services": json.loads(row["authorised_services"]),
+        "qualifications": json.loads(row["qualifications"]),
+        "tools": json.loads(row["tools"]),
+        "areas": json.loads(row["areas"]),
+        "base": _node_position(connection, row["base_node"])
+        if row["base_node"]
+        else None,
+        "location_reported_at": row["location_reported_at"],
+        "location_basis": row["location_basis"],
+        "shift_start": shift["shift_start"] if shift else None,
+        "shift_end": shift["shift_end"] if shift else None,
+        "label": "Synthetic planning inputs (fictional crew, shift and depot)",
+    }
 
 
 def teams(connection, user: User) -> TeamsView:
@@ -782,7 +888,10 @@ def teams(connection, user: User) -> TeamsView:
         f"WHERE i.site_id {clause} ORDER BY a.created_at DESC, a.assignment_id LIMIT 200",
         ids,
     ).fetchall()
+    from backend.dispatch import current_revision
+
     return TeamsView(
+        revision=current_revision(connection),
         crews=crews,
         unassigned_incidents=unassigned,
         assignments=[AssignmentReportRow(**dict(row)) for row in report],

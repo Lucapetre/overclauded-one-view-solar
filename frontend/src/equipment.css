@@ -1,0 +1,196 @@
+/* Replay indicator and customer equipment evidence cards (mobile first). */
+.replay-badge {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  padding: 9px 36px;
+  background: #2b2a14;
+  color: #f6e7a1;
+  font-size: 13px;
+  border-bottom: 2px solid #f0d14d;
+}
+.replay-badge b {
+  font-weight: 650;
+}
+.replay-badge .replay-scenario {
+  font-size: 11px;
+  color: #d9cf9e;
+  overflow-wrap: anywhere;
+}
+
+.evidence-strip {
+  margin: 0 0 22px;
+}
+.evidence-strip-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin-bottom: 12px;
+}
+.evidence-strip-head h2 {
+  font-size: 17px;
+  margin: 0;
+}
+.evidence-strip-head .text-btn {
+  margin-left: auto;
+}
+.evidence-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+.evidence-card {
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  color: #4f5b49;
+}
+.evidence-card.state-limited,
+.evidence-card.state-stale,
+.evidence-card.state-partial {
+  border-left: 4px solid #e2b15f;
+}
+.evidence-card.state-not_installed {
+  background: #f7f8f3;
+}
+.evidence-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.evidence-head h3 {
+  margin: 0;
+  font-size: 15px;
+  color: var(--ink);
+}
+.evidence-head .pill {
+  margin-left: auto;
+  font-size: 10px;
+}
+.evidence-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #f5e9a9;
+  color: #7c6810;
+  flex: none;
+}
+.evidence-device {
+  margin: 2px 0 0;
+  color: #6b7563;
+}
+.evidence-value {
+  display: flex;
+  flex-direction: column;
+  margin: 4px 0;
+}
+.evidence-value span {
+  font-size: 11px;
+  color: #7f8a77;
+}
+.evidence-value b {
+  font-family: "Manrope", sans-serif;
+  font-size: 24px;
+  color: var(--ink);
+}
+.evidence-value b small {
+  font-size: 13px;
+  color: #6b7563;
+}
+.evidence-value.missing {
+  color: #a0664a;
+}
+.evidence-secondary,
+.evidence-reasons,
+.evidence-details ul {
+  margin: 0;
+  padding-left: 18px;
+  line-height: 1.6;
+}
+.evidence-reasons {
+  color: #4f6a3e;
+}
+.evidence-reasons.limited {
+  color: #8f5a2c;
+}
+.evidence-time {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0;
+  font-size: 11px;
+  color: #848d7b;
+}
+.evidence-details {
+  margin-top: 4px;
+  padding: 10px 0 0;
+}
+.evidence-details h4 {
+  margin: 10px 0 4px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #7f8a77;
+}
+.evidence-details li small {
+  display: block;
+  color: #8f9887;
+  font-size: 10px;
+  line-height: 1.5;
+}
+.technical-details {
+  margin-top: 8px;
+}
+.technical-details dl {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 4px 10px;
+  margin: 8px 0 0;
+}
+.technical-details dt {
+  font-weight: 600;
+}
+.technical-details dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.evidence-ids {
+  list-style: none;
+  padding: 0 !important;
+}
+.evidence-ids code {
+  font-size: 10px;
+  overflow-wrap: anywhere;
+}
+.evidence-none {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 20px;
+  font-size: 12px;
+  color: #7f8a77;
+}
+summary:focus-visible,
+.evidence-card button:focus-visible {
+  outline: 2px solid #8d781d;
+  outline-offset: 2px;
+}
+
+@media (max-width: 1000px) {
+  .evidence-grid {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 760px) {
+  .replay-badge {
+    padding: 8px 16px;
+    font-size: 12px;
+  }
+}

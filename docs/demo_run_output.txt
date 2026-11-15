@@ -1,0 +1,351 @@
+# Output of scripts/demo_scenes.py on a clean scratch workspace (synthetic data)
+# Recorded 2026-11-15T06:20Z wall time; commands run from the repo root:
+#   python -m scripts.demo_scenes --workspace D:/ovs-scratch/run1 setup   (then A, B, C, D)
+# Passwords stay in <workspace>/demo-credentials.json and are never printed.
+
+Using committed deterministic component fixtures; regeneration: "D:\hackhaton innovation labs\.venv\Scripts\python.exe" generate_components.py --seed 42 --start 2026-07-15 --days 7 --out demo_components --truth-out tests/component_truth --provider-data demo_data
+$ "D:\hackhaton innovation labs\.venv\Scripts\python.exe" -m backend migrate
+Database migrations complete
+$ "D:\hackhaton innovation labs\.venv\Scripts\python.exe" -m backend import-provider --database "D:\hackhaton innovation labs\build\scraper.sqlite.gz" --sites demo_data/sites.json --frames build/site_frames_15min.csv
+{
+  "status": "imported",
+  "import_id": "3cf8e0a6c8fae5a39d2ef18ff386ae7eb9369b68c6d0e9814eb8dc1854798bfd",
+  "frames": 62880,
+  "sites": [
+    {
+      "site_id": "provider-d97b13196637185888be23c1",
+      "site_key": "huawei|hw-nbi-demo-01|NE=33554791",
+      "provider": "huawei",
+      "account_id": "hw-nbi-demo-01",
+      "native_site_id": "NE=33554791",
+      "display_name": "Synthetic site H1 (Huawei-like, PV only, single-phase, garage-mounted inverter)",
+      "provider_profile_id": "huawei_smartpvms_nbi_2025_07_28",
+      "capabilities": {
+        "grid_meter": "unsupported",
+        "battery": "not_installed"
+      },
+      "source_mode": "synthetic",
+      "as_of_utc": "2026-07-21T21:00:00Z"
+    },
+    {
+      "site_id": "provider-4d119fc90c8c2cf7b55b314c",
+      "site_key": "huawei|hw-nbi-demo-01|NE=33554792",
+      "provider": "huawei",
+      "account_id": "hw-nbi-demo-01",
+      "native_site_id": "NE=33554792",
+      "display_name": "Synthetic site H2 (Huawei-like, east/west strings, three-phase, weak feeder)",
+      "provider_profile_id": "huawei_smartpvms_nbi_2025_07_28",
+      "capabilities": {
+        "grid_meter": "unsupported",
+        "battery": "not_installed"
+      },
+      "source_mode": "synthetic",
+      "as_of_utc": "2026-07-21T21:00:00Z"
+    },
+    {
+      "site_id": "provider-3cf3aeacbce278b4207de1bd",
+      "site_key": "huawei|hw-nbi-demo-02|NE=33554850",
+      "provider": "huawei",
+      "account_id": "hw-nbi-demo-02",
+      "native_site_id": "NE=33554850",
+      "display_name": "Synthetic site H3 (Huawei-like hybrid inverter + battery, three-phase)",
+      "provider_profile_id": "huawei_smartpvms_nbi_2025_07_28",
+      "capabilities": {
+        "grid_meter": "unsupported",
+        "battery": "installed"
+      },
+      "source_mode": "synthetic",
+      "as_of_utc": "2026-07-21T21:00:00Z"
+    },
+    {
+      "site_id": "provider-e2f35075482123a2267dd143",
+      "site_key": "fronius|fr-lan-gw-0001|FR-SITE-0001",
+      "provider": "fronius",
+      "account_id": "fr-lan-gw-0001",
+      "native_site_id": "FR-SITE-0001",
+      "display_name": "Synthetic site F1 (Fronius SnapInverter-style, PV only, no meter)",
+      "provider_profile_id": "fronius_solar_api_v1_rev021",
+      "capabilities": {
+        "grid_meter": "not_installed",
+        "battery": "not_installed"
+      },
+      "source_mode": "synthetic",
+      "as_of_utc": "2026-07-21T21:00:00Z"
+    },
+    {
+      "site_id": "provider-89c51a61990828f2e6027c6f",
+      "site_key": "fronius|fr-lan-gw-0002|FR-SITE-0002",
+      "provider": "fronius",
+      "account_id": "fr-lan-gw-0002",
+      "native_site_id": "FR-SITE-0002",
+      "display_name": "Synthetic site F2 (Fronius SnapInverter-style + grid meter, EV, morning shading)",
+      "provider_profile_id": "fronius_solar_api_v1_rev021",
+      "capabilities": {
+        "grid_meter": "installed",
+        "battery": "not_installed"
+      },
+      "source_mode": "synthetic",
+      "as_of_utc": "2026-07-21T21:00:00Z"
+    },
+    {
+      "site_id": "provider-ca9967cfc42fcc3e2841efe0",
+      "site_key": "fronius|fr-lan-gw-0003|FR-SITE-0003",
+      "provider": "fronius",
+      "account_id": "fr-lan-gw-0003",
+      "native_site_id": "FR-SITE-0003",
+      "display_name": "Synthetic site F3 (Fronius GEN24-style hybrid + battery + grid meter)",
+      "provider_profile_id": "fronius_solar_api_v1_rev021",
+      "capabilities": {
+        "grid_meter": "installed",
+        "battery": "installed"
+      },
+      "source_mode": "synthetic",
+      "as_of_utc": "2026-07-21T21:00:00Z"
+    },
+    {
+      "site_id": "provider-65a9712309ce0c5bd8397af2",
+      "site_key": "solaredge|se-acct-demo-01|2718281",
+      "provider": "solaredge",
+      "account_id": "se-acct-demo-01",
+      "native_site_id": "2718281",
+      "display_name": "Synthetic site S1 (SolarEdge-like, inverter only, no meter, afternoon shading)",
+      "provider_profile_id": "solaredge_monitoring_api_2026_03",
+      "capabilities": {
+        "grid_meter": "not_installed",
+        "battery": "not_installed",
+        "site_power_flow": "unsupported"
+      },
+      "source_mode": "synthetic",
+      "as_of_utc": "2026-07-21T21:00:00Z"
+    },
+    {
+      "site_id": "provider-5f758c0e29543b7dcf57a7e6",
+      "site_key": "solaredge|se-acct-demo-01|3141592",
+      "provider": "solaredge",
+      "account_id": "se-acct-demo-01",
+      "native_site_id": "3141592",
+      "display_name": "Synthetic site S2 (SolarEdge-like + export/consumption meter, EV, string fault)",
+      "provider_profile_id": "solaredge_monitoring_api_2026_03",
+      "capabilities": {
+        "grid_meter": "installed",
+        "battery": "not_installed",
+        "site_power_flow": "installed"
+      },
+      "source_mode": "synthetic",
+      "as_of_utc": "2026-07-21T21:00:00Z"
+    },
+    {
+      "site_id": "provider-ee134e1a6c0c4c87f7e5a752",
+      "site_key": "solaredge|se-acct-demo-02|1618033",
+      "provider": "solaredge",
+      "account_id": "se-acct-demo-02",
+      "native_site_id": "1618033",
+      "display_name": "Synthetic site S3 (SolarEdge StorEdge-style hybrid + battery + meter)",
+      "provider_profile_id": "solaredge_monitoring_api_2026_03",
+      "capabilities": {
+        "grid_meter": "installed",
+        "battery": "installed",
+        "site_power_flow": "installed"
+      },
+      "source_mode": "synthetic",
+      "as_of_utc": "2026-07-21T21:00:00Z"
+    }
+  ]
+}
+$ "D:\hackhaton innovation labs\.venv\Scripts\python.exe" -m backend import-components --database "D:\hackhaton innovation labs\build\components\component.sqlite"
+{
+  "status": "imported",
+  "import_id": "882e88fb35d848c5bb9fcaed0ad6afab99e741d091335f3b36e9030fbf572b5b",
+  "scenario_version": "components-2026.11.15-1",
+  "sites": [
+    "provider-3cf3aeacbce278b4207de1bd",
+    "provider-4d119fc90c8c2cf7b55b314c",
+    "provider-5f758c0e29543b7dcf57a7e6",
+    "provider-65a9712309ce0c5bd8397af2",
+    "provider-89c51a61990828f2e6027c6f",
+    "provider-ca9967cfc42fcc3e2841efe0",
+    "provider-d97b13196637185888be23c1",
+    "provider-e2f35075482123a2267dd143",
+    "provider-ee134e1a6c0c4c87f7e5a752"
+  ],
+  "assets": 10,
+  "grid_frames": 4032,
+  "snapshot_sha256": "01080bbdfecfd121497f35d9e435f20f34646b44b5a818172ee751b6be164265"
+}
+$ "D:\hackhaton innovation labs\.venv\Scripts\python.exe" -m backend provision-component-scenario
+Component scenario provisioned (fictional placements, explicit grants). New account credentials are stored privately at D:\ovs-scratch\run1\demo-credentials.json
+$ "D:\hackhaton innovation labs\.venv\Scripts\python.exe" -m backend provision-scenario-operations
+Scenario operations provisioned (synthetic crews, shifts and travel matrix). New account credentials are stored privately at D:\ovs-scratch\run1\demo-credentials.json
+$ "D:\hackhaton innovation labs\.venv\Scripts\python.exe" -m backend scenario start component-four-scenes-v1 --at 2026-07-17T07:30:00+03:00
+{
+  "status": "started",
+  "mode": "scenario",
+  "analytical_now": "2026-07-17T04:30:00.000000+00:00",
+  "scenario_id": "component-four-scenes-v1",
+  "run_id": "98c7aad824cb4b64b0c9eb36848ce342",
+  "scenario_started_at": "2026-07-17T04:30:00.000000+00:00",
+  "wall_now": "2026-11-15T06:17:59.376479+00:00"
+}
+--- Setup ---
+Scenario clock: {"status": "started", "mode": "scenario", "analytical_now": "2026-07-17T04:30:00.000000+00:00", "scenario_id": "component-four-scenes-v1", "run_id": "98c7aad824cb4b64b0c9eb36848ce342", "scenario_started_at": "2026-07-17T04:30:00.000000+00:00", "wall_now": "2026-11-15T06:17:59.376479+00:00"}
+Database: D:\ovs-scratch\run1\api.sqlite3
+Private credentials: D:\ovs-scratch\run1\demo-credentials.json
+Public evidence report: D:\ovs-scratch\run1\demo-report.json
+$ "D:\hackhaton innovation labs\.venv\Scripts\python.exe" -m backend scenario advance --to 2026-07-17T12:00:00+03:00
+{
+  "status": "advanced",
+  "mode": "scenario",
+  "analytical_now": "2026-07-17T09:00:00.000000+00:00",
+  "scenario_id": "component-four-scenes-v1",
+  "run_id": "98c7aad824cb4b64b0c9eb36848ce342",
+  "scenario_started_at": "2026-07-17T04:30:00.000000+00:00",
+  "wall_now": "2026-11-15T06:18:06.806450+00:00"
+}
+$ "D:\hackhaton innovation labs\.venv\Scripts\python.exe" -m backend scenario advance --to 2026-07-17T14:00:00+03:00
+{
+  "status": "advanced",
+  "mode": "scenario",
+  "analytical_now": "2026-07-17T11:00:00.000000+00:00",
+  "scenario_id": "component-four-scenes-v1",
+  "run_id": "98c7aad824cb4b64b0c9eb36848ce342",
+  "scenario_started_at": "2026-07-17T04:30:00.000000+00:00",
+  "wall_now": "2026-11-15T06:18:08.281161+00:00"
+}
+Scene A complete. Evidence: D:\ovs-scratch\run1\demo-report.json
+--- Scene A actual values ---
+F1 laundry 4 kW x 2 h, 17 Jul: recommended 17 Jul 11:00-13:00 at 9.62 RON vs usual_time 17 Jul 08:00 at 12.16 RON (difference -2.54 RON); battery included ['battery_assisted_planning_available']
+Accepted start 17 Jul 11:00; repeat accept with the same Idempotency-Key returned the same commitment
+At 12:00 status=running; at 14:00 status=completed, measured connection-point import 9.467 kWh (coverage 1.0), measured site cost 10.60 RON vs estimated 7.89 RON
+Note: The connection-point (PCC) meter measures the whole site, not the appliance alone. Measured energy includes the base load and solar production in the same window; the comparison with the plan is an estimate, and one observed run cannot prove what the other start time would have cost.
+Database: D:\ovs-scratch\run1\api.sqlite3
+Private credentials: D:\ovs-scratch\run1\demo-credentials.json
+Public evidence report: D:\ovs-scratch\run1\demo-report.json
+$ "D:\hackhaton innovation labs\.venv\Scripts\python.exe" -m backend scenario advance --to 2026-07-18T07:30:00+03:00
+{
+  "status": "advanced",
+  "mode": "scenario",
+  "analytical_now": "2026-07-18T04:30:00.000000+00:00",
+  "scenario_id": "component-four-scenes-v1",
+  "run_id": "98c7aad824cb4b64b0c9eb36848ce342",
+  "scenario_started_at": "2026-07-17T04:30:00.000000+00:00",
+  "wall_now": "2026-11-15T06:18:17.907843+00:00"
+}
+$ "D:\hackhaton innovation labs\.venv\Scripts\python.exe" -m backend scenario advance --to 2026-07-18T10:00:00+03:00
+{
+  "status": "advanced",
+  "mode": "scenario",
+  "analytical_now": "2026-07-18T07:00:00.000000+00:00",
+  "scenario_id": "component-four-scenes-v1",
+  "run_id": "98c7aad824cb4b64b0c9eb36848ce342",
+  "scenario_started_at": "2026-07-17T04:30:00.000000+00:00",
+  "wall_now": "2026-11-15T06:18:24.465565+00:00"
+}
+Scene B complete. Evidence: D:\ovs-scratch\run1\demo-report.json
+--- Scene B actual values ---
+18 Jul 07:30 before new evidence: recommended 18 Jul 13:30-15:30 at 8.96 RON vs usual_time 18 Jul 10:00 at 9.20 RON (difference -0.24 RON); battery included ['battery_assisted_planning_available']
+18 Jul 10:00 after clouds + Victron alarm/derate: recommended 18 Jul 13:30-15:30 at 7.69 RON vs usual_time 18 Jul 10:00 at 9.20 RON (difference -1.51 RON); battery excluded ['battery_limit_derated_by_bms', 'battery_alarm_active_restricted', 'alarm_internal_failure', 'grid_solar_only_plan']
+review_suggested=True; accepted commitment unchanged=True (start 18 Jul 13:30)
+Database: D:\ovs-scratch\run1\api.sqlite3
+Private credentials: D:\ovs-scratch\run1\demo-credentials.json
+Public evidence report: D:\ovs-scratch\run1\demo-report.json
+$ "D:\hackhaton innovation labs\.venv\Scripts\python.exe" -m backend offers-worker --once
+Offers worker: one pass
+{"expired_offers": 1, "progressed": 0, "settled": 1, "reminders": 0}
+$ "D:\hackhaton innovation labs\.venv\Scripts\python.exe" -m backend import-components --database "D:\hackhaton innovation labs\build\components\component.sqlite"
+{
+  "status": "duplicate",
+  "import_id": "882e88fb35d848c5bb9fcaed0ad6afab99e741d091335f3b36e9030fbf572b5b",
+  "sites": [
+    "provider-3cf3aeacbce278b4207de1bd",
+    "provider-4d119fc90c8c2cf7b55b314c",
+    "provider-5f758c0e29543b7dcf57a7e6",
+    "provider-65a9712309ce0c5bd8397af2",
+    "provider-89c51a61990828f2e6027c6f",
+    "provider-ca9967cfc42fcc3e2841efe0",
+    "provider-d97b13196637185888be23c1",
+    "provider-e2f35075482123a2267dd143",
+    "provider-ee134e1a6c0c4c87f7e5a752"
+  ]
+}
+$ "D:\hackhaton innovation labs\.venv\Scripts\python.exe" -m backend offers-worker --once
+Offers worker: one pass
+{"expired_offers": 0, "progressed": 0, "settled": 0, "reminders": 0}
+Scene C complete. Evidence: D:\ovs-scratch\run1\demo-report.json
+--- Scene C actual values ---
+H2 Shelly exact duplicates suppressed: 7
+Counter-reset intervals (no invented delta): [{'status': 'segment_start_known_reset', 'energy_kwh': None, 'allocatable': 0}, {'status': 'segment_start_known_reset', 'energy_kwh': None, 'allocatable': 0}]
+Quality issue counts: [{'issue_code': 'exact_duplicate_suppressed', 'count': 7}, {'issue_code': 'known_counter_reset_new_segment', 'count': 2}]
+F2 grid import 17 Jul 14:00-16:00 local by selected authority: [{'selected_asset_id': 'F2-M2-FEEDIN', 'value_origin': 'measured', 'frames': 7, 'energy_kwh': 0.0}]
+Offer on H2 across the meter gap: coverage 0.125, penalty before waiver 300 bani, penalty 0 bani, waived reason meter_data_incomplete
+Repeated import status=duplicate; durable totals unchanged=True
+Database: D:\ovs-scratch\run1\api.sqlite3
+Private credentials: D:\ovs-scratch\run1\demo-credentials.json
+Public evidence report: D:\ovs-scratch\run1\demo-report.json
+$ "D:\hackhaton innovation labs\.venv\Scripts\python.exe" -m backend scenario advance --to 2026-07-19T11:30:00+03:00 --correlate
+{
+  "status": "advanced",
+  "mode": "scenario",
+  "analytical_now": "2026-07-19T08:30:00.000000+00:00",
+  "scenario_id": "component-four-scenes-v1",
+  "run_id": "98c7aad824cb4b64b0c9eb36848ce342",
+  "scenario_started_at": "2026-07-17T04:30:00.000000+00:00",
+  "wall_now": "2026-11-15T06:20:01.138680+00:00",
+  "correlation": {
+    "run_id": "f2eb72fe7a6f4acebcfb8f8089ea797f",
+    "as_of": "2026-07-19T08:30:00.000000+00:00",
+    "revision": 3,
+    "opened": 7,
+    "updated": 0,
+    "recovered": 0,
+    "held": 0,
+    "unchanged": 0,
+    "not_evaluated": 27
+  }
+}
+$ "D:\hackhaton innovation labs\.venv\Scripts\python.exe" -m backend scenario advance --to 2026-07-19T12:30:00+03:00 --correlate
+{
+  "status": "advanced",
+  "mode": "scenario",
+  "analytical_now": "2026-07-19T09:30:00.000000+00:00",
+  "scenario_id": "component-four-scenes-v1",
+  "run_id": "98c7aad824cb4b64b0c9eb36848ce342",
+  "scenario_started_at": "2026-07-17T04:30:00.000000+00:00",
+  "wall_now": "2026-11-15T06:20:39.675857+00:00",
+  "correlation": {
+    "run_id": "0c8c8cd6f03b4bfd8ffa2beed0017a6a",
+    "as_of": "2026-07-19T09:30:00.000000+00:00",
+    "revision": 9,
+    "opened": 0,
+    "updated": 3,
+    "recovered": 0,
+    "held": 1,
+    "unchanged": 3,
+    "not_evaluated": 27
+  }
+}
+Scene D complete. Evidence: D:\ovs-scratch\run1\demo-report.json
+--- Scene D actual values ---
+19 Jul 11:30 queue revision 3 = map revision 3; 7 unique episodes on 4 affected sites; by band {'P0': 0, 'P1': 1, 'P2': 3, 'P3': 3}
+  P1 battery_operational_restriction: Battery-related operational restriction (BMS-reported): Synthetic site F1 (Fronius SnapInverter-style, PV only, no meter) [field_visit, reported]
+  P2 persistent_underperformance: Persistent production underperformance vs measured POA: Synthetic site S2 (SolarEdge-like + export/consumption meter, EV, string fault) [field_visit, corroborated]
+  P2 shared_monitoring_path: Shared monitoring-path issue (one declared collector): Synthetic site H1 (Huawei-like, PV only, single-phase, garage-mounted inverter) + Synthetic site H2 (Huawei-like, east/west strings, three-phase, [remote_troubleshooting, reported]
+  P2 pcc_voltage_sustained: Sustained phase-voltage anomaly at the PCC: Synthetic site H2 (Huawei-like, east/west strings, three-phase, weak feeder) [external_review, corroborated]
+  P3 weather_consistent_drop: Weather-consistent production drop: Synthetic site S2 (SolarEdge-like + export/consumption meter, EV, string fault) [monitor, corroborated]
+  P3 weather_consistent_drop: Weather-consistent production drop: Synthetic site F1 (Fronius SnapInverter-style, PV only, no meter) [monitor, corroborated]
+  P3 weather_consistent_drop: Weather-consistent production drop: Synthetic site H1 (Huawei-like, PV only, single-phase, garage-mounted inverter) [monitor, corroborated]
+Plan: feasible heuristic proposal (not a guaranteed optimum)
+  Battery Service Crew (fictional): Battery-related operational restriction (BMS-reported): Synthetic site F1 (Fronius SnapInverter-style, PV only, no meter) (field_visit) 19 Jul 12:30-14:00, deadline met=True
+  PV O&M Crew (fictional): Persistent production underperformance vs measured POA: Synthetic site S2 (SolarEdge-like + export/consumption meter, EV, string fault) (field_visit) 19 Jul 13:30-15:30, deadline met=True
+  Monitoring & Remote Triage Desk (fictional): Persistent production underperformance vs measured POA: Synthetic site S2 (SolarEdge-like + export/consumption meter, EV, string fault) (remote_review) 19 Jul 11:30-12:00, deadline met=True
+  Monitoring & Remote Triage Desk (fictional): Shared monitoring-path issue (one declared collector): Synthetic site H1 (Huawei-like, PV only, single-phase, garage-mounted inverter) + Synthetic site H2 (Huawei-like, east/west strings, three-phase, (remote_troubleshooting) 19 Jul 13:00-13:45, deadline met=True
+  Unassigned: Sustained phase-voltage anomaly at the PCC: Synthetic site H2 (Huawei-like, east/west strings, three-phase, weak feeder) ['no_eligible_crew', 'crew_location_unknown', 'crew_not_authorised_for_responsible_service', 'remote_desk_no_field', 'scn-battery-service:crew_not_authorised_for_responsible_service', 'scn-pv-om:crew_not_authorised_for_responsible_service', 'scn-remote-desk:remote_desk_no_field', 'scn-remote-desk:crew_not_authorised_for_responsible_service', 'scn-remote-desk:crew_location_unknown']
+  Monitoring only: 3 items
+Baseline verdict: no_improvement; findings: ['jobs served: no difference (4)', 'P1 timely: no difference (1)', 'P2 timely: no difference (3)', 'travel minutes: no difference (30)', 'delay loss kWh: no difference (2.192)']
+Supervisor review -> dispatch_capability_required, apply -> dispatch_capability_required; repeated apply same assignments=True; legacy assign on a correlated incident -> episode_workflow_required
+Override H2 to P1 (computed band P2 kept); old plan apply -> plan_stale; replacement plan status draft
+12:30 outage closed: incident resolved, resolution authorized_closure; unique episodes 7 -> 6; affected sites 4 -> 4; workflow {'on_site': 0, 'en_route': 1, 'assigned': 1, 'proposed': 0, 'field_action_needed': 0, 'remote_triage': 0, 'needs_review': 1, 'monitoring': 1, 'resolved': 0, 'none': 5}; telemetry {'access_error': 0, 'missing': 0, 'stale': 0, 'partial': 1, 'fresh': 8}
+  Agenda scn-battery-service: Battery-related operational restriction (BMS-reported): Synthetic site F1 (Fronius SnapInverter-style, PV only, no meter) (field_visit) progress=en_route
+  Agenda scn-pv-om: Persistent production underperformance vs measured POA: Synthetic site S2 (SolarEdge-like + export/consumption meter, EV, string fault) (field_visit) progress=None
+Database: D:\ovs-scratch\run1\api.sqlite3
+Private credentials: D:\ovs-scratch\run1\demo-credentials.json
+Public evidence report: D:\ovs-scratch\run1\demo-report.json

@@ -1,0 +1,30 @@
+{
+ "evaluation_only": true,
+ "profile_id": "m2_fronius_smart_meter_solar_api",
+ "asset_id": "F2-M2-FEEDIN",
+ "effective_time_utc": "2026-07-17T09:00:00.000Z",
+ "expected": [
+  {
+   "metric": "grid_net_kw",
+   "value": -1.1656
+  },
+  {
+   "metric": "phase_voltage_v",
+   "channel": "L1",
+   "value": 231.3
+  },
+  {
+   "metric": "lifetime_grid_import_kwh",
+   "value": 7692.743
+  },
+  {
+   "metric": "lifetime_grid_export_kwh",
+   "value": 11186.763
+  }
+ ],
+ "mirror_check": {
+  "existing_P_Grid_W_at_same_minute": -1165.6,
+  "note": "existing PowerFlow P_Grid (same physical meter via the inverter gateway)"
+ },
+ "tolerance": 1e-09
+}

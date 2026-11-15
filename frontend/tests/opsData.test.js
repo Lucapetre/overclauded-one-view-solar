@@ -43,6 +43,7 @@ test("menus follow the product owner's role decisions", () => {
     "Account",
   ]);
   assert.deepEqual(pagesFor("technician"), [
+    "Agenda",
     "Incidents",
     "Requests",
     "Sites",
@@ -51,6 +52,7 @@ test("menus follow the product owner's role decisions", () => {
   ]);
   assert.deepEqual(pagesFor("customer"), [
     "Home",
+    "Plan",
     "Offers",
     "History",
     "Support",
@@ -65,20 +67,24 @@ test("menus follow the product owner's role decisions", () => {
 });
 
 test("bottom navigation caps long menus with a More entry", () => {
-  const short = bottomNav(pagesFor("technician"), "Incidents");
+  const short = bottomNav(["Agenda", "Account"], "Agenda");
   assert.deepEqual(short, {
-    items: pagesFor("technician"),
+    items: ["Agenda", "Account"],
     more: false,
     moreActive: false,
   });
+  const technician = bottomNav(pagesFor("technician"), "History");
+  assert.deepEqual(technician.items, ["Agenda", "Incidents", "Requests", "Sites"]);
+  assert.equal(technician.more, true);
+  assert.equal(technician.moreActive, true);
   const long = bottomNav(pagesFor("supervisor"), "History");
   assert.deepEqual(long.items, ["Area Radar", "Incidents", "Teams", "Revenue"]);
   assert.equal(long.more, true);
   assert.equal(long.moreActive, true);
   assert.equal(bottomNav(pagesFor("supervisor"), "Teams").moreActive, false);
-  // Customers: Offers sits right after Home on phones; the rest goes under More.
+  // Customers: Plan and Offers follow Home on phones; the rest goes under More.
   const customer = bottomNav(pagesFor("customer"), "Learn");
-  assert.deepEqual(customer.items, ["Home", "Offers", "History", "Support"]);
+  assert.deepEqual(customer.items, ["Home", "Plan", "Offers", "History"]);
   assert.equal(customer.moreActive, true);
 });
 
@@ -434,6 +440,7 @@ test("friendly error text for known codes, server message otherwise", () => {
   assert.match(friendlyError(error("crew_unavailable")), /on-site dispatch/);
   assert.match(friendlyError(error("dispatcher_required")), /dispatcher/);
   assert.match(friendlyError(error("media_not_allowed")), /danger reports/);
+  assert.match(friendlyError(error("episode_workflow_required")), /^Use Plan teams for this incident/);
   assert.equal(friendlyError(error("something_new", "Server says")), "Server says.");
   assert.equal(friendlyError(error("something_new", "Done!")), "Done!");
   assert.equal(friendlyError(new Error("Local check.")), "Local check.");

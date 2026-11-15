@@ -1,0 +1,86 @@
+# Dispatch ranking and crew-planning policy (SYNTHETIC DEMONSTRATION).
+#
+# DEMO POLICY: explicit, bounded, versioned weights chosen for the demonstration. They are not an
+# optimized or learned model, not a contractual service level and not a regulatory obligation.
+# Priority bands always come first; within-band weights only order jobs inside one band.
+policy_version: "demo-dispatch-2026.11.15-1"
+label: "Demo dispatch policy (illustrative weights, not a validated or learned model)"
+
+# Bands in order. Safety/emergency and mandatory response obligations sit above commercial benefit.
+bands:
+  - band: P0
+    name: safety_emergency
+    label: "Safety / emergency"
+    response_minutes: 60
+    deadline_mandatory: true
+    note: "Active P0 stays urgent even with incomplete evidence; escalate per local emergency policy"
+  - band: P1
+    name: urgent_review
+    label: "Urgent: reported fault with lost function"
+    response_minutes: 240
+    deadline_mandatory: true
+  - band: P2
+    name: service_impact
+    label: "Service impact / review"
+    response_minutes: 1440
+    deadline_mandatory: false
+  - band: P3
+    name: monitoring
+    label: "Monitoring / low impact"
+    response_minutes: null
+    deadline_mandatory: false
+
+# Band of a correlated episode by rule (an authorized override may change it, with expiry).
+rule_bands:
+  battery_operational_restriction: P1
+  pcc_voltage_sustained: P2
+  persistent_underperformance: P2
+  shared_monitoring_path: P2
+  common_upstream: P2
+  weather_consistent_drop: P3
+
+# Within-band factors: each normalized to [0, 1] with a stated basis, then weighted. Weights sum to 1.
+weights:
+  deadline_pressure: 0.30   # elapsed share of the band's response window (1 = due/overdue)
+  evidenced_impact: 0.20    # affected installations (cap 5) and lost function
+  recoverable_impact: 0.15  # expected recoverable kWh/day (cap 30); unknown = 0 + listed as unknown
+  confidence_persistence: 0.15  # ordinal confidence and persistence (cap 4 h)
+  age: 0.08                 # analytical age (cap 24 h)
+  repeat_dependency: 0.05   # repeat episodes (cap 3); child of a shared parent
+  commitments: 0.04         # an active assignment/commitment already exists
+  remote_resolvable: 0.03   # remote work can resolve it quickly (field = 0.5)
+caps:
+  affected_sites: 5
+  lost_kwh_per_day: 30
+  persistence_minutes: 240
+  age_hours: 24
+  repeat: 3
+confidence_scores:
+  reported: 1.0
+  corroborated: 0.8
+  suspected: 0.5
+  insufficient: 0.3
+
+# Economics (labelled). Valuation is stakeholder-specific; never summed across stakeholders.
+economics:
+  currency: RON
+  customer_lost_pv_value:
+    stakeholder: "site customer"
+    basis: >-
+      Lost PV energy is worth between the export value and the avoided import price of the saved
+      contract (or the default demo tariff). Not a utility revenue loss.
+  default_tariff:
+    import_price_ron_kwh: 1.30
+    export_price_ron_kwh: 0.55
+    source: "backend/fixtures/site_profiles.json default_tariff (demo)"
+
+# Crew planner (feasible heuristic proposal, not a guaranteed optimum).
+planning:
+  horizon_hours: 12
+  overtime_allowed: false
+  max_overtime_minutes: 0
+  local_improvement_passes: 2
+  max_insertion_evaluations: 20000
+  remote_activities: [remote_review, remote_troubleshooting]
+  # Activities that never become field jobs.
+  monitor_only: [monitor]

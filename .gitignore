@@ -14,3 +14,7 @@ build/scraper.sqlite-shm
 build/side/*.sqlite-wal
 build/side/*.sqlite-shm
 *_log.txt
+# component snapshot (~470 MB); regenerate with scraper.py --component all
+build/components/
+# Browser automation tool output (local only)
+.playwright-mcp/

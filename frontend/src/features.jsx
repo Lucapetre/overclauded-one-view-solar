@@ -17,6 +17,18 @@ import {
 import { friendlyEnergy } from "./friendly";
 import { dailyForecast, LOCATION, MODEL, skyLabel, WEATHER_URL } from "./forecast";
 import { estimateDay } from "./dailyForecast";
+import {
+  bandId,
+  bandTime,
+  checkBands,
+  compensationText,
+  daysText,
+  localDateTime,
+  minuteText,
+  parseMinute,
+  sortBands,
+  validityText,
+} from "./planView";
 
 const fmt = (value, digits = 1) =>
   value == null || !Number.isFinite(value)
@@ -558,36 +570,216 @@ export function ForecastCard({ kwp, kwpAssumed, contract, accountType }) {
   );
 }
 
-/** Contract details that drive the money figures. `onSave` resolves or throws. */
-export function ContractCard({ contract, onSave, readOnly, defaultKwp }) {
+const PRICING_LABEL = { fixed: "fixed", time_of_use: "time of use" };
+const DAY_LETTERS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+/** Read-only list of contract time bands (local Europe/Bucharest times). */
+export function BandTable({ bands }) {
+  const rows = sortBands(bands);
+  if (!rows.length) return <p className="muted">No time bands on this contract.</p>;
+  return (
+    <ul className="band-list" aria-label="Contract time bands">
+      {rows.map((band) => (
+        <li key={band.band_id}>
+          <div>
+            <b>{band.label || band.band_id}</b>
+            <small>
+              {daysText(band.days)} · {bandTime(band)}
+              {(band.valid_from || band.valid_to) && ` · ${validityText(band.valid_from, band.valid_to)}`}
+            </small>
+          </div>
+          <span>
+            You pay <b>{money(band.import_rate_ron_kwh)}</b> RON/kWh
+            <small>export valued {money(band.export_value_ron_kwh)} RON/kWh</small>
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+const bandRow = (band) => ({
+  band_id: band.band_id,
+  label: band.label || "",
+  days: [...band.days],
+  start: minuteText(band.start_minute),
+  end: minuteText(band.end_minute % 1440),
+  import_rate_ron_kwh: String(band.import_rate_ron_kwh),
+  export_value_ron_kwh: String(band.export_value_ron_kwh),
+  valid_from: band.valid_from || null,
+  valid_to: band.valid_to || null,
+});
+const rowBand = (row) => {
+  const start = parseMinute(row.start);
+  const endRaw = parseMinute(row.end);
+  return {
+    band_id: row.band_id,
+    label: row.label.trim() || null,
+    days: [...row.days].sort((a, b) => a - b),
+    start_minute: start == null ? NaN : start % 1440,
+    end_minute: endRaw == null ? NaN : endRaw === 0 ? 1440 : endRaw,
+    import_rate_ron_kwh: Number(row.import_rate_ron_kwh),
+    export_value_ron_kwh: Number(row.export_value_ron_kwh),
+    valid_from: row.valid_from,
+    valid_to: row.valid_to,
+  };
+};
+
+function BandEditor({ rows, onChange }) {
+  const update = (index, patch) => onChange(rows.map((row, i) => (i === index ? { ...row, ...patch } : row)));
+  return (
+    <div className="band-editor">
+      {rows.map((row, index) => (
+        <fieldset key={row.band_id} className="band-row">
+          <legend>{row.label || `Band ${index + 1}`}</legend>
+          <label>
+            Name
+            <input value={row.label} maxLength={60} onChange={(event) => update(index, { label: event.target.value })} placeholder="e.g. Night" />
+          </label>
+          <div className="band-days" role="group" aria-label="Days this band starts">
+            {DAY_LETTERS.map((name, i) => {
+              const day = i + 1;
+              const on = row.days.includes(day);
+              return (
+                <button
+                  type="button"
+                  key={name}
+                  aria-pressed={on}
+                  className={on ? "on" : ""}
+                  onClick={() => update(index, { days: on ? row.days.filter((d) => d !== day) : [...row.days, day] })}
+                >
+                  {name}
+                </button>
+              );
+            })}
+          </div>
+          <div className="band-fields">
+            <label>
+              From
+              <input type="time" step="900" value={row.start} onChange={(event) => update(index, { start: event.target.value })} />
+            </label>
+            <label>
+              Until
+              <input type="time" step="900" value={row.end} onChange={(event) => update(index, { end: event.target.value })} />
+            </label>
+            <label>
+              You pay (RON/kWh)
+              <input type="number" min="0.01" max="10" step="0.01" value={row.import_rate_ron_kwh} onChange={(event) => update(index, { import_rate_ron_kwh: event.target.value })} />
+            </label>
+            <label>
+              Export value (RON/kWh)
+              <input type="number" min="0" max="10" step="0.01" value={row.export_value_ron_kwh} onChange={(event) => update(index, { export_value_ron_kwh: event.target.value })} />
+            </label>
+          </div>
+          <small className="band-hint">
+            {row.end === "00:00"
+              ? "Ends at midnight."
+              : row.end && row.start && row.end <= row.start
+                ? "Ends the next day (crosses midnight)."
+                : ""}
+          </small>
+          <button type="button" className="text-btn" onClick={() => onChange(rows.filter((_, i) => i !== index))} disabled={rows.length === 1}>
+            Remove band
+          </button>
+        </fieldset>
+      ))}
+      <button
+        type="button"
+        className="btn secondary"
+        onClick={() =>
+          onChange([
+            ...rows,
+            {
+              band_id: bandId(`band-${rows.length + 1}`, new Set(rows.map((r) => r.band_id))),
+              label: "",
+              days: [1, 2, 3, 4, 5],
+              start: "",
+              end: "",
+              import_rate_ron_kwh: "",
+              export_value_ron_kwh: "0",
+              valid_from: null,
+              valid_to: null,
+            },
+          ])
+        }
+      >
+        Add a band
+      </button>
+    </div>
+  );
+}
+
+/**
+ * Contract details that drive the money figures. `onSave` resolves or throws.
+ * `version` (optional) is the contract version in force, with its effective bands.
+ */
+export function ContractCard({ contract, version, onSave, readOnly, defaultKwp }) {
   const blank = {
     supplier: "",
+    pricing: "fixed",
     import_price_ron_kwh: "",
     export_price_ron_kwh: "",
     installed_kwp: defaultKwp ?? "",
+    export_compensation: "unspecified",
+    rows: [],
   };
-  const [form, setForm] = useState(contract || blank);
+  const toForm = (value) =>
+    value
+      ? {
+          ...blank,
+          ...value,
+          pricing: value.pricing || "fixed",
+          export_compensation: value.export_compensation || "unspecified",
+          rows: (value.bands || []).map(bandRow),
+        }
+      : blank;
+  const [form, setForm] = useState(() => toForm(contract));
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   useEffect(() => {
-    if (!editing) setForm(contract || blank);
+    if (!editing) setForm(toForm(contract));
   }, [contract]);
+  const timeOfUse = contract?.pricing === "time_of_use";
+  const bands = contract?.bands || version?.bands || [];
   async function submit(event) {
     event.preventDefault();
-    setBusy(true);
     setError("");
-    try {
-      await onSave({
-        supplier: form.supplier.trim(),
-        pricing: "fixed",
-        import_price_ron_kwh: Number(form.import_price_ron_kwh),
-        export_price_ron_kwh: Number(form.export_price_ron_kwh),
-        installed_kwp:
-          form.installed_kwp === "" || form.installed_kwp == null
-            ? null
-            : Number(form.installed_kwp),
+    const body = {
+      supplier: form.supplier.trim(),
+      pricing: form.pricing,
+      import_price_ron_kwh: Number(form.import_price_ron_kwh),
+      export_price_ron_kwh: Number(form.export_price_ron_kwh),
+      installed_kwp:
+        form.installed_kwp === "" || form.installed_kwp == null
+          ? null
+          : Number(form.installed_kwp),
+    };
+    // Keep the stated compensation; an older fixed contract keeps its original shape.
+    if (contract?.export_compensation || form.export_compensation !== "unspecified")
+      body.export_compensation = form.export_compensation;
+    if (form.pricing === "time_of_use") {
+      const taken = new Set();
+      body.bands = form.rows.map((row) => {
+        const band = rowBand(row);
+        // Existing ids stay stable across versions; new or clashing ones come from the name.
+        band.band_id =
+          /^[a-z0-9][a-z0-9_-]{0,39}$/.test(row.band_id) && !taken.has(row.band_id)
+            ? row.band_id
+            : bandId(band.label || row.band_id, taken);
+        taken.add(band.band_id);
+        return band;
       });
+      const check = checkBands(body.bands);
+      if (!body.bands.length) check.errors.push("Add at least one band.");
+      if (check.errors.length) {
+        setError(check.errors.slice(0, 4).join(" "));
+        return;
+      }
+    }
+    setBusy(true);
+    try {
+      await onSave(body);
       setEditing(false);
     } catch (failure) {
       setError(
@@ -607,6 +799,7 @@ export function ContractCard({ contract, onSave, readOnly, defaultKwp }) {
       />
     </label>
   );
+  const uncovered = form.pricing === "time_of_use" ? checkBands(form.rows.map(rowBand)).uncoveredMinutes : 0;
   return (
     <section className="card contract-card">
       <div className="section-head">
@@ -626,14 +819,39 @@ export function ContractCard({ contract, onSave, readOnly, defaultKwp }) {
                 <b>Supplier</b>
                 <span>{contract.supplier}</span>
               </div>
-              <div className="list-row">
-                <b>You pay (import)</b>
-                <span>{money(contract.import_price_ron_kwh)} RON/kWh · fixed</span>
-              </div>
-              <div className="list-row">
-                <b>You receive (export)</b>
-                <span>{money(contract.export_price_ron_kwh)} RON/kWh</span>
-              </div>
+              {timeOfUse ? (
+                <>
+                  <div className="list-row">
+                    <b>Pricing</b>
+                    <span>Time of use: prices change by time of day (Bucharest time)</span>
+                  </div>
+                  <BandTable bands={bands} />
+                  <div className="list-row">
+                    <b>Reference rates</b>
+                    <span>
+                      {money(contract.import_price_ron_kwh)} / {money(contract.export_price_ron_kwh)} RON/kWh
+                      <small>used by Power Block Offers</small>
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="list-row">
+                    <b>You pay (import)</b>
+                    <span>{money(contract.import_price_ron_kwh)} RON/kWh · fixed</span>
+                  </div>
+                  <div className="list-row">
+                    <b>You receive (export)</b>
+                    <span>{money(contract.export_price_ron_kwh)} RON/kWh</span>
+                  </div>
+                </>
+              )}
+              {contract.export_compensation && (
+                <div className="list-row">
+                  <b>Export compensation</b>
+                  <span>{compensationText(contract.export_compensation)}</span>
+                </div>
+              )}
               <div className="list-row">
                 <b>Installed solar</b>
                 <span>
@@ -642,10 +860,25 @@ export function ContractCard({ contract, onSave, readOnly, defaultKwp }) {
                     : "Not provided"}
                 </span>
               </div>
+              {version && (
+                <div className="list-row">
+                  <b>Version in force</b>
+                  <span>
+                    Version {version.version_no} ({PRICING_LABEL[version.pricing] || version.pricing}) · from{" "}
+                    {localDateTime(version.effective_from)}
+                    {version.valid_to ? ` until ${localDateTime(version.valid_to)}` : ""}
+                    {version.uncovered_week_minutes > 0 && (
+                      <small>
+                        {Math.round(version.uncovered_week_minutes / 60)} h a week have no price; estimates there show “unknown”.
+                      </small>
+                    )}
+                  </span>
+                </div>
+              )}
             </>
           ) : (
             <p className="muted">
-              No contract added yet. Add your fixed prices from your supplier
+              No contract added yet. Add your prices from your supplier
               contract or latest bill.
             </p>
           )}
@@ -667,14 +900,51 @@ export function ContractCard({ contract, onSave, readOnly, defaultKwp }) {
               step: "0.1",
               placeholder: "e.g. 6",
             })}
-            {field("import_price_ron_kwh", "Price you pay (RON/kWh)", {
+            <label>
+              Pricing
+              <select
+                value={form.pricing}
+                onChange={(event) =>
+                  setForm({
+                    ...form,
+                    pricing: event.target.value,
+                    rows:
+                      event.target.value === "time_of_use" && !form.rows.length
+                        ? [
+                            bandRow({
+                              band_id: "all-day",
+                              label: "All day",
+                              days: [1, 2, 3, 4, 5, 6, 7],
+                              start_minute: 0,
+                              end_minute: 1440,
+                              import_rate_ron_kwh: form.import_price_ron_kwh || "",
+                              export_value_ron_kwh: form.export_price_ron_kwh || "0",
+                            }),
+                          ]
+                        : form.rows,
+                  })
+                }
+              >
+                <option value="fixed">Fixed price</option>
+                <option value="time_of_use">Time of use (bands)</option>
+              </select>
+            </label>
+            <label>
+              Export compensation
+              <select value={form.export_compensation} onChange={(event) => setForm({ ...form, export_compensation: event.target.value })}>
+                <option value="unspecified">Not stated</option>
+                <option value="payment">Paid to me</option>
+                <option value="credit">Credited to my bill</option>
+              </select>
+            </label>
+            {field("import_price_ron_kwh", form.pricing === "fixed" ? "Price you pay (RON/kWh)" : "Reference price you pay (RON/kWh)", {
               required: true,
               type: "number",
               min: "0.01",
               max: "10",
               step: "0.01",
             })}
-            {field("export_price_ron_kwh", "Price you receive (RON/kWh)", {
+            {field("export_price_ron_kwh", form.pricing === "fixed" ? "Price you receive (RON/kWh)" : "Reference export price (RON/kWh)", {
               required: true,
               type: "number",
               min: "0",
@@ -682,11 +952,23 @@ export function ContractCard({ contract, onSave, readOnly, defaultKwp }) {
               step: "0.01",
             })}
           </div>
+          {form.pricing === "time_of_use" && (
+            <>
+              <p className="small-note">
+                Bands use Bucharest local time. An “until” time before the “from” time crosses midnight. Days are the days a band starts.
+              </p>
+              <BandEditor rows={form.rows} onChange={(rows) => setForm({ ...form, rows })} />
+              {uncovered > 0 && (
+                <p className="small-note">
+                  {Math.round(uncovered / 60)} h a week have no band; estimates for those times will show “unknown”.
+                </p>
+              )}
+            </>
+          )}
           <p className="small-note">
-            Fixed-price contracts only for now. Prices are per kWh, taxes
-            included, as on your bill.
+            Prices are per kWh, taxes included, as on your bill. Saving creates a new contract version from now on; accepted plans keep the version they used.
           </p>
-          {error && <p className="error">{error}</p>}
+          {error && <p className="error" role="alert">{error}</p>}
           <div className="button-row">
             <button className="btn yellow" disabled={busy}>
               {busy ? "Saving…" : "Save contract"} <Check size={16} />

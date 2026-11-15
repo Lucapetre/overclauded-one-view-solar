@@ -1,0 +1,356 @@
+# Component source evidence registry (PHASE 1 feasibility gate output).
+#
+# Consumed by the component generator / component profiles. It records ONLY what the pinned public
+# documentation establishes for each candidate profile, so that generated fixtures never contain a native
+# field, register, type, scale or semantic that was not verified. Human-readable version with reasoning:
+# docs/COMPONENT_SOURCE_NOTES.md.
+#
+# Rules for consumers:
+#   * outcome: include | narrow | exclude.  exclude => generate NOTHING for that profile.
+#   * fields: the complete allowlist of native fields for include/narrow profiles. Anything not listed is
+#     unavailable (do not generate it, do not fake it as null-with-meaning).
+#   * evidence_status: documented | inferred | explicitly_simulated  (inferred items must stay visible in
+#     provenance; they are configuration choices, not vendor facts).
+#   * requirement_class keeps the existing three telemetry classes unchanged:
+#     integration_required | vendor_response_required | optional.
+#   * access_status for every profile is "documented, simulated for demo" or "not established". Public
+#     documentation does NOT prove PPC permission or a working connection. All values are synthetic.
+#   * address = zero-based Modbus PDU/protocol address (what goes in the frame); register = vendor's
+#     register number where the vendor uses a separate 1-based numbering.
+#   * canonical_metric names marked in `proposed_canonical_metrics` do not yet exist in
+#     config/provider_profiles.yaml and must be added there (with bounds) by the profile author.
+#   * Collector envelope metadata (capture time, collector id, request window) is OUR metadata and may be
+#     simulated; it is never presented as a device-emitted field.
+registry_version: "2026.11.15-phase1"
+researched_on: "2026-11-15"
+synthetic_notice: >-
+  Evidence is documentation-only. No vendor login, credential, device or live API was used. Values generated
+  from these profiles are synthetic demonstration data.
+
+proposed_canonical_metrics:
+  grid_net_kw:               {unit: kW, kind: power, sign: "+import / -export, only on a declared grid/PCC boundary"}
+  lifetime_grid_import_kwh:  {unit: kWh, kind: energy_counter_lifetime}
+  lifetime_grid_export_kwh:  {unit: kWh, kind: energy_counter_lifetime}
+  resettable_grid_import_kwh: {unit: kWh, kind: energy_counter_resettable}
+  resettable_grid_export_kwh: {unit: kWh, kind: energy_counter_resettable}
+  phase_active_power_kw:     {unit: kW, kind: power, sign: "+import / -export after configured boundary/CT orientation"}
+  meter_status_raw:          {unit: none, kind: state}
+  battery_voltage_v:         {unit: V, kind: voltage}
+  battery_current_a:         {unit: A, kind: current, sign: "canonical +discharge / -charge (native Victron is +charge)"}
+  battery_net_kw:            {unit: kW, kind: power, sign: "+discharge / -charge on the named boundary"}
+  battery_alarm_raw:         {unit: none, kind: state}
+  battery_max_charge_current_a:    {unit: A, kind: limit, description: "BMS-reported allowed charge current"}
+  battery_max_discharge_current_a: {unit: A, kind: limit, description: "BMS-reported allowed discharge current"}
+  battery_max_charge_voltage_v:    {unit: V, kind: limit}
+  battery_min_discharge_voltage_v: {unit: V, kind: limit}
+  battery_capacity_ah:       {unit: Ah, kind: capacity, description: "capacity basis reported by the battery service"}
+  irradiance_wm2:            {unit: W/m2, kind: irradiance, description: "plane given ONLY by asset-registry mounting (poa | horizontal)"}
+  reference_cell_temperature_c: {unit: degC, kind: temperature, description: "irradiance reference-cell temperature (not module, not ambient)"}
+  module_temperature_c:      {unit: degC, kind: temperature, description: "back-of-module PV temperature sensor"}
+  ambient_temperature_c:     {unit: degC, kind: temperature}
+  sensor_body_temperature_c: {unit: degC, kind: temperature, description: "radiometer body temperature (not ambient, not module)"}
+  sensor_status_raw:         {unit: none, kind: state}
+
+references:
+  SE-DOCA0005EN:  {title: "Schneider Electric iEM3100/iEM3200/iEM3300 series User manual", version: "DOCA0005EN-16", date: "05/2026", url: "https://download.se.com/files?filename=User+guide&p_Doc_Ref=DOCA0005EN", official: true, retrieved: "2026-11-15"}
+  FR-SOLARAPI:    {title: "Fronius Solar API V1 operating instructions", version: "42,0410,2012,EN 021-15052025", date: "2025-05-15", url: "https://www.fronius.com/~/downloads/Solar%20Energy/Operating%20Instructions/42%2C0410%2C2012.pdf", official: true, retrieved: "2026-11-15", note: "Spec-listed loxone copy (third-party mirror) was unreachable (DNS failure); official Fronius-hosted PDF used instead."}
+  SH-EM:          {title: "Shelly Gen2 API docs - EM component", version: "page Version 1.0 (no date shown)", date: "accessed 2026-11-15", url: "https://shelly-api-docs.shelly.cloud/gen2/ComponentsAndServices/EM/", official: true}
+  SH-EMDATA:      {title: "Shelly Gen2 API docs - EMData component", version: "page Version 1.0 (no date shown)", date: "accessed 2026-11-15", url: "https://shelly-api-docs.shelly.cloud/gen2/ComponentsAndServices/EMData/", official: true}
+  SH-PRO3EM:      {title: "Shelly Gen2 API docs - Shelly Pro 3EM device page", version: "page Version 1.0", date: "accessed 2026-11-15", url: "https://shelly-api-docs.shelly.cloud/gen2/Devices/Gen2/ShellyPro3EM", official: true}
+  VE-REGLIST:     {title: "Victron CCGX/GX Modbus-TCP register list", version: "file 3.81; 'Document versions' sheet latest entry Rev 54; file metadata modified 2026-10-06", date: "2026-10-06", url: "https://www.victronenergy.com/upload/documents/CCGX-Modbus-TCP-register-list-3.81.xlsx", official: true, retrieved: "2026-11-15"}
+  VE-FAQ:         {title: "Victron GX Modbus-TCP manual / FAQ", version: "ccgx/modbustcp_faq.txt last modified 2025-03-28", date: "2025-03-28", url: "https://www.victronenergy.com/live/ccgx:modbustcp_faq", official: true}
+  SEDG-API:       {title: "SolarEdge Monitoring Server API (March 2026)", version: "March 2026 (not re-retrieved)", date: "2026-03", url: "https://knowledge-center.solaredge.com/sites/kc/files/se_monitoring_api.pdf", official: true, retrieved: "FAILED 2026-11-15: HTTP 403 bot challenge (also www.solaredge.com/sites/default/files/se_monitoring_api.pdf: 403)", prior_review: "repo SOURCE_NOTES.md R7, accessed 2026-11-14"}
+  EN-SUPPORT:     {title: "Enphase developer portal - support", version: "no date shown", date: "accessed 2026-11-15", url: "https://developer-v4.enphase.com/docs/support", official: true}
+  EN-MONITORING:  {title: "Enphase developer portal - monitoring API", version: "no date shown", date: "accessed 2026-11-15", url: "https://developer-v4.enphase.com/docs/monitoring_api", official: true, note: "no battery telemetry response schema present on the accessible page"}
+  IMT-MODBUS:     {title: "IMT Modbus Specification for Irradiance Sensors Si-RS485...-MB (instruction sheet)", version: "firmware 2.03 (also covers 1.51-1.55)", date: "January 2026", url: "https://imt-technology.com/fileadmin/docs/en/products/Si-RS485_Modbus_SPEC_EN.pdf", official: true, retrieved: "2026-11-15"}
+  IMT-TABLE:      {title: "IMT Si-RS485 series selection table", version: "-", date: "March 2026", url: "https://imt-technology.com/fileadmin/docs/en/products/Si-RS485-Table_DS_EN.pdf", official: true, retrieved: "2026-11-15"}
+  KZ-SMP:         {title: "Kipp & Zonen (OTT HydroMet) SMP10x and SMP22x Smart Pyranometers Operational Manual", version: "0374214 | 02-0326 (file V20); Modbus data model 108", date: "2026-03 (02-0326)", url: "https://cdn.hach.com/1XMCM0ZF/at/4vgjr9542w2f29hsgjbhsqtb/Operational_Manual_SMP10x_SMP22x_Smart_Pyranometers_V20.pdf", official: true, retrieved: "2026-11-15", note: "Spec URL https://www.kippzonen.com/Download/1143/... now returns the vendor 'Resources' page, which links this vendor CDN file."}
+  CS-TOA5:        {title: "Campbell Scientific LoggerNet manual - TOA5 file format", version: "no version shown", date: "accessed 2026-11-15", url: "https://help.campbellsci.com/loggernet-manual/ln_manual/campbell_scientific_file_formats/toa5.htm", official: true}
+  CS-CR1000X-TABLES: {title: "Campbell Scientific CR1000X help - About data tables", version: "no version shown", date: "accessed 2026-11-15", url: "https://help.campbellsci.com/CR1000X/Content/shared/Details/Data/About_Data_Tables.htm", official: true}
+  CS-DLAPI:       {title: "Campbell Scientific Data Logger Web Server API", version: "1.0.3", date: "2026-09-25", url: "https://help.campbellsci.com/datalogger-api/", official: true}
+
+profiles:
+  # =====================================================================================================
+  m1_schneider_iem3255_modbus:
+    family: meter
+    outcome: include
+    outcome_reason: >-
+      Model-specific register table, types, units, register-vs-address rule, model applicability (iEM3255 has
+      Modbus, four-quadrant energy and electrical measurements) and non-resettable total energy are documented.
+      Word order of multi-register values is NOT stated in the manual and is a declared configuration (inferred).
+    doc: {url: "https://download.se.com/files?filename=User+guide&p_Doc_Ref=DOCA0005EN", title: "iEM3100/iEM3200/iEM3300 series User manual", version: "DOCA0005EN-16", date: "05/2026", official: true}
+    access_status: "documented, simulated for demo"
+    device: {model: "Schneider Electric iEM3255 (iEM3200 series, CT inputs 1 A/5 A, VT inputs supported)", firmware: "not pinned by manual (Present Firmware Version register 1637 exists); declare in asset registry", accessories: "external CTs (and VTs if used); RS-485 Modbus RTU to a site collector/gateway"}
+    acquisition: {path: "local documented read interface: Modbus RTU, function code 0x03 Read Holding Registers", collector: "site Modbus collector (simulated) storing raw 16-bit words + capture metadata", authorization: "site owner network/collector permission (not established)"}
+    cadence: {native: "not specified by the manual", chosen_polling_s: 300}
+    conventions:
+      register_to_address: "address = register - 1 (manual: 'register = address + 1'; Address column is the value used in the Modbus frame)"
+      word_order: {value: "high_word_first", evidence_status: inferred, note: "DOCA0005EN-16 does not state word or byte order for Float32/Int64. Configured; a wrong-order fixture must be flagged, never auto-repaired."}
+      int64_signedness: {value: "decode as signed Int64, expect >= 0", evidence_status: documented, note: "Energy section says 'signed 64-bit integer'; the unit table describes Int64 as '64 bit unsigned integer' (internal inconsistency in the manual). Counters are non-negative in practice; a negative decode is flagged."}
+      power_sign: {value: "+P = delivered/imported (source -> load); -P = received/exported", evidence_status: documented, source_ref: "DOCA0005EN-16 p.120 'Power flow' / quadrant table", note: "Grid meaning only when the meter is installed at the declared PCC with source side = grid."}
+      invalid_sentinel: {value: null, evidence_status: documented, note: "No NaN/invalid sentinel is documented for these registers; non-finite Float32 is treated as invalid by OUR rule."}
+    fields:
+      - {native: "Total Active Power", register: 3060, address: 3059, address_hex: "0x0BF3", words: 2, type: Float32, signed: true, scale: 1, unit: kW, word_order: high_word_first, invalid_sentinel: null, canonical_metric: grid_net_kw, boundary: "configured (grid_pcc for demo site)", aggregation: instantaneous, requirement_class: optional, evidence_status: documented, source_ref: "SE-DOCA0005EN p.67 Meter Data / Power (address = register - 1, p.56)", feature: "grid exchange view, discrepancy check"}
+      - {native: "Active Power Phase 1/2/3", register: [3054, 3056, 3058], address: [3053, 3055, 3057], address_hex: ["0x0BED", "0x0BEF", "0x0BF1"], words: 2, type: Float32, signed: true, scale: 1, unit: kW, word_order: high_word_first, invalid_sentinel: null, canonical_metric: phase_active_power_kw, boundary: "configured", aggregation: instantaneous, requirement_class: optional, evidence_status: documented, source_ref: "SE-DOCA0005EN pp.66-67", feature: "per-phase consistency test (sum vs total)"}
+      - {native: "Voltage L1-N / L2-N / L3-N", register: [3028, 3030, 3032], address: [3027, 3029, 3031], address_hex: ["0x0BD3", "0x0BD5", "0x0BD7"], words: 2, type: Float32, signed: true, scale: 1, unit: V, word_order: high_word_first, invalid_sentinel: null, canonical_metric: phase_voltage_v, boundary: "configured", aggregation: instantaneous, requirement_class: optional, evidence_status: documented, source_ref: "SE-DOCA0005EN p.66", feature: "voltage event evidence"}
+      - {native: "I1/I2/I3 phase current", register: [3000, 3002, 3004], address: [2999, 3001, 3003], address_hex: ["0x0BB7", "0x0BB9", "0x0BBB"], words: 2, type: Float32, signed: true, scale: 1, unit: A, word_order: high_word_first, invalid_sentinel: null, canonical_metric: ac_current_a, boundary: "configured", aggregation: instantaneous, requirement_class: optional, evidence_status: documented, source_ref: "SE-DOCA0005EN p.66", feature: "optional phase detail"}
+      - {native: "Frequency", register: 3110, address: 3109, address_hex: "0x0C25", words: 2, type: Float32, signed: true, scale: 1, unit: Hz, word_order: high_word_first, invalid_sentinel: null, canonical_metric: grid_frequency_hz, boundary: "configured", aggregation: instantaneous, requirement_class: optional, evidence_status: documented, source_ref: "SE-DOCA0005EN p.67", feature: "optional context"}
+      - {native: "Total Active Energy Import (cannot be reset)", register: 3204, address: 3203, address_hex: "0x0C83", words: 4, type: Int64, signed: true, scale: 1, unit: Wh, word_order: high_word_first, invalid_sentinel: null, canonical_metric: lifetime_grid_import_kwh, boundary: "configured (grid_pcc)", aggregation: cumulative_counter_lifetime, requirement_class: optional, evidence_status: documented, source_ref: "SE-DOCA0005EN p.67 'Energy values - 64-bit integer', 'Total Energy (cannot be reset)'", feature: "measured grid-energy verification (authoritative energy representation)", notes: "Preserve integer precision; never route through float. Do NOT inject resets into this counter."}
+      - {native: "Total Active Energy Export (cannot be reset)", register: 3208, address: 3207, address_hex: "0x0C87", words: 4, type: Int64, signed: true, scale: 1, unit: Wh, word_order: high_word_first, invalid_sentinel: null, canonical_metric: lifetime_grid_export_kwh, boundary: "configured (grid_pcc)", aggregation: cumulative_counter_lifetime, requirement_class: optional, evidence_status: documented, source_ref: "SE-DOCA0005EN pp.67-68 (not applicable to iEM3150/iEM3250/iEM3350; applicable to iEM3255)", feature: "measured grid-energy verification"}
+      - {native: "Energy Reset Date and Time", register: 3252, address: 3251, address_hex: "0x0CB3", words: 4, type: DATETIME, signed: false, scale: null, unit: none, word_order: "per DATETIME layout (4 words)", invalid_sentinel: null, canonical_metric: null, boundary: null, aggregation: state, requirement_class: optional, evidence_status: documented, source_ref: "SE-DOCA0005EN p.67", feature: "audit of partial-counter resets (metadata only)"}
+      - {native: "Diagnostics error status (bitmap; bit5 = Code 204 total active energy negative due to incorrect voltage or current connections)", register: 45000, address: 44999, address_hex: "0xAFC7", words: 1, type: Bitmap, signed: false, scale: null, unit: none, word_order: n/a, invalid_sentinel: null, canonical_metric: meter_status_raw, boundary: null, aggregation: state, requirement_class: optional, evidence_status: documented, source_ref: "SE-DOCA0005EN p.62 Modbus register list > System (register); p.126 diagnosis code 204 ('Metering continues')", feature: "wiring/data-quality evidence (raw, no physical diagnosis)"}
+    not_selected:
+      - {native: "Partial Active Energy Import", register: 3256, reason: "resettable (front panel, digital input, command 2020); a lifetime representation (3204/3208) is authoritative. No partial EXPORT register exists."}
+      - {native: "Total Active Energy Import/Export Float32 kWh", register: [45100, 45102], reason: "alternative representation (Float32, kWh); single authoritative representation is the Int64 Wh pair"}
+
+  # =====================================================================================================
+  m2_fronius_smart_meter_solar_api:
+    family: meter
+    outcome: narrow
+    outcome_reason: >-
+      Endpoint, nesting, location-dependent directions and channel availability per meter model are documented
+      in the official Fronius PDF. Narrowed: (a) the meter section does not tabulate channel units (W, Wh, V, A,
+      Hz are inferred from channel names and example magnitudes); (b) Current_AC_Phase_* are ABSOLUTE values on
+      the 63A-3 (no direction); (c) the per-device TimeStamp channel's epoch format is inferred from the example.
+    doc: {url: "https://www.fronius.com/~/downloads/Solar%20Energy/Operating%20Instructions/42%2C0410%2C2012.pdf", title: "Fronius Solar API V1", version: "42,0410,2012,EN 021-15052025", date: "2025-05-15", official: true}
+    access_status: "documented, simulated for demo"
+    device: {model: "Fronius Smart Meter 63A-3 (article 43,0001,1473)", firmware: "channel table compatibility: hw=0 and sw=2.7, or hw=1 and (sw=2.9 or sw=3.0)", accessories: "connected to a Fronius Datamanager/inverter that serves the Solar API (Non Hybrid platform since 3.3.4-8; Fronius Hybrid always; GEN24/Tauro/Verto listed as 'planned in 1.13' - do not pair with GEN24 without separate evidence)"}
+    acquisition: {path: "local documented read interface: HTTP GET /solar_api/v1/GetMeterRealtimeData.cgi?Scope=System (or Scope=Device&DeviceId=n)", collector: "site LAN collector (simulated)", authorization: "local network access to the datalogger (not established)"}
+    cadence: {native: "not specified", chosen_polling_s: 300}
+    conventions:
+      nesting: "Head{RequestArguments, Status{Code,Reason,UserMessage}, Timestamp} + Body.Data.{DeviceId}.{channel}; Details{Serial, Model, Manufacturer} per device"
+      head_timestamp: {meaning: "RFC3339 localtime of the datalogger; time the request was answered, NOT the time data was queried from the device", evidence_status: documented, source_ref: "FR-SOLARAPI Common response header (Listing: Head)"}
+      units: {value: "PowerReal_* W; EnergyReal_WAC_* Wh; Voltage_* V; Current_* A; Frequency Hz", evidence_status: inferred, note: "meter section has no unit column; inferred from channel naming, example magnitudes (e.g. 19838697 energy, 232.3 voltage) and the API's use of base units without prefixes elsewhere"}
+      sign_by_location:
+        "0": {meaning: "grid interconnection point (primary meter, feed-in)", PowerReal_P_Sum_positive: "consuming from grid", PowerReal_P_Sum_negative: "feeding in to grid"}
+        "1": {meaning: "load / consumption path (primary meter)", PowerReal_P_Sum_positive: "producing power", PowerReal_P_Sum_negative: "normal consumption"}
+        "3": {meaning: "external generator (secondary meter, multiple)", PowerReal_P_Sum_positive: "generation", PowerReal_P_Sum_negative: "consumption"}
+        "256-511": {meaning: "subloads (secondary meter, unique)", PowerReal_P_Sum_positive: "load is producing power", PowerReal_P_Sum_negative: "normal consumption"}
+      counter_views: "EnergyReal_WAC_Sum_Consumed/Produced = meter-specific view; EnergyReal_WAC_Plus/Minus_Absolute = system (Solar.web) view. At location 0: Plus_Absolute = import, Minus_Absolute = export."
+      missing_channels: "Inactive channels are not included and vary by meter/software version; a missing optional channel is not a fault."
+    fields:
+      - {native: "Details.Serial / Details.Model / Details.Manufacturer", path: "Body.Data.{id}.Details.*", type: string, signed: null, scale: null, unit: none, word_order: n/a, invalid_sentinel: null, canonical_metric: null, boundary: null, aggregation: identity, requirement_class: vendor_response_required, evidence_status: documented, source_ref: "FR-SOLARAPI 4.8.4 (m for 63A-3), Listing 42", feature: "device identity"}
+      - {native: "Meter_Location_Current", path: "Body.Data.{id}.Meter_Location_Current", type: number, signed: false, scale: 1, unit: none, word_order: n/a, invalid_sentinel: null, canonical_metric: null, boundary: "selects sign interpretation; must equal the configured installation boundary", aggregation: state, requirement_class: vendor_response_required, evidence_status: documented, source_ref: "FR-SOLARAPI 4.8.5-4.8.7", feature: "flow-direction resolution (integration-critical; mismatch with registry => quarantine)"}
+      - {native: "Enable", path: "Body.Data.{id}.Enable", type: number, signed: false, scale: 1, unit: none, word_order: n/a, invalid_sentinel: null, canonical_metric: null, boundary: null, aggregation: state, requirement_class: vendor_response_required, evidence_status: documented, source_ref: "FR-SOLARAPI 4.8.5 (1 enabled, 0 disabled)", feature: "quality gate"}
+      - {native: "Visible", path: "Body.Data.{id}.Visible", type: number, signed: false, scale: 1, unit: none, word_order: n/a, invalid_sentinel: "0 = incomplete or outdated values", canonical_metric: null, boundary: null, aggregation: state, requirement_class: vendor_response_required, evidence_status: documented, source_ref: "FR-SOLARAPI 4.8.5 (1 use values, 0 incomplete or outdated values)", feature: "quality gate: Visible=0 => withhold values, coverage warning"}
+      - {native: "TimeStamp (per device channel)", path: "Body.Data.{id}.TimeStamp", type: number, signed: false, scale: 1, unit: "s since Unix epoch (inferred)", word_order: n/a, invalid_sentinel: null, canonical_metric: null, boundary: null, aggregation: measurement_time, requirement_class: vendor_response_required, evidence_status: inferred, source_ref: "FR-SOLARAPI 4.8.4 channel table (m), Listing 43 example 1561364909", feature: "source time (format inferred; Head.Timestamp remains response time)"}
+      - {native: "PowerReal_P_Sum", path: "Body.Data.{id}.PowerReal_P_Sum", type: number, signed: true, scale: 1, unit: W, word_order: n/a, invalid_sentinel: null, canonical_metric: grid_net_kw, boundary: "Meter_Location_Current=0 => grid_pcc (+import/-export); other locations are NOT grid", aggregation: instantaneous, requirement_class: vendor_response_required, evidence_status: documented, unit_evidence_status: inferred, source_ref: "FR-SOLARAPI 4.8.4, 4.8.6", feature: "grid exchange view"}
+      - {native: "PowerReal_P_Phase_1/2/3", path: "Body.Data.{id}.PowerReal_P_Phase_n", type: number, signed: true, scale: 1, unit: W, word_order: n/a, invalid_sentinel: null, canonical_metric: phase_active_power_kw, boundary: "as PowerReal_P_Sum", aggregation: instantaneous, requirement_class: vendor_response_required, evidence_status: documented, unit_evidence_status: inferred, source_ref: "FR-SOLARAPI 4.8.4 (m for 63A-3)", feature: "phase consistency test"}
+      - {native: "EnergyReal_WAC_Sum_Consumed", path: "Body.Data.{id}.EnergyReal_WAC_Sum_Consumed", type: number, signed: false, scale: 1, unit: Wh, word_order: n/a, invalid_sentinel: null, canonical_metric: lifetime_grid_import_kwh, boundary: "meter-specific view; = grid import only at Meter_Location_Current=0", aggregation: cumulative_counter_lifetime, requirement_class: vendor_response_required, evidence_status: documented, unit_evidence_status: inferred, source_ref: "FR-SOLARAPI 4.8.4, 4.8.5", feature: "measured grid-energy verification"}
+      - {native: "EnergyReal_WAC_Sum_Produced", path: "Body.Data.{id}.EnergyReal_WAC_Sum_Produced", type: number, signed: false, scale: 1, unit: Wh, word_order: n/a, invalid_sentinel: null, canonical_metric: lifetime_grid_export_kwh, boundary: "meter-specific view; = grid export only at Meter_Location_Current=0", aggregation: cumulative_counter_lifetime, requirement_class: vendor_response_required, evidence_status: documented, unit_evidence_status: inferred, source_ref: "FR-SOLARAPI 4.8.4, 4.8.5", feature: "measured grid-energy verification"}
+      - {native: "Voltage_AC_Phase_1/2/3", path: "Body.Data.{id}.Voltage_AC_Phase_n", type: number, signed: false, scale: 1, unit: V, word_order: n/a, invalid_sentinel: null, canonical_metric: phase_voltage_v, boundary: "meter location", aggregation: instantaneous, requirement_class: vendor_response_required, evidence_status: documented, unit_evidence_status: inferred, source_ref: "FR-SOLARAPI 4.8.4 (m for 63A-3)", feature: "voltage evidence"}
+      - {native: "Current_AC_Phase_1/2/3", path: "Body.Data.{id}.Current_AC_Phase_n", type: number, signed: false, scale: 1, unit: A, word_order: n/a, invalid_sentinel: null, canonical_metric: ac_current_a, boundary: "meter location", aggregation: instantaneous, requirement_class: vendor_response_required, evidence_status: documented, unit_evidence_status: inferred, source_ref: "FR-SOLARAPI 4.8.5 ('absolute values for 63A-3, 63A-1 and 50KA-3; only UL and TS meter provide directions')", feature: "magnitude only; never used for direction"}
+      - {native: "Frequency_Phase_Average", path: "Body.Data.{id}.Frequency_Phase_Average", type: number, signed: false, scale: 1, unit: Hz, word_order: n/a, invalid_sentinel: null, canonical_metric: grid_frequency_hz, boundary: "meter location", aggregation: instantaneous, requirement_class: vendor_response_required, evidence_status: documented, unit_evidence_status: inferred, source_ref: "FR-SOLARAPI 4.8.4", feature: "optional context"}
+      - {native: "Head.Timestamp", path: "Head.Timestamp", type: "string (RFC3339 localtime)", signed: null, scale: null, unit: none, word_order: n/a, invalid_sentinel: null, canonical_metric: null, boundary: null, aggregation: response_time, requirement_class: vendor_response_required, evidence_status: documented, source_ref: "FR-SOLARAPI common response header", feature: "response time only (never measurement time)"}
+      - {native: "Head.Status.Code", path: "Head.Status.Code", type: integer, signed: false, scale: 1, unit: none, word_order: n/a, invalid_sentinel: "non-zero = request problem", canonical_metric: null, boundary: null, aggregation: state, requirement_class: vendor_response_required, evidence_status: documented, source_ref: "FR-SOLARAPI common response header (0 = OKAY)", feature: "transport/access failure detection"}
+
+  # =====================================================================================================
+  m3_shelly_pro3em_rpc:
+    family: meter
+    outcome: include
+    outcome_reason: >-
+      EM.GetStatus and EMData.GetStatus keys, per-phase units, error vocabularies, CT 'reverse' configuration and
+      EMData.ResetCounters are documented on official Shelly pages. Two semantics are inferred and must stay
+      labelled: the unit of total_act_power (W) and the meaning of a negative act_power (returned/export
+      direction). Directional energy (total_act / total_act_ret, Wh) is documented and is the authoritative basis.
+    doc: {url: "https://shelly-api-docs.shelly.cloud/gen2/ComponentsAndServices/EM/", title: "Shelly Gen2 API EM / EMData / Pro 3EM pages", version: "page Version 1.0 (undated)", date: "accessed 2026-11-15", official: true}
+    access_status: "documented, simulated for demo"
+    device: {model: "Shelly Pro 3EM in 'triphase' profile (single em:0 + emdata:0)", firmware: ">= 1.1.0 (profiles supported since 1.1.0); declare exact version in registry", accessories: "Shelly CTs; ct_type must be set (else error ct_type_not_set)"}
+    acquisition: {path: "local documented read interface: Gen2 RPC EM.GetStatus?id=0 and EMData.GetStatus?id=0", collector: "site LAN collector (simulated) adds capture time (GetStatus payloads carry no measurement timestamp)", authorization: "local network access; device auth if enabled (not established)"}
+    cadence: {native: "EMData stores one-minute records; instantaneous refresh rate not stated", chosen_polling_s: 300}
+    conventions:
+      ct_orientation: {config: "EM.SetConfig reverse{a,b,c}: 'Reverse CT measurement direction' of active power and energy per phase (restart required)", evidence_status: documented, note: "Registry declares orientation; ingestion never auto-flips an unexplained negative reading."}
+      power_sign: {value: "negative act_power = returned direction (export at a grid boundary)", evidence_status: inferred, note: "EM page does not explain the sign; consistent with EMData 'returned energy' wording."}
+      reset: {method: "EMData.ResetCounters {id}", effect: "'Reset the total counters for the specified component'", evidence_status: documented, note: "Resettable counter: the known-reset defect case belongs to THIS profile. EMData.DeleteAllData also nullifies perpetual counters."}
+      monophase_profile: "Pro 3EM 'monophase' profile exposes EM1/EM1Data instead; not modelled."
+    fields:
+      - {native: "total_act_power", path: "EM.GetStatus.total_act_power", type: "number|null", signed: true, scale: 1, unit: W, word_order: n/a, invalid_sentinel: null, canonical_metric: grid_net_kw, boundary: "configured CT boundary (grid_pcc for demo)", aggregation: instantaneous, requirement_class: optional, evidence_status: documented, unit_evidence_status: inferred, sign_evidence_status: inferred, source_ref: "SH-EM status ('Sum of the active power on all phases')", feature: "grid exchange view"}
+      - {native: "a_act_power / b_act_power / c_act_power", path: "EM.GetStatus.{a,b,c}_act_power", type: "number|null", signed: true, scale: 1, unit: W, word_order: n/a, invalid_sentinel: null, canonical_metric: phase_active_power_kw, boundary: "configured CT boundary", aggregation: instantaneous, requirement_class: optional, evidence_status: documented, sign_evidence_status: inferred, source_ref: "SH-EM ('Phase A active power measurement value, [W]')", feature: "phase consistency test, CT orientation case"}
+      - {native: "a_voltage / b_voltage / c_voltage", path: "EM.GetStatus.{a,b,c}_voltage", type: "number|null", signed: false, scale: 1, unit: V, word_order: n/a, invalid_sentinel: null, canonical_metric: phase_voltage_v, boundary: "measurement point", aggregation: instantaneous, requirement_class: optional, evidence_status: documented, source_ref: "SH-EM ('Phase A voltage measurement value, [V]')", feature: "voltage evidence"}
+      - {native: "a_current / b_current / c_current", path: "EM.GetStatus.{a,b,c}_current", type: "number|null", signed: false, scale: 1, unit: A, word_order: n/a, invalid_sentinel: null, canonical_metric: ac_current_a, boundary: "measurement point", aggregation: instantaneous, requirement_class: optional, evidence_status: documented, source_ref: "SH-EM ('Phase A current measurement value, [A]')", feature: "optional phase detail"}
+      - {native: "errors", path: "EM.GetStatus.errors", type: "array[string] (present only if non-empty)", signed: null, scale: null, unit: none, word_order: n/a, invalid_sentinel: null, enum: [power_meter_failure, phase_sequence, ct_type_not_set], canonical_metric: meter_status_raw, boundary: null, aggregation: state, requirement_class: optional, evidence_status: documented, source_ref: "SH-EM", feature: "native error evidence (raw, no physical diagnosis)"}
+      - {native: "a_errors / b_errors / c_errors", path: "EM.GetStatus.{a,b,c}_errors", type: "array[string] (shown if non-empty)", signed: null, scale: null, unit: none, word_order: n/a, invalid_sentinel: null, enum: ["out_of_range:active_power", "out_of_range:apparent_power", "out_of_range:voltage", "out_of_range:current"], canonical_metric: meter_status_raw, boundary: null, aggregation: state, requirement_class: optional, evidence_status: documented, source_ref: "SH-EM", feature: "field-level quality flag for that phase"}
+      - {native: "total_act", path: "EMData.GetStatus.total_act", type: number, signed: false, scale: 1, unit: Wh, word_order: n/a, invalid_sentinel: null, canonical_metric: resettable_grid_import_kwh, boundary: "configured CT boundary (import at grid_pcc)", aggregation: cumulative_counter_resettable, requirement_class: optional, evidence_status: documented, source_ref: "SH-EMDATA ('Total active energy on all phases, Wh')", feature: "measured grid-energy verification; known-reset segment case"}
+      - {native: "total_act_ret", path: "EMData.GetStatus.total_act_ret", type: number, signed: false, scale: 1, unit: Wh, word_order: n/a, invalid_sentinel: null, canonical_metric: resettable_grid_export_kwh, boundary: "configured CT boundary (export at grid_pcc)", aggregation: cumulative_counter_resettable, requirement_class: optional, evidence_status: documented, source_ref: "SH-EMDATA ('Total active returned energy on all phases, Wh')", feature: "measured grid-energy verification"}
+      - {native: "a/b/c_total_act_energy, a/b/c_total_act_ret_energy", path: "EMData.GetStatus.{a,b,c}_total_act_energy / _total_act_ret_energy", type: number, signed: false, scale: 1, unit: Wh, word_order: n/a, invalid_sentinel: null, canonical_metric: null, boundary: "per phase", aggregation: cumulative_counter_resettable, requirement_class: optional, evidence_status: documented, source_ref: "SH-EMDATA", feature: "optional phase-energy consistency test only"}
+      - {native: "errors (EMData)", path: "EMData.GetStatus.errors", type: "array[string]", signed: null, scale: null, unit: none, word_order: n/a, invalid_sentinel: null, enum: [database_error, ct_type_not_set], canonical_metric: meter_status_raw, boundary: null, aggregation: state, requirement_class: optional, evidence_status: documented, source_ref: "SH-EMDATA", feature: "counter quality flag"}
+
+  # =====================================================================================================
+  b1_victron_gx_battery_modbus:
+    family: battery
+    outcome: narrow
+    outcome_reason: >-
+      Official register list retrieved and parsed. Battery service registers for voltage, current, SoC,
+      temperature, alarms and capacity are verified with types and scale factors. Narrowed: int32 battery power
+      (256) is not used because 32-bit word order is not documented (the int16 variant 258 is used); BMS
+      limit registers 305-308 are conditional ('Supported by third-party CAN.Bus batteries and Lynx NG', not by
+      all Victron products); no invalid sentinel is documented; SoH/cell registers exist but are not used.
+    doc: {url: "https://www.victronenergy.com/upload/documents/CCGX-Modbus-TCP-register-list-3.81.xlsx", title: "CCGX/GX Modbus-TCP register list", version: "3.81 (Rev 54 in 'Document versions'; modified 2026-10-06)", date: "2026-10-06", official: true}
+    access_status: "documented, simulated for demo"
+    device: {model: "Victron GX device (e.g. Cerbo GX) with a CAN-bus BMS lithium battery appearing as service com.victronenergy.battery", firmware: "Venus OS matching register list 3.81 (declare in registry; unit IDs dynamic since Venus 2.60)", accessories: "CAN-bus BMS battery; Modbus-TCP server enabled on GX. A BMV/SmartShunt variant is a battery MONITOR, not a BMS: limits 305-308 then unavailable."}
+    acquisition: {path: "local documented read interface: Modbus-TCP on GX, function code 3 or 4 (no difference per FAQ), unit-id of the battery service", collector: "site LAN collector (simulated) storing raw 16-bit words", authorization: "LAN access + Modbus-TCP enabled by owner (not established)"}
+    cadence: {native: "not specified", chosen_polling_s: 300}
+    conventions:
+      address: "Address column is the data address used in the request (FAQ example: 'set the data address of the first request register to 3'); no separate 1-based register number is used in this list."
+      scale: "value = raw / Scalefactor (FAQ: 'Divide it by 10, as specified in cell E3'; Range column e.g. uint16 /100 -> '0 to 655.35')"
+      unit_id: {preferred: 225, device_instance: 512, remark: "CAN-bus BMS (Unit ID mapping sheet). Since Venus 2.60 Unit IDs are assigned dynamically: read Settings -> Integrations -> Modbus TCP server -> Available services. Configure, do not hardcode."}
+      errors: "Modbus exceptions per FAQ: 0x02 IllegalDataAddress (register does not exist), 0x0A GatewayPathUnavailable, 0x0B GatewayTargetDeviceFailedToRespond; 'A canbus-connected lithium battery might not have all those parameters available.'"
+      invalid_sentinel: {value: null, evidence_status: documented, note: "no sentinel value documented for these battery registers"}
+      current_sign: {value: "+ battery being charged / - being discharged (native)", evidence_status: documented, note: "canonical battery convention is +discharge: invert with provenance"}
+    fields:
+      - {native: "Battery voltage /Dc/0/Voltage", address: 259, type: uint16, signed: false, scale: "divide by 100", unit: "V DC", word_order: n/a, invalid_sentinel: null, canonical_metric: battery_voltage_v, boundary: dc_battery, aggregation: instantaneous, requirement_class: optional, evidence_status: documented, source_ref: "VE-REGLIST Field list row com.victronenergy.battery 259", feature: "battery state evidence, voltage anomaly"}
+      - {native: "Current /Dc/0/Current", address: 261, type: int16, signed: true, scale: "divide by 10", unit: "A DC", word_order: n/a, invalid_sentinel: null, canonical_metric: battery_current_a, boundary: dc_battery, aggregation: instantaneous, requirement_class: optional, evidence_status: documented, source_ref: "VE-REGLIST 261 ('Postive: battery begin charged. Negative: battery being discharged')", feature: "charge/discharge direction, limit compliance"}
+      - {native: "Battery power /Dc/0/Power (older 16-bit variant of 256)", address: 258, type: int16, signed: true, scale: "divide by 1", unit: W, word_order: n/a, invalid_sentinel: null, canonical_metric: battery_net_kw, boundary: dc_battery, aggregation: instantaneous, requirement_class: optional, evidence_status: documented, sign_evidence_status: inferred, source_ref: "VE-REGLIST 258", feature: "battery power view (sign assumed same as current: + charging; invert to canonical)", notes: "int16 saturates at +-32767 W; acceptable for demo battery sizes. 256 int32 not used (word order undocumented)."}
+      - {native: "State of charge /Soc", address: 266, type: uint16, signed: false, scale: "divide by 10", unit: "%", word_order: n/a, invalid_sentinel: null, canonical_metric: soc_pct, boundary: battery, aggregation: last_valid_instantaneous, requirement_class: optional, evidence_status: documented, source_ref: "VE-REGLIST 266 (range 0 to 6553.6)", feature: "battery-assisted planning (SoC). Values > 100 are quarantined, never clamped."}
+      - {native: "Battery temperature /Dc/0/Temperature", address: 262, type: int16, signed: true, scale: "divide by 10", unit: degC, word_order: n/a, invalid_sentinel: null, canonical_metric: battery_temperature_c, boundary: battery, aggregation: instantaneous, requirement_class: optional, evidence_status: documented, source_ref: "VE-REGLIST 262", feature: "temperature context; thresholds are demo policy unless an alarm register is set"}
+      - {native: "Capacity /Capacity", address: 309, type: uint16, signed: false, scale: "divide by 10", unit: Ah, word_order: n/a, invalid_sentinel: null, canonical_metric: battery_capacity_ah, boundary: battery, aggregation: state, requirement_class: optional, evidence_status: documented, source_ref: "VE-REGLIST 309", feature: "usable capacity basis (energy basis derived with nominal voltage => label derived)"}
+      - {native: "Max charge current /Info/MaxChargeCurrent", address: 307, type: uint16, signed: false, scale: "divide by 10", unit: "A DC", word_order: n/a, invalid_sentinel: null, canonical_metric: battery_max_charge_current_a, boundary: dc_battery, aggregation: state, requirement_class: optional, evidence_status: documented, source_ref: "VE-REGLIST 307 ('Not supported by all Victron products. Supported by third-party CAN.Bus batteries and Lynx NG.')", feature: "BMS-reported charge limit for battery-assisted planning; absent => no battery flexibility promise", availability: "only when the declared battery is a CAN-bus BMS / Lynx NG"}
+      - {native: "Max discharge current /Info/MaxDischargeCurrent", address: 308, type: uint16, signed: false, scale: "divide by 10", unit: "A DC", word_order: n/a, invalid_sentinel: null, canonical_metric: battery_max_discharge_current_a, boundary: dc_battery, aggregation: state, requirement_class: optional, evidence_status: documented, source_ref: "VE-REGLIST 308", feature: "BMS-reported discharge limit (derating case observable here)", availability: "only CAN-bus BMS / Lynx NG"}
+      - {native: "Max charge voltage /Info/MaxChargeVoltage", address: 305, type: uint16, signed: false, scale: "divide by 10", unit: "V DC", word_order: n/a, invalid_sentinel: null, canonical_metric: battery_max_charge_voltage_v, boundary: dc_battery, aggregation: state, requirement_class: optional, evidence_status: documented, source_ref: "VE-REGLIST 305", feature: "limit context", availability: "only CAN-bus BMS / Lynx NG"}
+      - {native: "Min discharge voltage /Info/BatteryLowVoltage", address: 306, type: uint16, signed: false, scale: "divide by 10", unit: "V DC", word_order: n/a, invalid_sentinel: null, canonical_metric: battery_min_discharge_voltage_v, boundary: dc_battery, aggregation: state, requirement_class: optional, evidence_status: documented, source_ref: "VE-REGLIST 306", feature: "limit context", availability: "only CAN-bus BMS / Lynx NG"}
+      - {native: "Low voltage alarm /Alarms/LowVoltage", address: 268, type: uint16, signed: false, scale: "divide by 1", unit: none, enum: {0: "No alarm", 2: "Alarm"}, word_order: n/a, invalid_sentinel: null, canonical_metric: battery_alarm_raw, boundary: battery, aggregation: state, requirement_class: optional, evidence_status: documented, source_ref: "VE-REGLIST 268", feature: "reported battery fault => planner restriction"}
+      - {native: "High voltage alarm /Alarms/HighVoltage", address: 269, type: uint16, signed: false, scale: "divide by 1", unit: none, enum: {0: "No alarm", 2: "Alarm"}, word_order: n/a, invalid_sentinel: null, canonical_metric: battery_alarm_raw, boundary: battery, aggregation: state, requirement_class: optional, evidence_status: documented, source_ref: "VE-REGLIST 269", feature: "reported battery fault"}
+      - {native: "Low State-of-charge alarm /Alarms/LowSoc", address: 272, type: uint16, signed: false, scale: "divide by 1", unit: none, enum: {0: "No alarm", 2: "Alarm"}, word_order: n/a, invalid_sentinel: null, canonical_metric: battery_alarm_raw, boundary: battery, aggregation: state, requirement_class: optional, evidence_status: documented, source_ref: "VE-REGLIST 272", feature: "reported battery state"}
+      - {native: "Low temperature alarm /Alarms/LowTemperature", address: 273, type: uint16, signed: false, scale: "divide by 1", unit: none, enum: {0: "No alarm", 2: "Alarm"}, word_order: n/a, invalid_sentinel: null, canonical_metric: battery_alarm_raw, boundary: battery, aggregation: state, requirement_class: optional, evidence_status: documented, source_ref: "VE-REGLIST 273", feature: "reported battery fault"}
+      - {native: "High temperature alarm /Alarms/HighTemperature", address: 274, type: uint16, signed: false, scale: "divide by 1", unit: none, enum: {0: "No alarm", 2: "Alarm"}, word_order: n/a, invalid_sentinel: null, canonical_metric: battery_alarm_raw, boundary: battery, aggregation: state, requirement_class: optional, evidence_status: documented, source_ref: "VE-REGLIST 274", feature: "reported battery fault (documented status, not a universal threshold)"}
+      - {native: "High charge current alarm /Alarms/HighChargeCurrent", address: 320, type: uint16, signed: false, scale: "divide by 1", unit: none, enum: {0: "No alarm", 2: "Alarm"}, word_order: n/a, invalid_sentinel: null, canonical_metric: battery_alarm_raw, boundary: battery, aggregation: state, requirement_class: optional, evidence_status: documented, source_ref: "VE-REGLIST 320", feature: "reported battery fault"}
+      - {native: "High discharge current alarm /Alarms/HighDischargeCurrent", address: 321, type: uint16, signed: false, scale: "divide by 1", unit: none, enum: {0: "No alarm", 2: "Alarm"}, word_order: n/a, invalid_sentinel: null, canonical_metric: battery_alarm_raw, boundary: battery, aggregation: state, requirement_class: optional, evidence_status: documented, source_ref: "VE-REGLIST 321", feature: "reported battery fault"}
+      - {native: "Internal failure alarm /Alarms/InternalFailure", address: 323, type: uint16, signed: false, scale: "divide by 1", unit: none, enum: {0: "No alarm", 2: "Alarm"}, word_order: n/a, invalid_sentinel: null, canonical_metric: battery_alarm_raw, boundary: battery, aggregation: state, requirement_class: optional, evidence_status: documented, source_ref: "VE-REGLIST 323", feature: "reported battery fault => planner restriction"}
+    not_selected:
+      - {native: "Battery power int32", address: 256, reason: "32-bit word order not documented in list or FAQ"}
+      - {native: "Alarm /Alarms/Alarm", address: 267, reason: "deprecated, 'Value is always 0'"}
+      - {native: "State of health /Soh", address: 304, reason: "exists for CAN-bus BMS but no planned feature uses SoH; spec forbids SoH claims beyond exposed data"}
+      - {native: "Min/Max cell temperature, min/max cell voltage", address: [318, 319, 1290, 1291], reason: "not needed; no cell-level claims"}
+      - {native: "State /State, Error /ErrorCode", address: [1282, 1283], reason: "FAQ: registers 1282-1301 are for Lynx Ion / Lynx BMS; not applicable to a generic CAN-bus BMS"}
+      - {native: "History registers 281-302", address: "281-302", reason: "'Not supported by CAN.Bus BMS batteries'"}
+
+  # =====================================================================================================
+  b2_solaredge_storagedata:
+    family: battery
+    outcome: narrow
+    outcome_reason: >-
+      The pinned official PDF (March 2026) could NOT be retrieved in this phase (HTTP 403 bot challenge on the
+      official URL and on one alternative official URL). Only the fields already pinned in this repository from
+      the 2026-11-14 review (SOURCE_NOTES.md R7, provider_profiles.yaml storageData mapping se-storage-1.0) are
+      retained. batteryState label enumeration, fullPackEnergyAvailable / ACGridCharging units and semantics,
+      batteryCount/nameplate/modelNumber/telemetryCount and query-window limits are NOT established here.
+    doc: {url: "https://knowledge-center.solaredge.com/sites/kc/files/se_monitoring_api.pdf", title: "SolarEdge Monitoring Server API", version: "March 2026 (not re-retrieved 2026-11-15)", date: "2026-03", official: true}
+    access_status: "documented, simulated for demo"
+    access_note: "Evidence = prior repository review R7 (2026-11-14); re-verify against the PDF before any claim beyond these fields."
+    device: {model: "SolarEdge StorEdge-integrated battery on a SolarEdge-monitored site (existing SolarEdge provider site only)", firmware: "not established", accessories: "SolarEdge inverter + monitoring account with API key (not established)"}
+    acquisition: {path: "vendor monitoring API: GET /site/{siteId}/storageData?startTime&endTime (local naive)", collector: "existing provider ingestion (reuse SolarEdge acquisition path and physical asset identity)", authorization: "site API key / account access (not established)"}
+    cadence: {native: "not established in this phase", chosen_polling_s: 900}
+    fields:
+      - {native: "serialNumber", path: "storageData.batteries[].serialNumber", type: string, signed: null, scale: null, unit: none, word_order: n/a, invalid_sentinel: null, canonical_metric: null, boundary: null, aggregation: identity, requirement_class: integration_required, evidence_status: documented, verification: "prior_review_R7", source_ref: "SEDG-API storageData (repo provider_profiles.yaml device_id)", feature: "battery identity"}
+      - {native: "timeStamp", path: "storageData.batteries[].telemetries[].timeStamp", type: "string 'YYYY-MM-DD HH:MM:SS' local naive", signed: null, scale: null, unit: none, word_order: n/a, invalid_sentinel: null, canonical_metric: null, boundary: null, aggregation: measurement_time, requirement_class: integration_required, evidence_status: documented, verification: "prior_review_R7", source_ref: "SEDG-API storageData", feature: "source time; requires declared site timezone (DST gaps/overlaps quarantined)"}
+      - {native: "power", path: "storageData.batteries[].telemetries[].power", type: number, signed: true, scale: 1, unit: W, word_order: n/a, invalid_sentinel: null, canonical_metric: battery_net_kw, boundary: dc_battery, aggregation: instantaneous, requirement_class: optional, evidence_status: documented, verification: "prior_review_R7", source_ref: "SEDG-API storageData ('+ charging / - discharging'; differs from currentPowerFlow)", feature: "battery power view (invert to canonical +discharge)"}
+      - {native: "stateOfCharge", path: "storageData.batteries[].telemetries[].stateOfCharge", type: number, signed: false, scale: 1, unit: "%", word_order: n/a, invalid_sentinel: null, canonical_metric: soc_pct, boundary: battery, aggregation: last_valid_instantaneous, requirement_class: optional, evidence_status: documented, verification: "prior_review_R7", source_ref: "SEDG-API storageData", feature: "battery-assisted planning (SoC); invalid 108% case quarantined"}
+      - {native: "internalTemp", path: "storageData.batteries[].telemetries[].internalTemp", type: number, signed: true, scale: 1, unit: degC, word_order: n/a, invalid_sentinel: null, canonical_metric: battery_temperature_c, boundary: battery_internal, aggregation: instantaneous, requirement_class: optional, evidence_status: documented, verification: "prior_review_R7", source_ref: "SEDG-API storageData", feature: "temperature context"}
+      - {native: "batteryState", path: "storageData.batteries[].telemetries[].batteryState", type: integer, signed: false, scale: 1, unit: none, word_order: n/a, invalid_sentinel: null, canonical_metric: battery_state_raw, boundary: battery, aggregation: state, requirement_class: optional, evidence_status: documented, verification: "prior_review_R7 (key only)", label_map: "NOT ESTABLISHED - keep raw integer; no thermal-management/fault labels", source_ref: "SEDG-API storageData", feature: "raw state display only; NOT usable for the 'reported battery fault' scene until labels are verified"}
+      - {native: "lifeTimeEnergyCharged", path: "storageData.batteries[].telemetries[].lifeTimeEnergyCharged", type: number, signed: false, scale: 1, unit: Wh, word_order: n/a, invalid_sentinel: null, canonical_metric: lifetime_battery_charge_kwh, boundary: dc_battery, aggregation: cumulative_counter_lifetime, requirement_class: optional, evidence_status: documented, verification: "prior_review_R7", source_ref: "SEDG-API storageData", feature: "energy throughput verification"}
+      - {native: "lifeTimeEnergyDischarged", path: "storageData.batteries[].telemetries[].lifeTimeEnergyDischarged", type: number, signed: false, scale: 1, unit: Wh, word_order: n/a, invalid_sentinel: null, canonical_metric: lifetime_battery_discharge_kwh, boundary: dc_battery, aggregation: cumulative_counter_lifetime, requirement_class: optional, evidence_status: documented, verification: "prior_review_R7", source_ref: "SEDG-API storageData", feature: "energy throughput verification"}
+    known_but_unverified_keys: [fullPackEnergyAvailable, ACGridCharging, batteryCount, nameplate, modelNumber, telemetryCount]
+    known_but_unverified_note: "Keys listed in the repo known_keys (first two) or in the master spec; units/semantics not verifiable this phase. Generator may emit them ONLY as raw pass-through with no derived metric, or omit them. No capacity/SoH derivation from fullPackEnergyAvailable."
+    capability_gaps: ["no BMS-reported charge/discharge limits in this API response", "no cell data", "batteryState labels not established"]
+
+  # =====================================================================================================
+  b3_enphase_battery_telemetry:
+    family: battery
+    outcome: exclude
+    outcome_reason: >-
+      The site-level endpoint /api/v4/systems/{system_id}/telemetry/battery is documented as returning battery
+      energy charged and discharged in 15-minute intervals (7-day max range per request, start within 2 years),
+      but no accessible published page gives the response field names, units or interval-boundary semantics, and
+      no authorized sample exists. Master spec 5.2 B3: exclude rather than invent a response shape.
+    doc: {url: "https://developer-v4.enphase.com/docs/support", title: "Enphase developer portal - support / monitoring API", version: "undated (Copyright 2026)", date: "accessed 2026-11-15", official: true}
+    access_status: "not established"
+    access_constraints: ["OAuth 2.0 bearer token + API key header 'key'", "system owner authorization required", "Partner plan gives access to all endpoints for installed/maintained systems (>= 10 installations); other plan coverage of the battery endpoint not stated"]
+    fields: []
+    fields_reason: "response schema not published on accessible official pages; no authorized sample"
+
+  # =====================================================================================================
+  w1_imt_si_rs485tc:
+    family: weather
+    outcome: include
+    outcome_reason: >-
+      Official Modbus spec (January 2026, FW 2.03, also FW 1.51-1.55) and selection table confirm the model's
+      active registers 0, 7, 8, types, gains, ranges, firmware applicability and the 'unsupported optional
+      register returns 0' behaviour. Register numbering is used directly as the protocol address (inferred).
+    doc: {url: "https://imt-technology.com/fileadmin/docs/en/products/Si-RS485_Modbus_SPEC_EN.pdf", title: "Modbus Specification for Irradiance Sensors Si-RS485...-MB", version: "FW 2.03 (covers 1.51-1.55)", date: "January 2026", official: true}
+    access_status: "documented, simulated for demo"
+    device: {model: "IMT Si-RS485TC-T-Tm-MB (serial prefix 485-4; active registers 0, 7, 8)", firmware: ">= 1.53 required for registers 7/8; declare 2.03", accessories: "permanently connected PV module temperature sensor (3 m cable); no ambient/wind on this model"}
+    acquisition: {path: "local documented read interface: Modbus RTU, function 0x04 Read Input Register (0x03 also supported)", collector: "site Modbus collector (simulated); factory default 9600 baud 8N1 address 1", authorization: "site collector permission (not established)"}
+    cadence: {native: "not specified", chosen_polling_s: 60}
+    conventions:
+      register_numbering: {value: "'Register n' used as zero-based protocol address n", evidence_status: inferred, note: "the sheet lists Register 0, which can only be a PDU address"}
+      unsupported_registers: "Registers 3, 8 and 9 are optional for some sensor types; unsupported => returns 0. For this model 3 and 9 are NOT active and must be marked unavailable, never ingested as 0 W/m2 / 0 m/s / 0 degC."
+      mounting: "POA only if the asset registry declares in-plane mounting; the device name does not prove orientation."
+      invalid_sentinel: {value: null, evidence_status: documented, note: "none documented; values outside data range (e.g. irradiance > 15000 raw) flagged by OUR bounds"}
+    fields:
+      - {native: "Irradiance in W/m2", register: 0, address: 0, type: UINT16, signed: false, scale: 0.1, offset: 0, unit: W/m2, range: "0...1500 W/m2 (FW <= 1.52: 0...1400)", word_order: n/a, invalid_sentinel: null, canonical_metric: irradiance_wm2, boundary: "sensor plane from registry (poa for demo)", aggregation: instantaneous, requirement_class: optional, evidence_status: documented, source_ref: "IMT-MODBUS p.1 register table", feature: "irradiance-aware explanation, PV performance review"}
+      - {native: "Cell Temperature in degC", register: 7, address: 7, type: INT16, signed: true, scale: 0.1, offset: 0, unit: degC, range: "-40...+90 degC", word_order: n/a, invalid_sentinel: null, canonical_metric: reference_cell_temperature_c, boundary: "irradiance sensor cell", aggregation: instantaneous, requirement_class: optional, evidence_status: documented, source_ref: "IMT-MODBUS p.1 (FW >= 1.53)", feature: "signed INT16 negative-temperature decode case; rough module proxy only (selection table note 1)"}
+      - {native: "External Temp. no. 1 in degC", register: 8, address: 8, type: INT16, signed: true, scale: 0.1, offset: 0, unit: degC, range: "-40...+90 degC", word_order: n/a, invalid_sentinel: "0 if channel unsupported (not applicable: active on 485-4)", canonical_metric: module_temperature_c, boundary: "back of PV module (registry)", aggregation: instantaneous, requirement_class: optional, evidence_status: documented, source_ref: "IMT-MODBUS p.1, p.5 serial-prefix table; IMT-TABLE solution 3", feature: "module temperature for PV performance review"}
+
+  # =====================================================================================================
+  w2_kipp_smp10x_modbus:
+    family: weather
+    outcome: include
+    outcome_reason: >-
+      Official manual (0374214 | 02-0326, data model 108) gives the input register table with PDU addresses,
+      types, scale-factor rule, body temperature scaling and status-flag bits. Float32 registers (10006+) are not
+      used because their word order is not stated; the S16 registers are used with the scale-factor register.
+    doc: {url: "https://cdn.hach.com/1XMCM0ZF/at/4vgjr9542w2f29hsgjbhsqtb/Operational_Manual_SMP10x_SMP22x_Smart_Pyranometers_V20.pdf", title: "SMP10x and SMP22x Smart Pyranometers Operational Manual", version: "0374214 | 02-0326 (V20), data model 108", date: "2026-03", official: true}
+    access_status: "documented, simulated for demo"
+    device: {model: "Kipp & Zonen SMP10x (IO_DEVICE_TYPE = 635)", firmware: "IO_DATAMODEL_VERSION must be >= 108", accessories: "RS-485 Modbus RTU (factory default 19200 baud, even parity, 8 data bits, 1 stop bit, address 1); no internal data memory"}
+    acquisition: {path: "local documented read interface: Modbus RTU function 0x04 Read input register", collector: "site Modbus collector (simulated); manual suggests 1 s sampling with 1-minute averages", authorization: "site collector permission (not established)"}
+    cadence: {native: "response time < 0.7 s (63%), < 2 s (95%)", chosen_polling_s: 60}
+    conventions:
+      register_numbering: "PDU address + 1 = Modbus register number (manual 15.5 legend)"
+      scale_factor: "IO_SCALE_FACTOR (PDU 4): 2 => x/100, 1 => x/10, 0 => x, -1 => x*10; applies to radiation registers 5, 6, 10, 11"
+      night_offset: "Zero offset type A produces small negative output (total zero offset < 9 W/m2 for SMP10x); not an equipment fault. IO_CLAMP_IRR coil (default 0) can prohibit negatives."
+      mounting: "POA only if registry mounting says in-plane; include one horizontal/GHI test case."
+      invalid_sentinel: {value: null, evidence_status: documented, note: "validity via IO_STATUS_FLAGS bit 0 IO_VOID_DATA_FLAG (invalid data) and overflow/underflow bits; no sentinel value"}
+    fields:
+      - {native: "IO_DEVICE_TYPE", register: 1, address: 0, type: U16, signed: false, scale: 1, unit: none, word_order: n/a, invalid_sentinel: null, canonical_metric: null, boundary: null, aggregation: identity, requirement_class: integration_required, evidence_status: documented, source_ref: "KZ-SMP 15.2, 15.6 (SMP10x = 635)", feature: "model check"}
+      - {native: "IO_STATUS_FLAGS", register: 4, address: 3, type: U16, signed: false, scale: 1, unit: none, bits: {0: IO_VOID_DATA_FLAG invalid data, 1: overflow, 2: underflow, 3: error, 4: ADC error, 5: DAC error, 6: calibration checksum error, 7: NV update failed, 8: power failure occurred, 10: RH sensor error, 11: desiccant saturation warning, 12: body temperature sensor error}, word_order: n/a, invalid_sentinel: null, canonical_metric: sensor_status_raw, boundary: null, aggregation: state, requirement_class: optional, evidence_status: documented, source_ref: "KZ-SMP 15.6 register 3", feature: "data validity gate; native status evidence"}
+      - {native: "IO_SCALE_FACTOR", register: 5, address: 4, type: S16, signed: true, scale: 1, unit: none, word_order: n/a, invalid_sentinel: null, canonical_metric: null, boundary: null, aggregation: state, requirement_class: integration_required, evidence_status: documented, source_ref: "KZ-SMP 15.6 register 4", feature: "decode of radiation register (wrong/absent scale => flag, never fit)"}
+      - {native: "IO_SENSOR1_DATA (temperature compensated radiation)", register: 6, address: 5, type: S16, signed: true, scale: "per IO_SCALE_FACTOR", unit: W/m2, range: "-400 to 2000 W/m2 (serial output range)", word_order: n/a, invalid_sentinel: null, canonical_metric: irradiance_wm2, boundary: "sensor plane from registry (poa or horizontal)", aggregation: instantaneous, requirement_class: optional, evidence_status: documented, source_ref: "KZ-SMP 15.2, 15.6 register 5; 14.1", feature: "irradiance-aware explanation"}
+      - {native: "IO_BODY_TEMPERATURE", register: 9, address: 8, type: S16, signed: true, scale: 0.1, unit: degC, word_order: n/a, invalid_sentinel: null, canonical_metric: sensor_body_temperature_c, boundary: "instrument body (NOT ambient, NOT module)", aggregation: instantaneous, requirement_class: optional, evidence_status: documented, source_ref: "KZ-SMP 15.2, 15.6 register 8", feature: "instrument context only"}
+      - {native: "IO_ERROR_CODE", register: 27, address: 26, type: U16, signed: false, scale: 1, unit: none, word_order: n/a, invalid_sentinel: null, canonical_metric: sensor_status_raw, boundary: null, aggregation: state, requirement_class: optional, evidence_status: documented, source_ref: "KZ-SMP 15.2 Error reports", feature: "raw error evidence (code meanings not mapped)"}
+    not_selected:
+      - {native: "FL_SENSOR1_DATA / FL_BODY_TEMPERATURE (F32)", address: [10006, 10014], reason: "Float32 word order not stated in manual"}
+      - {native: "IO_RAW_SENSOR1_DATA, IO_STDEV_SENSOR1, RH, pressure, tilt", reason: "no planned feature"}
+
+  # =====================================================================================================
+  w3_campbell_toa5_station:
+    family: weather
+    outcome: include
+    outcome_reason: >-
+      TOA5 four-row header structure, TIMESTAMP/RECORD columns (units TS/RN), processing descriptors and CSV
+      records are documented. Column names, units and attached sensors are OUR configured logger program, not
+      universal Campbell fields. Missing-value token is configured as "NAN" (documented for Campbell's datalogger
+      web API output; the TOA5 page itself is silent on missing values).
+    doc: {url: "https://help.campbellsci.com/loggernet-manual/ln_manual/campbell_scientific_file_formats/toa5.htm", title: "LoggerNet manual - TOA5", version: "undated", date: "accessed 2026-11-15", official: true}
+    access_status: "documented, simulated for demo"
+    device: {model: "Campbell Scientific CR1000X datalogger (configured station, shared AREA resource)", firmware: "declare OS version in header row 1 (e.g. CR1000X.Std.xx) - configuration", accessories: "configured: POA pyranometer, ambient temperature sensor with radiation shield, back-of-module temperature sensor (declared in station metadata)"}
+    acquisition: {path: "configured datalogger export: TOA5 file collected by LoggerNet (or equivalent)", collector: "LoggerNet-style file collection (simulated)", authorization: "station owner (not established)"}
+    cadence: {native: "logger program scan/output interval (configured)", chosen_output_s: 60}
+    conventions:
+      header_row_1: "environment line, 8 fields: \"TOA5\", station name, datalogger model, serial number, OS version, program (DLD) name, program signature, table name"
+      header_row_2: "field names; TIMESTAMP and RECORD first"
+      header_row_3: "units; TIMESTAMP => TS, RECORD => RN; others as defined by the logger program"
+      header_row_4: "data process abbreviation per field: Avg, Max, Min, Tot, Std, SMM...; Sample shown as Smp in the LoggerNet TOA5 example (CR1000X help lists Sample with no abbreviation); empty for TIMESTAMP/RECORD"
+      timestamp: {format: "\"YYYY-MM-DD HH:MM:SS\" quoted (sub-second resolution possible)", meaning: "interval-ending label for Avg/Tot outputs (CR1000X examples: record 14:27:00 = average 14:26:01-14:27:00)", timezone: "logger clock - must be configured (no offset in file)", evidence_status: documented}
+      missing_token: {value: "NAN", evidence_status: documented, source_ref: "CS-DLAPI 1.0.3 ('Invalid or not-a-number floating-point values are written as the string \"NAN\"')", note: "configured for our station; TOA5 page does not cover missing values"}
+    fields:
+      - {native: "TIMESTAMP", column: TIMESTAMP, type: "quoted timestamp string", signed: null, scale: null, unit: TS, word_order: n/a, invalid_sentinel: null, canonical_metric: null, boundary: null, aggregation: "interval end", requirement_class: integration_required, evidence_status: documented, source_ref: "CS-TOA5; CS-CR1000X-TABLES", feature: "source time"}
+      - {native: "RECORD", column: RECORD, type: integer, signed: false, scale: 1, unit: RN, word_order: n/a, invalid_sentinel: null, canonical_metric: null, boundary: null, aggregation: record_number, requirement_class: integration_required, evidence_status: documented, source_ref: "CS-TOA5", feature: "dedup/out-of-order detection"}
+      - {native: "POA_Irr_Avg (configured column name)", column: POA_Irr_Avg, type: float, signed: true, scale: 1, unit: W/m^2, processing: Avg, word_order: n/a, invalid_sentinel: "NAN", canonical_metric: irradiance_wm2, boundary: "poa (configured station metadata)", aggregation: interval_average, requirement_class: optional, evidence_status: explicitly_simulated, source_ref: "column = our logger-program configuration; format CS-TOA5", feature: "irradiance-aware explanation"}
+      - {native: "AirT_C_Avg (configured)", column: AirT_C_Avg, type: float, signed: true, scale: 1, unit: Deg C, processing: Avg, word_order: n/a, invalid_sentinel: "NAN", canonical_metric: ambient_temperature_c, boundary: "ambient (shielded sensor)", aggregation: interval_average, requirement_class: optional, evidence_status: explicitly_simulated, source_ref: "configuration", feature: "weather context"}
+      - {native: "ModT_C_Avg (configured)", column: ModT_C_Avg, type: float, signed: true, scale: 1, unit: Deg C, processing: Avg, word_order: n/a, invalid_sentinel: "NAN", canonical_metric: module_temperature_c, boundary: "back of module", aggregation: interval_average, requirement_class: optional, evidence_status: explicitly_simulated, source_ref: "configuration", feature: "PV performance review; missing stays missing (never replaced by ambient)"}
+      - {native: "POA_Irr_Max / POA_Irr_Min (configured, optional)", column: [POA_Irr_Max, POA_Irr_Min], type: float, signed: true, scale: 1, unit: W/m^2, processing: [Max, Min], word_order: n/a, invalid_sentinel: "NAN", canonical_metric: irradiance_wm2, boundary: "poa", aggregation: [interval_max, interval_min], requirement_class: optional, evidence_status: explicitly_simulated, source_ref: "configuration", feature: "cloud-variability explanation (retain min/max aggregation)"}
+
+regulatory_references:
+  - {id: LEG-EU-2023-1542, title: "Regulation (EU) 2023/1542 (Batteries Regulation), Article 14 and Annex VII", url: "https://eur-lex.europa.eu/eli/reg/2023/1542/oj/eng", status: unverified, retrieval: "FAILED 2026-11-15 (EUR-Lex returned empty/HTTP 202 to automated fetch)", scope_claim_from_spec: "BMS of covered batteries holds SoH/expected-lifetime parameters (Annex VII) with read-only access in specified circumstances", applicability: "not established in this phase (verify current consolidated text and application dates)", relevance: "does NOT establish that any chosen monitoring API exposes these parameters, nor a universal CAN/register map"}
+  - {id: LEG-EU-2023-2854, title: "Regulation (EU) 2023/2854 (Data Act)", url: "https://eur-lex.europa.eu/eli/reg/2023/2854/oj/eng", status: unverified, applicability: "not established", relevance: "general data-access framework only; not a mandatory inverter/battery/meter API schema"}
+  - {id: LEG-RO-ORDER-228-2018, title: "Romanian technical connection norm (repo R1)", url: "https://legislatie.just.ro/Public/DetaliiDocumentAfis/209500", status: "context only (repo R1, accessed 2026-11-14)", applicability: "connection/protection and technical documentation to the network operator", relevance: "not proof of third-party API access rights or a cloud telemetry contract"}

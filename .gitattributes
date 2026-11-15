@@ -7,3 +7,5 @@ tests/injection_manifest.json -text
 *.gz binary
 *.sqlite binary
 *.pdf binary
+demo_components/** -text
+tests/component_truth/** -text

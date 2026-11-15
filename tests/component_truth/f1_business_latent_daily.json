@@ -1,0 +1,129 @@
+{
+ "evaluation_only": true,
+ "synthetic": true,
+ "balance": "PV_ac + import + batt_dis_ac = load + export + batt_ch_ac + residual_losses (residual = 0)",
+ "storage_rule": "E_next = E + eta_c*P_ch_ac*dt - P_dis_ac*dt/eta_d (eta 0.95/0.95), reserve 20 %",
+ "executed_laundry_batches": [
+  {
+   "date": "2026-07-15",
+   "start_local": "09:00",
+   "end_local": "11:00",
+   "power_kw": 4.0,
+   "energy_kwh": 8.0
+  },
+  {
+   "date": "2026-07-16",
+   "start_local": "09:00",
+   "end_local": "11:00",
+   "power_kw": 4.0,
+   "energy_kwh": 8.0
+  },
+  {
+   "date": "2026-07-17",
+   "start_local": "11:00",
+   "end_local": "13:00",
+   "power_kw": 4.0,
+   "energy_kwh": 8.0
+  },
+  {
+   "date": "2026-07-18",
+   "start_local": "09:00",
+   "end_local": "11:00",
+   "power_kw": 4.0,
+   "energy_kwh": 8.0
+  },
+  {
+   "date": "2026-07-19",
+   "start_local": "09:00",
+   "end_local": "11:00",
+   "power_kw": 4.0,
+   "energy_kwh": 8.0
+  },
+  {
+   "date": "2026-07-20",
+   "start_local": "09:00",
+   "end_local": "11:00",
+   "power_kw": 4.0,
+   "energy_kwh": 8.0
+  },
+  {
+   "date": "2026-07-21",
+   "start_local": "09:00",
+   "end_local": "11:00",
+   "power_kw": 4.0,
+   "energy_kwh": 8.0
+  }
+ ],
+ "days": {
+  "2026-07-15": {
+   "F1_pv_ac_kwh": 34.694,
+   "F1_load_kwh": 48.543,
+   "F1_import_kwh": 11.311,
+   "F1_export_kwh": 0.012,
+   "F1_batt_charge_ac_kwh": 8.771,
+   "F1_batt_discharge_ac_kwh": 11.32,
+   "F1_soc_min_pct": 20.0,
+   "F1_soc_max_pct": 89.06
+  },
+  "2026-07-16": {
+   "F1_pv_ac_kwh": 30.704,
+   "F1_load_kwh": 46.501,
+   "F1_import_kwh": 17.018,
+   "F1_export_kwh": 0.372,
+   "F1_batt_charge_ac_kwh": 8.708,
+   "F1_batt_discharge_ac_kwh": 7.859,
+   "F1_soc_min_pct": 20.0,
+   "F1_soc_max_pct": 77.42
+  },
+  "2026-07-17": {
+   "F1_pv_ac_kwh": 23.543,
+   "F1_load_kwh": 53.648,
+   "F1_import_kwh": 30.569,
+   "F1_export_kwh": 0.004,
+   "F1_batt_charge_ac_kwh": 4.724,
+   "F1_batt_discharge_ac_kwh": 4.263,
+   "F1_soc_min_pct": 20.0,
+   "F1_soc_max_pct": 35.16
+  },
+  "2026-07-18": {
+   "F1_pv_ac_kwh": 15.322,
+   "F1_load_kwh": 61.555,
+   "F1_import_kwh": 46.342,
+   "F1_export_kwh": 0.0,
+   "F1_batt_charge_ac_kwh": 1.13,
+   "F1_batt_discharge_ac_kwh": 1.02,
+   "F1_soc_min_pct": 20.0,
+   "F1_soc_max_pct": 27.18
+  },
+  "2026-07-19": {
+   "F1_pv_ac_kwh": 33.822,
+   "F1_load_kwh": 62.739,
+   "F1_import_kwh": 30.135,
+   "F1_export_kwh": 0.095,
+   "F1_batt_charge_ac_kwh": 8.463,
+   "F1_batt_discharge_ac_kwh": 7.34,
+   "F1_soc_min_pct": 20.0,
+   "F1_soc_max_pct": 88.23
+  },
+  "2026-07-20": {
+   "F1_pv_ac_kwh": 33.603,
+   "F1_load_kwh": 58.333,
+   "F1_import_kwh": 25.16,
+   "F1_export_kwh": 0.038,
+   "F1_batt_charge_ac_kwh": 7.071,
+   "F1_batt_discharge_ac_kwh": 6.679,
+   "F1_soc_min_pct": 20.0,
+   "F1_soc_max_pct": 75.8
+  },
+  "2026-07-21": {
+   "F1_pv_ac_kwh": 30.21,
+   "F1_load_kwh": 54.937,
+   "F1_import_kwh": 25.326,
+   "F1_export_kwh": 0.006,
+   "F1_batt_charge_ac_kwh": 6.083,
+   "F1_batt_discharge_ac_kwh": 5.49,
+   "F1_soc_min_pct": 20.0,
+   "F1_soc_max_pct": 67.85
+  }
+ }
+}

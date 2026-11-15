@@ -126,8 +126,95 @@ FROM observations o JOIN raw_records r ON r.raw_record_id = o.raw_record_id;
 """
 
 
+# ------------------------------------------------------------------ component (extended) snapshot only
+# Extra canonical-meaning columns of observations. They exist ONLY in component snapshots (Store(extended=True));
+# provider snapshots keep the original schema unchanged.
+OBS_EXTRA_COLS = ["family", "profile_version", "physical_asset_id", "mounting", "sensor_position", "phase",
+                  "aggregation", "interval_start_ms", "interval_end_ms", "scenario_version", "source_role",
+                  "exact_value_text", "state_label"]
+_EXTRA_TYPES = {"interval_start_ms": "INTEGER", "interval_end_ms": "INTEGER"}
+
+FRAME_COLS = ["site_key", "demo_site_key", "endpoint_key", "provider_profile_id", "family", "physical_asset_id",
+              "device_key", "metric_name", "channel", "phase", "boundary", "mounting", "sensor_position",
+              "source_aggregation", "frame_aggregation", "rule_id", "basis", "frame_start_utc", "frame_end_utc",
+              "frame_start_local", "frame_start_ms", "value", "value_time_utc", "unit", "n_obs",
+              "original_cadence_s", "coverage_ratio", "value_origin", "frame_status", "scenario_version"]
+AUTH_COLS = ["site_key", "demo_site_key", "boundary", "metric_name", "frame_start_utc", "frame_end_utc",
+             "frame_start_ms", "value_kwh", "selected_rank", "selected_role", "selected_basis",
+             "selected_asset_id", "selected_endpoint_key", "selected_rule_id", "selected_coverage", "value_origin",
+             "authority_status", "reason", "mirrors_excluded", "candidates_json", "policy_version"]
+
+COMPONENT_SCHEMA = """
+CREATE TABLE IF NOT EXISTS component_meta(key TEXT PRIMARY KEY, value TEXT);
+CREATE TABLE IF NOT EXISTS site_registry(
+  site_key TEXT PRIMARY KEY, kind TEXT, demo_site_key TEXT, backend_site_id TEXT, timezone TEXT, json TEXT);
+CREATE TABLE IF NOT EXISTS asset_registry(
+  asset_id TEXT PRIMARY KEY, site_key TEXT, demo_site_key TEXT, family TEXT, profile_id TEXT, device_id TEXT,
+  source_role TEXT, boundary TEXT, mounting TEXT, json TEXT);
+CREATE TABLE IF NOT EXISTS component_frames(
+  site_key TEXT, demo_site_key TEXT, endpoint_key TEXT, provider_profile_id TEXT, family TEXT,
+  physical_asset_id TEXT, device_key TEXT, metric_name TEXT, channel TEXT, phase TEXT, boundary TEXT, mounting TEXT,
+  sensor_position TEXT, source_aggregation TEXT, frame_aggregation TEXT, rule_id TEXT, basis TEXT,
+  frame_start_utc TEXT, frame_end_utc TEXT, frame_start_local TEXT, frame_start_ms INTEGER, value REAL,
+  value_time_utc TEXT, unit TEXT, n_obs INTEGER, original_cadence_s INTEGER, coverage_ratio REAL,
+  value_origin TEXT, frame_status TEXT, scenario_version TEXT);
+CREATE INDEX IF NOT EXISTS cf_series ON component_frames(site_key, metric_name, frame_start_ms);
+CREATE TABLE IF NOT EXISTS authority_frames(
+  site_key TEXT, demo_site_key TEXT, boundary TEXT, metric_name TEXT, frame_start_utc TEXT, frame_end_utc TEXT,
+  frame_start_ms INTEGER, value_kwh REAL, selected_rank INTEGER, selected_role TEXT, selected_basis TEXT,
+  selected_asset_id TEXT, selected_endpoint_key TEXT, selected_rule_id TEXT, selected_coverage REAL,
+  value_origin TEXT, authority_status TEXT, reason TEXT, mirrors_excluded TEXT, candidates_json TEXT,
+  policy_version TEXT, PRIMARY KEY(site_key, boundary, metric_name, frame_start_ms));
+CREATE TABLE IF NOT EXISTS authority_conflicts(
+  site_key TEXT, boundary TEXT, metric_name TEXT, frame_start_utc TEXT, frame_start_ms INTEGER,
+  primary_value REAL, other_role TEXT, other_asset_id TEXT, other_endpoint_key TEXT, other_basis TEXT,
+  other_value REAL, abs_diff REAL, tolerance REAL, resolution TEXT);
+CREATE TABLE IF NOT EXISTS capability_registry(
+  site_key TEXT, demo_site_key TEXT, capability TEXT, declared INTEGER, declared_basis TEXT, assets TEXT,
+  observed_valid INTEGER, first_valid_utc TEXT, last_valid_utc TEXT, state TEXT, reason TEXT,
+  PRIMARY KEY(site_key, capability));
+CREATE TABLE IF NOT EXISTS state_episodes(
+  site_key TEXT, physical_asset_id TEXT, metric_name TEXT, channel TEXT, state_value TEXT, state_label TEXT,
+  start_utc TEXT, last_seen_utc TEXT, start_ms INTEGER, last_seen_ms INTEGER, n_obs INTEGER,
+  active_at_as_of INTEGER, first_obs_id INTEGER, last_obs_id INTEGER);
+CREATE TABLE IF NOT EXISTS limit_history(
+  site_key TEXT, physical_asset_id TEXT, metric_name TEXT, value REAL, unit TEXT, start_utc TEXT,
+  last_seen_utc TEXT, start_ms INTEGER, last_seen_ms INTEGER, n_obs INTEGER, declared_nominal REAL,
+  below_declared_nominal INTEGER, first_obs_id INTEGER, last_obs_id INTEGER);
+CREATE TABLE IF NOT EXISTS battery_status(
+  site_key TEXT, demo_site_key TEXT, physical_asset_id TEXT, profile_id TEXT, as_of_utc TEXT,
+  soc_pct REAL, soc_time_utc TEXT, soc_obs_id INTEGER, soc_age_s REAL, limits_available INTEGER,
+  max_charge_current_a REAL, max_discharge_current_a REAL, max_charge_voltage_v REAL,
+  min_discharge_voltage_v REAL, limits_time_utc TEXT, active_alarms TEXT, battery_state_raw TEXT,
+  capacity_ah REAL, declared_json TEXT, capability_json TEXT);
+CREATE TABLE IF NOT EXISTS collector_outages(
+  collector_id TEXT, start_utc TEXT, end_utc TEXT, start_ms INTEGER, end_ms INTEGER, affected_site_keys TEXT,
+  endpoints TEXT, failed_attempts INTEGER, failure_classes TEXT, evidence_delivery_hashes TEXT, detail TEXT);
+"""
+
+COMPONENT_VIEW = """
+CREATE VIEW IF NOT EXISTS component_observations AS
+SELECT o.obs_id, r.provider, r.provider_profile_id, o.profile_version, r.mapping_version, r.endpoint_key,
+       r.variant AS profile_variant, o.family, o.site_key, o.device_id, o.device_key, o.physical_asset_id,
+       o.entity_scope, o.channel, o.phase, o.raw_record_id, r.content_hash,
+       strftime('%Y-%m-%dT%H:%M:%fZ', r.measurement_time_ms/1000.0, 'unixepoch') AS measurement_time_utc,
+       strftime('%Y-%m-%dT%H:%M:%fZ', r.capture_time_ms/1000.0, 'unixepoch') AS capture_time_utc,
+       strftime('%Y-%m-%dT%H:%M:%fZ', r.received_at_ms/1000.0, 'unixepoch') AS received_at_utc,
+       strftime('%Y-%m-%dT%H:%M:%fZ', o.effective_time_ms/1000.0, 'unixepoch') AS effective_time_utc,
+       o.effective_time_ms,
+       strftime('%Y-%m-%dT%H:%M:%fZ', o.interval_start_ms/1000.0, 'unixepoch') AS interval_start_utc,
+       strftime('%Y-%m-%dT%H:%M:%fZ', o.interval_end_ms/1000.0, 'unixepoch') AS interval_end_utc,
+       r.effective_time_basis, o.metric_name, o.canonical_value, o.exact_value_text, o.canonical_text,
+       o.state_label, o.canonical_unit, o.metric_kind, o.boundary, o.mounting, o.sensor_position, o.aggregation,
+       o.value_origin, o.availability_status, o.quality_flags, o.is_conflicted, o.assumption_basis,
+       o.requirement_class, o.transform_log, o.field_rule_id, o.scenario_version, o.source_role,
+       r.status AS record_status
+FROM observations o JOIN raw_records r ON r.raw_record_id = o.raw_record_id;
+"""
+
+
 class Store:
-    def __init__(self, path: Path):
+    def __init__(self, path: Path, extended: bool = False):
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.con = sqlite3.connect(str(self.path))
@@ -137,6 +224,18 @@ class Store:
         self.con.execute("PRAGMA temp_store=MEMORY")
         self.con.executescript(SCHEMA)
         self.con.executescript(CANONICAL_VIEW)
+        self.extended = extended
+        self.obs_cols = list(OBS_COLS)
+        if extended:
+            have = {r[1] for r in self.con.execute("PRAGMA table_info(observations)")}
+            for c in OBS_EXTRA_COLS:
+                if c not in have:
+                    self.con.execute(f"ALTER TABLE observations ADD COLUMN {c} {_EXTRA_TYPES.get(c, 'TEXT')}")
+            self.con.executescript(COMPONENT_SCHEMA)
+            self.con.executescript(COMPONENT_VIEW)
+            self.con.execute("CREATE INDEX IF NOT EXISTS obs_asset ON observations(physical_asset_id, metric_name, "
+                             "effective_time_ms)")
+            self.obs_cols += OBS_EXTRA_COLS
 
     def q(self, sql, args=()):
         return self.con.execute(sql, args).fetchall()

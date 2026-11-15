@@ -5,11 +5,15 @@ Every read and write resolves the caller's site scope on the server.
 
 import json
 import uuid
+from datetime import UTC
 from functools import lru_cache
 from pathlib import Path
 
+from backend import tariff
+from backend.clock import analytical_now
 from backend.customer_models import (
     Contract,
+    ContractVersionView,
     ContractView,
     Lesson,
     LessonCatalog,
@@ -20,6 +24,7 @@ from backend.customer_models import (
     SupportReply,
     SupportRequest,
     SupportRequestCreate,
+    TariffBand,
 )
 from backend.db import stamp
 from backend.errors import ApiError
@@ -74,6 +79,45 @@ def require_customer(user: User):
         raise ApiError(403, "customer_required", "A customer account is required")
 
 
+def _band_model(band: tariff.Band) -> TariffBand:
+    return TariffBand(
+        band_id=band.band_id,
+        label=band.label,
+        days=list(band.days),
+        start_minute=band.start_minute,
+        end_minute=band.end_minute,
+        import_rate_ron_kwh=band.import_rate,
+        export_value_ron_kwh=band.export_value,
+        valid_from=band.valid_from,
+        valid_to=band.valid_to,
+    )
+
+
+def _uncovered(bands) -> int:
+    covered = set()
+    for band in bands:
+        covered |= tariff._week_minutes(band)
+    return 7 * 1440 - len(covered)
+
+
+def _contract_fields(row, stored) -> dict:
+    fields = {
+        key: row[key]
+        for key in (
+            "supplier",
+            "pricing",
+            "import_price_ron_kwh",
+            "export_price_ron_kwh",
+            "installed_kwp",
+        )
+    }
+    if row["export_compensation"] != "unspecified":
+        fields["export_compensation"] = row["export_compensation"]
+    if stored and row["pricing"] == "time_of_use":
+        fields["bands"] = [_band_model(band) for band in stored.bands]
+    return fields
+
+
 def get_contract(connection, user: User, site_id: str) -> ContractView:
     authorized_site(connection, user, site_id)
     row = connection.execute(
@@ -81,27 +125,101 @@ def get_contract(connection, user: User, site_id: str) -> ContractView:
     ).fetchone()
     if not row:
         return ContractView(site_id=site_id, contract=None, updated_at=None)
+    versions = tariff.load_versions(connection, site_id)
+    version = tariff.current_version(versions, analytical_now(connection))
+    if version is None and versions:
+        # A version scheduled to start later is still the one the customer just saved.
+        version = max(versions, key=lambda v: (v.effective_from, v.version_no))
+    stored = next(
+        (v for v in versions if v.version_id == row["current_version_id"]), version
+    )
     return ContractView(
         site_id=site_id,
-        contract=Contract(
-            **{key: row[key] for key in Contract.model_fields},
-        ),
+        # Only stated fields are set, so a fixed contract keeps its original response shape
+        # (the routes serialize with exclude_unset).
+        contract=Contract(**_contract_fields(row, stored)),
         updated_at=row["updated_at"],
+        version=ContractVersionView(
+            version_id=version.version_id,
+            version_no=version.version_no,
+            pricing=version.pricing,
+            timezone=tariff.TIMEZONE,
+            export_compensation=version.export_compensation,
+            effective_from=version.effective_from,
+            valid_to=version.valid_to,
+            bands=[_band_model(band) for band in version.bands],
+            uncovered_week_minutes=_uncovered(version.bands),
+        )
+        if version
+        else None,
+        version_count=len(versions),
     )
 
 
-def save_contract(
-    database, connection, user: User, site_id: str, contract: Contract, request_id: str
-) -> ContractView:
-    require_customer(user)
-    authorized_site(connection, user, site_id)
+def contract_bands(contract: Contract) -> list[tariff.Band]:
+    if contract.pricing == "fixed":
+        return [
+            tariff.all_day(contract.import_price_ron_kwh, contract.export_price_ron_kwh)
+        ]
+    return [
+        tariff.Band(
+            band_id=band.band_id,
+            days=tuple(sorted(set(band.days))),
+            start_minute=band.start_minute,
+            end_minute=band.end_minute,
+            import_rate=band.import_rate_ron_kwh,
+            export_value=band.export_value_ron_kwh,
+            label=band.label,
+            valid_from=band.valid_from,
+            valid_to=band.valid_to,
+        )
+        for band in contract.bands or []
+    ]
+
+
+def store_contract(
+    connection,
+    site_id: str,
+    contract: Contract,
+    user_id: str,
+    now,
+    effective_from=None,
+) -> str:
+    """Write the reference contract row and a new immutable version; returns its id."""
+    bands = contract_bands(contract)
+    errors = tariff.validate_bands(bands)
+    if errors:
+        raise ApiError(422, "invalid_tariff_bands", "; ".join(errors[:5]))
+    effective = effective_from or contract.effective_from or now
+    effective = effective.astimezone(UTC)
+    if effective_from is None and contract.effective_from and effective < now:
+        raise ApiError(
+            422,
+            "retroactive_tariff",
+            "A contract version cannot start before the current time",
+        )
+    version_id = tariff.insert_version(
+        connection,
+        site_id,
+        supplier=contract.supplier.strip(),
+        pricing=contract.pricing,
+        export_compensation=contract.export_compensation,
+        bands=bands,
+        effective_from=effective,
+        valid_to=None,
+        created_by=user_id,
+        created_as_of=now,
+    )
     connection.execute(
-        "INSERT INTO contracts VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(site_id) DO UPDATE SET "
+        "INSERT INTO contracts(site_id,supplier,pricing,import_price_ron_kwh,"
+        "export_price_ron_kwh,installed_kwp,updated_by,updated_at,export_compensation,"
+        "current_version_id) VALUES (?,?,?,?,?,?,?,?,?,?) ON CONFLICT(site_id) DO UPDATE SET "
         "supplier=excluded.supplier, pricing=excluded.pricing, "
         "import_price_ron_kwh=excluded.import_price_ron_kwh, "
         "export_price_ron_kwh=excluded.export_price_ron_kwh, "
         "installed_kwp=excluded.installed_kwp, updated_by=excluded.updated_by, "
-        "updated_at=excluded.updated_at",
+        "updated_at=excluded.updated_at, export_compensation=excluded.export_compensation, "
+        "current_version_id=excluded.current_version_id",
         (
             site_id,
             contract.supplier.strip(),
@@ -109,11 +227,31 @@ def save_contract(
             contract.import_price_ron_kwh,
             contract.export_price_ron_kwh,
             contract.installed_kwp,
-            user.user_id,
+            user_id,
             stamp(),
+            contract.export_compensation,
+            version_id,
         ),
     )
-    database.audit(connection, user.user_id, "contract.saved", site_id, request_id)
+    return version_id
+
+
+def save_contract(
+    database, connection, user: User, site_id: str, contract: Contract, request_id: str
+) -> ContractView:
+    require_customer(user)
+    authorized_site(connection, user, site_id)
+    connection.execute("BEGIN IMMEDIATE")
+    now = analytical_now(connection)
+    version_id = store_contract(connection, site_id, contract, user.user_id, now)
+    database.audit(
+        connection,
+        user.user_id,
+        "contract.saved",
+        site_id,
+        request_id,
+        {"version_id": version_id, "analytical_at": stamp(now)},
+    )
     return get_contract(connection, user, site_id)
 
 

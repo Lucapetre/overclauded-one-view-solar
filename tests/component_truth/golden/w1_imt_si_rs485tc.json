@@ -1,0 +1,23 @@
+{
+ "evaluation_only": true,
+ "profile_id": "w1_imt_si_rs485tc",
+ "asset_id": "F1-W1-POA",
+ "effective_time_utc": "2026-07-17T09:00:00.479Z",
+ "expected": [
+  {
+   "metric": "irradiance_wm2",
+   "value": 350.6,
+   "mounting": "poa"
+  },
+  {
+   "metric": "reference_cell_temperature_c",
+   "value": 32.7
+  },
+  {
+   "metric": "module_temperature_c",
+   "value": 38.2
+  }
+ ],
+ "tolerance": 1e-09,
+ "note": "register 9 returns 0 on this model: capability 'unsupported', no observation"
+}

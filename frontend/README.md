@@ -12,13 +12,18 @@ npm run build
 python3 database/seed.py
 ```
 
-Run these commands from `frontend/`. During development, start the FastAPI backend from the repository root and visit `http://127.0.0.1:5173`; Vite proxies API requests to port 8000. For one-origin hosting, run `npm run build` first, start or restart FastAPI, and visit `http://127.0.0.1:8000/consumer`. See the [combined setup](../README.md) for importing provider data, creating accounts and granting access.
+Run these commands from `frontend/`. On Windows use `npm.cmd` when PowerShell script execution is disabled. For the component replay, follow the [external-database setup](../README.md#equipment-customer-planning-and-operations-replay), build the frontend once, serve FastAPI on port **8016** and open `http://localhost:8016/consumer` or `/ops`. For development set `SOLAR_BACKEND_URL=http://127.0.0.1:8016` before starting Vite; its default proxy target is port 8000. Keep the user's existing server and tabs separate.
 
 Connected mode accepts backend usernames such as `alice`, with their configured passwords. It has no public demo password or browser-selectable role. Sessions restore after reload, logout revokes the backend session, and metadata/telemetry refreshes every five seconds. API errors remain visible and never become mock data. Missing readings and AC/DC/phase boundaries remain distinct; charts preserve gaps and source cadence. Operations views use backend-authorized installations and area coverage, not browser seed scope.
 
 - `src/main.jsx`: connected app entry and lazy workflow-demo routing.
 - `src/connected.jsx`: API-backed login, role menus, customer/operations views, history, source health and account.
-- `src/opsPages.jsx`: connected operations pages (Area Radar map and forecast, Incidents with detail and incident log, Teams, Revenue) on `/api/v1/ops/*`; lazy-loaded so customers do not download the map.
+- `src/opsPages.jsx`: connected Area Radar, Teams and Revenue pages, plus the compact-demo incident dialog; lazy-loaded so customers do not download the map.
+- `src/opsQueue.jsx`: common-revision ranked queue and map, six synchronized filters, episode drawer with evidence/rank/source health and authorized actions.
+- `src/opsMapPanel.jsx` / `src/opsView.js`: projected map/list, unmapped sites, crew bases, schematic routes, and pure presentation adapters; backend rank and plan values are preserved.
+- `src/opsPlan.jsx`: Plan teams panel: horizon, skills/shifts, visits, unassigned reasons, FIFO comparison, review/apply and stale-plan errors.
+- `src/opsAgenda.jsx`: technician agenda and revision-checked progress with a required note on completion.
+- `src/opsShared.jsx`: five-second polling, error notices, dialogs and idempotency keys.
 - `src/opsData.js`: pure adapters from the operations API to the shared component props (map sites, forecast areas, revenue report, assignment rows, crew summaries), role → menu, friendly error text.
 - `src/bucharestTime.js`: Europe/Bucharest local date/time → UTC for meeting booking (DST-aware), slot and meeting labels.
 - `src/video.js`: support video rules (MP4/WebM, 30 MB, 60 s) and readable sizes.
@@ -37,6 +42,21 @@ Connected mode accepts backend usernames such as `alice`, with their configured 
 - `database/fixtures.json`: the same fictional seed used by the frontend.
 - `BACKEND_HANDOFF.md`: API, authorization, migration and implementation boundaries.
 
+## Component replay screens (connected app)
+
+The four-scene demo uses the nine provider sites, so these screens need the component scenario (see the [root README](../README.md#run-the-component-demo)) and the replay badge from `/api/v1/clock`. All values are synthetic; nothing falls back to browser mock data.
+
+| Screen | Account | Files | What it shows |
+| --- | --- | --- | --- |
+| Home: Grid / Battery / Solar cards | `laundry-owner`, `h2-resident` | `equipment.jsx`, `equipmentView.js` | Selected source, latest value, freshness, availability and capability reasons; assumptions separate from measurements; a "Why?" list of evidence |
+| Plan | `laundry-owner` | `planner.jsx`, `planView.js` | Task form, "run now / usual time" against the recommended slot with estimated costs (unknown costs say "unknown"), constraints, forecast issue time, battery included or excluded with reasons, accept / release with an idempotency key, measured whole-site progress |
+| Incidents | `scenario-dispatcher`, `scenario-supervisor` | `opsQueue.jsx`, `opsView.js` | Ranked queue and map at one matching revision, six synchronized filters, episode drawer with evidence, rank factors, unknowns and permitted actions |
+| Area Radar map | same | `opsMapPanel.jsx`, `map.jsx` | Existing Bucharest/Ilfov map with condition, priority, telemetry and workflow badges, unmapped list, crew bases, dashed proposed and solid applied routes labelled as estimates |
+| Teams → Plan teams | `scenario-dispatcher` (apply), `scenario-supervisor` (view) | `opsPlan.jsx` | Propose a feasible heuristic, qualifications and shifts, unassigned reasons, FIFO comparison and verdict, review, apply, stale-plan (409) handling |
+| Agenda | `tech-battery-1`, `tech-pv-1`, `desk-operator` | `opsAgenda.jsx` | Own crews' ordered work; en route → on site → done with an observed revision and a required note on completion |
+
+Tests for these adapters are `tests/planView.test.js`, `equipmentView.test.js`, `opsView.test.js` and `opsData.test.js` (`npm test`). Passwords for the accounts are only in the scenario's `demo-credentials.json`.
+
 ## Customer features
 
 - **Plain-language energy**: today's export is translated into everyday equivalents (`src/friendly.js`), with separate wording for home and business accounts. Unknown energy is never shown as zero.
@@ -44,6 +64,8 @@ Connected mode accepts backend usernames such as `alice`, with their configured 
 - **Production forecast**: `src/forecast.js` combines a live Open-Meteo weather forecast for Bucharest (sunshine, temperature, humidity; season through day length) with the installed capacity. Only that fixed city location is sent to the weather service. The formula and its assumptions are shown in the card.
 - **Contract**: the customer saves supplier, fixed import/export prices and installed kWp; forecast values (and the demo planner) then use those prices instead of assumptions.
 - **Looking after your home/business**: source reporting health in plain words, replacing the technical tables on the customer home (staff keep them under Sites).
+- **Equipment evidence** (`equipment.jsx`, `equipmentView.js`): Grid, Battery and Solar cards show selected source, freshness, availability, capability reasons and expandable evidence. They preserve missing values and the configured sensor plane.
+- **Plan** (`planner.jsx`, `planView.js`): create/edit a non-interruptible task, compare the usual/run-now baseline with a recommended slot, inspect tariff/forecast/battery constraints, and explicitly accept or release a commitment. Measured progress is whole-site connection-point energy; it is not appliance submetering. The replay badge names the scenario and Bucharest analytical time.
 - **Support**: connected customers send typed requests (13 request types) and follow-ups; staff reply under Requests. An optional short video (MP4 or WebM, at most 30 MB and 60 seconds) can be attached: type and size are checked first, then the duration is read from the file's metadata in the browser (the server re-checks type, size and file signature). The request is created first and the video uploaded to it; if the upload fails the request still exists and the customer can retry with **Attach a video** in the support history. Video is off for immediate-danger reports. The history plays attached videos and shows a meeting booked by a technician (Bucharest time and crew).
 - **Lessons**: short card-based lessons with a mini test. Passing earns a simulated bill credit once per lesson; in connected mode the server checks the answers.
 - **Business accounts**: the backend account type (`home` or `business`) drives wording and comparisons. The demo has 25 business sites from the shared fixture (restaurants, cafés, bars and a hotel in the centre; factories, warehouses, cold storage, a data centre and logistics depots on the industrial platforms and in Ilfov); `bistro@solarlenes.demo` (Bistro Soare, s1-05, Dorobanți, Sector 1) is the business login.
@@ -56,17 +78,20 @@ Menus by role (first entry is the landing page):
 | --- | --- |
 | Supervisor (overall or area manager; the server scopes the data) | Area Radar, Incidents, Teams, Revenue, Offers, Sites, History, Account |
 | Dispatcher | Area Radar, Incidents, Teams, Requests, Sites, History, Account |
-| Technician | Incidents, Requests, Sites, History, Account |
-| Customer | Home, Offers, History, Support, Learn, Account |
+| Technician | Agenda, Incidents, Requests, Sites, History, Account |
+| Customer | Home, Plan, Offers, History, Support, Learn, Account |
 
 On phones the bottom bar shows four pages plus **More** (opens the full menu) when a role has more than five.
 
-- **Area Radar**: the Bucharest and Ilfov map from `/ops/map` (open incident → tier marker; otherwise a recent feed → ✓; anything else → stale), with the sector/county boundaries (areas outside the user's scope faded) and the cluster highlights (`clusters` and `sites[].cluster` from the API, else the shared fixture). A site with open incidents opens the Incidents page filtered to that site; other sites open the installation detail. Sites without a profile (for example imported provider sites) are not on the map and a note says how many. The fleet forecast uses `/ops/capacity`. The real telemetry coverage cards stay below.
-- **Incidents**: server severity order, open/all and tier filters, and a detail dialog with evidence, source, assignment, a linked customer request and the **Incident log**. Dispatcher: assign an eligible crew (busy crews shown disabled), **Assign automatically**, **Mark resolved**, and **Assign by severity** for the whole scope with assigned/skipped results in plain words. Technician: **Send the team**, **Allocate meeting** (date, start and end in Bucharest time, converted to UTC; at most 4 hours; overlaps are refused by the server) and **Mark resolved** when his crew has the case. Supervisor: read-only plus **Mark resolved**.
-- **Teams**: assignment report by incident (with "Not assigned" rows for open incidents without a crew), crew summary, and for the dispatcher the assignment tools lower on the page.
+- **Area Radar**: the existing Bucharest/Ilfov map consumes `/ops/map` and its common site-status projection. Condition, priority, telemetry freshness and workflow are independent badges. Safety attention takes precedence while a missing feed remains visible. The nine provider sites use explicitly fictional `site_placements`; unknown coordinates go into the unmapped list. Crew markers show reported bases, never live GPS. Proposed routes are dashed; applied routes are solid, with schematic straight lines and estimated times. Markers/boundaries/list remain usable without internet tiles. The fleet forecast uses `/ops/capacity`; it remains distinct from the local replay planner.
+- **Incidents**: queue and map are loaded together only at a matching operations revision. Area, priority, family, telemetry, responsibility and assignment filters affect the queue, map/list and visible counts. Selecting either side highlights the same site/episode and route. Shared monitoring episodes count once even when two sites are affected. The episode drawer shows affected assets, independent/mirrored evidence, ordinal confidence, responsibility, dominant rank factors, unknown economics, policy version, source health and permitted actions. Dispatchers may override priority with an audited reason/expiry; computed rank is retained. A documented closure is required. Compact-demo cases retain their existing assignment/meeting workflow.
+- **Teams / Plan teams**: dispatchers and supervisors may propose a bounded feasible heuristic for a selected horizon. The panel shows available crew qualifications/shifts, ranked jobs, departure/arrival/service times, remote work, monitoring-only items, blocked jobs and per-crew reasons. A feasible FIFO baseline uses identical constraints; `no_improvement` is shown plainly when results tie. Only dispatchers may review and explicitly apply. Supervisors see disabled controls with a reason. A 409 stale/conflict response explains the issue and reloads the latest draft; repeated apply uses an idempotency key. Existing assignments and started jobs are locked by backend constraints; the panel does not offer arbitrary rescheduling.
+- **Agenda** (technician landing page): own crews' ordered work and deferred prerequisites only. Allowed progress is en route → on site → done; remote work offers completion directly. Every write includes the observed assignment revision; done requires an outcome note. The server authorizes the crew and rejects stale revisions.
 - **Revenue** (supervisor): the server's monthly estimate and basis sentence; no money is recomputed in the browser.
 - **Requests** (dispatcher, technician): attached videos play inline, booked meetings are shown, and each request links to its incident (and back).
-- Views poll every five seconds; unchanged responses keep their references, so the map is not rebuilt. 401 signs out; a 403/404 is shown as a message and stops that view's polling.
+- Views poll every five seconds; unchanged responses keep their references, so the map is not rebuilt. A temporary queue/map revision mismatch preserves the last consistent snapshot and retries. 401 signs out; a 403/404 is shown as a message and stops that view's polling. Loading, empty, partial and error states never use mock fallbacks.
+
+The [four-scene replay script](../docs/COMPONENT_DEMO.md) gives accounts, commands and observed values. Use `node --test tests/opsView.test.js` for the operations adapters when only those change; use the frontend suite and build for integrated UI changes. Do not repeat unchanged suites already recorded as green in the handoff.
 
 ## Power Block Offers (connected app)
 

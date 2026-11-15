@@ -103,8 +103,20 @@ def register_site(database: Database, registration: SiteRegistration):
                 "SELECT device_id,source_id FROM energy_streams WHERE site_id=?",
                 (site.site_id,),
             ).fetchone()
+            current = site_from_row(existing)
+            placement = connection.execute(
+                "SELECT area_id FROM site_placements WHERE site_id=?", (site.site_id,)
+            ).fetchone()
+            # An explicit local placement (provision-component-scenario) sets the area of
+            # an imported site; a re-import without an area still matches its contract.
             if (
-                site_from_row(existing) == site
+                placement
+                and site.area_id is None
+                and current.area_id == placement["area_id"]
+            ):
+                current = current.model_copy(update={"area_id": None})
+            if (
+                current == site
                 and stream
                 and tuple(stream) == (registration.device_id, registration.source_id)
             ):

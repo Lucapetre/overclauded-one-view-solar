@@ -13,15 +13,15 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from zoneinfo import ZoneInfo
 
+from backend.bridge import offer_meter_intervals
+from backend.clock import clock_state
 from backend.customer import require_customer
 from backend.db import stamp
-from backend.energy import records_between
 from backend.errors import ApiError
 from backend.models import Metric, User, utc
 from backend.offers_math import (
     Allocation,
     Commitment,
-    MeterInterval,
     attribute,
     bani,
     decimal_text,
@@ -216,8 +216,11 @@ def _site_info(row) -> dict:
         "installed_kwp": kwp,
         "has_pv": has_pv,
         "segment": "prosumers" if has_pv else "consumers",
-        "export_capable": Metric.grid_export.value in capabilities,
-        "import_capable": Metric.grid_import.value in capabilities,
+        # An imported authoritative PCC meter (component evidence) measures both directions.
+        "export_capable": Metric.grid_export.value in capabilities
+        or bool(row["component_meter"]),
+        "import_capable": Metric.grid_import.value in capabilities
+        or bool(row["component_meter"]),
         "has_meter": bool(row["has_meter"]),
     }
 
@@ -225,7 +228,10 @@ def _site_info(row) -> dict:
 CLIENT_SITES = (
     "SELECT u.user_id, u.username, s.site_id, s.alias, s.area_id, s.capabilities, "
     "p.zone, p.installed_kwp, "
-    "EXISTS (SELECT 1 FROM energy_streams e WHERE e.site_id=s.site_id) AS has_meter "
+    "EXISTS (SELECT 1 FROM energy_streams e WHERE e.site_id=s.site_id) AS has_meter, "
+    "EXISTS (SELECT 1 FROM component_sites cs JOIN component_capabilities cc "
+    "ON cc.import_id=cs.import_id AND cc.site_id=cs.site_id WHERE cs.site_id=s.site_id "
+    "AND cc.capability='grid_energy_measured' AND cc.state='available') AS component_meter "
     "FROM users u JOIN user_sites us ON us.user_id=u.user_id "
     "JOIN sites s ON s.site_id=us.site_id LEFT JOIN site_profiles p ON p.site_id=s.site_id "
     "WHERE u.role='customer' "
@@ -478,22 +484,9 @@ def allocate(connection, site_id: str, offer_type: str, rows) -> dict[str, Alloc
     group = _group(connection, site_id, offer_type, lower, upper)
     start = min(when(row["window_start"]) for row in group)
     end = max(effective_end(row) for row in group)
-    metric = METRICS[offer_type]
-    intervals = []
-    for record in records_between(connection, site_id, start, end):
-        reading = record.measurements.get(metric)
-        available = (
-            reading is not None
-            and reading.availability == "available"
-            and reading.value is not None
-        )
-        intervals.append(
-            MeterInterval(
-                start=record.interval_start,
-                end=record.interval_end,
-                kw=Decimal(str(reading.value)) if available else None,
-            )
-        )
+    # The bridge picks the site's authoritative grid meter (imported component meter, else
+    # the compact stream) and never reads data after the analytical scenario clock.
+    intervals = offer_meter_intervals(connection, site_id, offer_type, start, end)
     commitments = [
         Commitment(
             user_offer_id=row["user_offer_id"],
@@ -673,6 +666,7 @@ def settle_user_offer(
             "amount_bani": result.amount_bani,
             "penalty_bani": result.penalty_bani,
             "penalty_waived_reason": result.penalty_waived_reason,
+            "settled_at": at,
         },
     )
     return True
@@ -1553,6 +1547,9 @@ def accept_offer(
             "site_id": site["site_id"],
             "reference_price_ron_per_kwh": decimal_text(reference),
             "reference_price_source": source,
+            # Event (analytical) time; audit.received_at keeps the real receipt time.
+            "accepted_at": stamp(start),
+            "clock": clock_state(connection).mode,
         },
     )
     return _user_offer(connection, user_offer_id), True

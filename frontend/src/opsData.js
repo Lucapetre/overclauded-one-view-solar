@@ -8,7 +8,7 @@ export const TIERS = ["P0", "P1", "P2", "P3"];
 
 /** Menu per role (product owner's decisions). The first page is the landing page. */
 export const ROLE_PAGES = {
-  customer: ["Home", "Offers", "History", "Support", "Learn", "Account"],
+  customer: ["Home", "Plan", "Offers", "History", "Support", "Learn", "Account"],
   supervisor: [
     "Area Radar",
     "Incidents",
@@ -28,7 +28,7 @@ export const ROLE_PAGES = {
     "History",
     "Account",
   ],
-  technician: ["Incidents", "Requests", "Sites", "History", "Account"],
+  technician: ["Agenda", "Incidents", "Requests", "Sites", "History", "Account"],
 };
 export const pagesFor = (role) => ROLE_PAGES[role] || ["Account"];
 
@@ -374,6 +374,27 @@ export const FRIENDLY_ERRORS = {
     "Videos cannot be attached to danger reports. Keep away from the equipment.",
   media_exists: "This request already has a video.",
   not_found: "This item is not in your scope or no longer exists.",
+  // Phase (c) episodes, crew plans and agenda.
+  episode_workflow_required:
+    "Use Plan teams for this incident: correlated cases are assigned through a reviewed crew plan and closed from the case drawer.",
+  plan_stale: "The situation changed — a new draft was computed. Review it, then apply again.",
+  plan_already_applied: "This plan is already applied. Nothing was duplicated.",
+  plan_superseded: "This plan was replaced by a newer draft. Open the latest plan.",
+  plan_not_reviewed: "Review the plan before applying it.",
+  plan_changed: "The plan's inputs no longer match. The latest plan has been loaded.",
+  crew_double_booked:
+    "A crew in this plan is already booked at that time. Propose a new plan.",
+  dispatch_capability_required: "Applying needs dispatch capability.",
+  planning_access_required:
+    "Crew plans are visible to dispatch and supervisory accounts only.",
+  assignment_changed:
+    "This visit changed since you loaded it. The agenda has been refreshed; try again.",
+  progress_not_forward: "Progress only moves forward: en route, on site, then done.",
+  assignment_closed: "This visit is no longer active.",
+  note_required: "Write a short note describing the outcome before marking it done.",
+  invalid_expiry:
+    "Choose an override expiry after the current replay time and at most 7 days ahead.",
+  invalid_request: "Some fields are missing or out of range. Check the form and try again.",
 };
 const OFFLINE = "Unable to reach the service. Please try again.";
 /** Always a full sentence ending in punctuation, so it can be embedded in text. */

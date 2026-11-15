@@ -33,6 +33,27 @@ import type {
   OfferPreview,
   SavingsSummary,
   UserOffer,
+  AcceptTask,
+  ClockView,
+  PlanDecision,
+  ReviewTask,
+  Task,
+  TaskCreate,
+  TaskProgress,
+  TaskUpdate,
+  EquipmentEvidence,
+  EquipmentSummary,
+  AgendaView,
+  ApplyRequest,
+  CloseRequest,
+  CrewPlanView,
+  EpisodeDetail,
+  OverrideRequest,
+  ProgressRequest,
+  ProposeRequest,
+  QueueView,
+  StatusProjection,
+  UnmappedSites,
 } from "./index";
 
 export class SolarApiError extends Error {
@@ -328,6 +349,161 @@ export class SolarClient {
     return this.write("/api/v1/notifications/read-all", {});
   }
 
+  /** Analytical clock: live wall time, or the local forward-only scenario clock (read-only). */
+  clock(signal?: AbortSignal): Promise<ClockView> {
+    return this.request("/api/v1/clock", { signal });
+  }
+
+  /** Business task planner: flexible, non-interruptible tasks of one authorized site. */
+  tasks(siteId: string, signal?: AbortSignal): Promise<Task[]> {
+    return this.request(`/api/v1/sites/${encodeURIComponent(siteId)}/tasks`, { signal });
+  }
+
+  createTask(siteId: string, task: TaskCreate): Promise<Task> {
+    return this.write(`/api/v1/sites/${encodeURIComponent(siteId)}/tasks`, task);
+  }
+
+  /** Rejected with 409 task_committed once accepted; review (release) it first. */
+  updateTask(siteId: string, taskId: string, task: TaskUpdate): Promise<Task> {
+    return this.write(`/api/v1/sites/${encodeURIComponent(siteId)}/tasks/${encodeURIComponent(taskId)}`, task);
+  }
+
+  cancelTask(siteId: string, taskId: string): Promise<Task> {
+    return this.write(`/api/v1/sites/${encodeURIComponent(siteId)}/tasks/${encodeURIComponent(taskId)}/cancel`, {});
+  }
+
+  /** Recomputed at the analytical time on every read; costs are estimates (null = unknown). */
+  plan(siteId: string, taskId: string, signal?: AbortSignal): Promise<PlanDecision> {
+    return this.request(
+      `/api/v1/sites/${encodeURIComponent(siteId)}/plan?${new URLSearchParams({ task: taskId })}`,
+      { signal },
+    );
+  }
+
+  /**
+   * Accept the recommendation the customer saw (409 recommendation_changed if it moved).
+   * Pass a stable idempotencyKey per click; a repeat returns the original commitment.
+   */
+  acceptTask(siteId: string, taskId: string, body: AcceptTask, idempotencyKey?: string): Promise<Task> {
+    return this.write(
+      `/api/v1/sites/${encodeURIComponent(siteId)}/tasks/${encodeURIComponent(taskId)}/accept`,
+      body,
+      idempotencyKey ? { "Idempotency-Key": idempotencyKey } : undefined,
+    );
+  }
+
+  /** Explicit review: release an accepted plan that has not started yet. */
+  reviewTask(siteId: string, taskId: string, body: ReviewTask): Promise<Task> {
+    return this.write(`/api/v1/sites/${encodeURIComponent(siteId)}/tasks/${encodeURIComponent(taskId)}/review`, body);
+  }
+
+  /** Measured whole-site grid energy for the accepted window, plus a labelled estimate. */
+  taskProgress(siteId: string, taskId: string, signal?: AbortSignal): Promise<TaskProgress> {
+    return this.request(
+      `/api/v1/sites/${encodeURIComponent(siteId)}/tasks/${encodeURIComponent(taskId)}/progress`,
+      { signal },
+    );
+  }
+
+  /**
+   * Equipment evidence summary per family (meter, battery, weather): selected source,
+   * recent values, freshness, capability decisions with reason codes, synthetic label.
+   */
+  equipmentSummary(siteId: string, signal?: AbortSignal): Promise<EquipmentSummary> {
+    return this.request(`/api/v1/sites/${encodeURIComponent(siteId)}/equipment/summary`, { signal });
+  }
+
+  /** Bounded 15-minute evidence frames (at most 7 days, limit <= 1000); no raw payloads. */
+  equipmentEvidence(siteId: string, options: EquipmentEvidenceQuery, signal?: AbortSignal): Promise<EquipmentEvidence> {
+    const query = new URLSearchParams();
+    for (const [key, value] of Object.entries(options)) {
+      if (value !== undefined) query.set(key, String(value));
+    }
+    return this.request(`/api/v1/sites/${encodeURIComponent(siteId)}/equipment/evidence?${query}`, { signal });
+  }
+
+  /**
+   * Ranked work queue (operations roles): priority band first, then the demo-policy score.
+   * Every item carries rank explanation, episode summary and workflow at one ops revision.
+   */
+  opsQueue(status: "open" | "all" = "open", signal?: AbortSignal): Promise<QueueView> {
+    return this.request(`/api/v1/ops/queue?${new URLSearchParams({ status })}`, { signal });
+  }
+
+  /** Episode drawer: hypothesis, evidence, rule, rank explanation/history, overrides, log. */
+  opsEpisode(incidentId: string, signal?: AbortSignal): Promise<EpisodeDetail> {
+    return this.request(`/api/v1/ops/episodes/${encodeURIComponent(incidentId)}`, { signal });
+  }
+
+  acknowledgeEpisode(incidentId: string): Promise<EpisodeDetail> {
+    return this.write(`/api/v1/ops/episodes/${encodeURIComponent(incidentId)}/acknowledge`, {});
+  }
+
+  /** Authorized documented closure (dispatcher or the assigned crew); children stay open. */
+  closeEpisode(incidentId: string, body: CloseRequest): Promise<EpisodeDetail> {
+    return this.write(`/api/v1/ops/episodes/${encodeURIComponent(incidentId)}/close`, body);
+  }
+
+  /** Dispatcher only; expires on the analytical clock; the computed rank is preserved. */
+  overridePriority(incidentId: string, body: OverrideRequest): Promise<EpisodeDetail> {
+    return this.write(`/api/v1/ops/episodes/${encodeURIComponent(incidentId)}/priority-override`, body);
+  }
+
+  revokePriorityOverride(incidentId: string): Promise<EpisodeDetail> {
+    return this.write(`/api/v1/ops/episodes/${encodeURIComponent(incidentId)}/priority-override/revoke`, {});
+  }
+
+  /** Common site-status projection (same revision as queue/map); scoped server-side. */
+  opsStatus(signal?: AbortSignal): Promise<StatusProjection> {
+    return this.request("/api/v1/ops/status", { signal });
+  }
+
+  opsUnmapped(signal?: AbortSignal): Promise<UnmappedSites> {
+    return this.request("/api/v1/ops/unmapped", { signal });
+  }
+
+  /** Feasible heuristic proposal (draft) plus the FIFO baseline comparison. */
+  proposeCrewPlan(body: ProposeRequest = { horizon_hours: 12 }): Promise<CrewPlanView> {
+    return this.write("/api/v1/ops/plans", body);
+  }
+
+  latestCrewPlan(signal?: AbortSignal): Promise<CrewPlanView> {
+    return this.request("/api/v1/ops/plans/latest", { signal });
+  }
+
+  crewPlan(planId: string, signal?: AbortSignal): Promise<CrewPlanView> {
+    return this.request(`/api/v1/ops/plans/${encodeURIComponent(planId)}`, { signal });
+  }
+
+  /** Dispatch capability only (supervisors get 403). */
+  reviewCrewPlan(planId: string): Promise<CrewPlanView> {
+    return this.write(`/api/v1/ops/plans/${encodeURIComponent(planId)}/review`, {});
+  }
+
+  /**
+   * Dispatch capability only. 409 plan_stale when inputs changed (a new draft is computed;
+   * reload latestCrewPlan), plan_already_applied, plan_superseded or plan_not_reviewed.
+   * Pass a stable idempotencyKey per click so a retry returns the applied plan.
+   */
+  applyCrewPlan(planId: string, expectedInputDigest: string, idempotencyKey?: string): Promise<CrewPlanView> {
+    const body: ApplyRequest = { expected_input_digest: expectedInputDigest };
+    return this.write(
+      `/api/v1/ops/plans/${encodeURIComponent(planId)}/apply`,
+      body,
+      idempotencyKey ? { "Idempotency-Key": idempotencyKey } : undefined,
+    );
+  }
+
+  /** Technician: own crews' assignments; dispatch/supervisor: visible crews. */
+  opsAgenda(signal?: AbortSignal): Promise<AgendaView> {
+    return this.request("/api/v1/ops/agenda", { signal });
+  }
+
+  /** Technician of the assigned crew; forward-only en_route -> on_site -> done (note required). */
+  updateAssignmentProgress(assignmentId: string, body: ProgressRequest): Promise<AgendaView> {
+    return this.write(`/api/v1/ops/assignments/${encodeURIComponent(assignmentId)}/progress`, body);
+  }
+
   /** State changes need the session's CSRF token; restore it after a page reload. */
   private async write<T>(path: string, body: unknown, headers?: Record<string, string>): Promise<T> {
     if (!this.csrfToken) await this.me();
@@ -342,6 +518,15 @@ export class SolarClient {
     return this.request(`/api/v1/sites/${encodeURIComponent(siteId)}/provider/${kind}?${query}`, { signal });
   }
 }
+
+export type EquipmentEvidenceQuery = {
+  from: string;
+  to: string;
+  family?: "meter" | "battery" | "weather";
+  metric?: string;
+  limit?: number;
+  offset?: number;
+};
 
 export type ProviderHistoryQuery = {
   from: string;

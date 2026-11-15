@@ -5,8 +5,17 @@ import os
 from datetime import datetime
 from pathlib import Path
 
+from backend.clock import (
+    advance_scenario,
+    clock_state,
+    parse_duration,
+    scenario_status,
+    start_scenario,
+)
+from backend.components import import_component_snapshot
 from backend.config import Settings
 from backend.db import Database, stamp
+from backend.dispatch import run_correlation
 from backend.errors import ApiError
 from backend.ingestion import ingest
 from backend.models import SiteRegistration, utc
@@ -26,7 +35,11 @@ from backend.provisioning import (
     set_account_type,
     set_password,
 )
-from backend.seed import seed_demo
+from backend.seed import (
+    seed_component_scenario,
+    seed_demo,
+    seed_scenario_operations,
+)
 
 
 def main(argv=None):
@@ -136,6 +149,60 @@ def main(argv=None):
     savings.add_argument(
         "--check", action="store_true", help="Report only; exit 1 on mismatches"
     )
+    scenario = commands.add_parser(
+        "scenario",
+        help="Local forward-only analytical scenario clock (restart = new local database)",
+    )
+    steps = scenario.add_subparsers(dest="scenario_command", required=True)
+    begin = steps.add_parser("start", help="Start a scenario run at an aware timestamp")
+    begin.add_argument("name")
+    begin.add_argument("--at", required=True, help="Timezone-aware ISO 8601 start time")
+    advance = steps.add_parser("advance", help="Move the scenario clock forward")
+    target = advance.add_mutually_exclusive_group(required=True)
+    target.add_argument("--to", help="Timezone-aware ISO 8601 time (not earlier)")
+    target.add_argument("--by", help="Duration such as 15m, 2h or 1d")
+    advance.add_argument(
+        "--correlate",
+        action="store_true",
+        help="Then run the incident correlation rules at the new analytical time",
+    )
+    advance.add_argument(
+        "--settle",
+        action="store_true",
+        help="Then run one offers worker pass at the new analytical time",
+    )
+    steps.add_parser("status", help="Show the analytical clock")
+    provision = commands.add_parser(
+        "provision-component-scenario",
+        help="Place the nine provider sites (fictional coordinates) and create scenario accounts and grants",
+    )
+    provision.add_argument("--sites", type=Path, default=Path("demo_data/sites.json"))
+    provision.add_argument(
+        "--assets", type=Path, default=Path("demo_components/assets.json")
+    )
+    components = commands.add_parser(
+        "import-components",
+        help="Import a component (meter/battery/irradiance) snapshot; never grants access",
+    )
+    components.add_argument(
+        "--database", type=Path, default=Path("build/components/component.sqlite")
+    )
+    operations = commands.add_parser(
+        "provision-scenario-operations",
+        help="Create the scenario crews, technicians, shifts, windows and travel matrix "
+        "(synthetic planning inputs); run after provision-component-scenario",
+    )
+    operations.add_argument(
+        "--inputs", type=Path, default=Path("demo_components/operations_inputs.json")
+    )
+    operations.add_argument("--sites", type=Path, default=Path("demo_data/sites.json"))
+    operations.add_argument(
+        "--assets", type=Path, default=Path("demo_components/assets.json")
+    )
+    commands.add_parser(
+        "correlate",
+        help="Run the incident correlation rules at the current analytical time",
+    )
     arguments = parser.parse_args(argv)
     settings = Settings()
     database = Database(settings.database_path)
@@ -156,6 +223,27 @@ def main(argv=None):
         parser.exit(130, "\nCommand cancelled.\n")
 
 
+def _aware(text: str) -> datetime:
+    try:
+        return utc(datetime.fromisoformat(text.replace("Z", "+00:00")))
+    except ValueError as exc:
+        raise ApiError(422, "invalid_time", str(exc)) from exc
+
+
+def store_credentials(settings: Settings, credentials: dict) -> Path:
+    """Merge new demo credentials into the private local file (never printed)."""
+    destination = settings.database_path.parent / "demo-credentials.json"
+    if credentials:
+        previous = json.loads(destination.read_text()) if destination.exists() else {}
+        previous.update(credentials)
+        descriptor = os.open(destination, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        if hasattr(os, "fchmod"):  # Not available on Windows.
+            os.fchmod(descriptor, 0o600)
+        with os.fdopen(descriptor, "w") as stream:
+            json.dump(previous, stream, indent=2)
+    return destination
+
+
 def execute(arguments, database: Database, settings: Settings):
     if arguments.command == "import-provider":
         print(
@@ -164,6 +252,12 @@ def execute(arguments, database: Database, settings: Settings):
                     database, arguments.database, arguments.sites, arguments.frames
                 ),
                 indent=2,
+            )
+        )
+    elif arguments.command == "import-components":
+        print(
+            json.dumps(
+                import_component_snapshot(database, arguments.database), indent=2
             )
         )
     elif arguments.command == "register-site":
@@ -229,22 +323,53 @@ def execute(arguments, database: Database, settings: Settings):
         print(f"{arguments.username} is a member of {arguments.crew}")
     elif arguments.command == "seed-demo":
         credentials = seed_demo(database, os.getenv("SOLAR_DEMO_PASSWORD"))
-        destination = settings.database_path.parent / "demo-credentials.json"
-        if credentials:
-            previous = (
-                json.loads(destination.read_text()) if destination.exists() else {}
-            )
-            previous.update(credentials)
-            descriptor = os.open(
-                destination, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600
-            )
-            if hasattr(os, "fchmod"):  # Not available on Windows.
-                os.fchmod(descriptor, 0o600)
-            with os.fdopen(descriptor, "w") as stream:
-                json.dump(previous, stream, indent=2)
+        destination = store_credentials(settings, credentials)
         print(
             f"Synthetic demo ready. New account credentials are stored privately at {destination}"
         )
+    elif arguments.command == "provision-component-scenario":
+        credentials = seed_component_scenario(
+            database,
+            os.getenv("SOLAR_DEMO_PASSWORD"),
+            arguments.sites,
+            arguments.assets,
+        )
+        destination = store_credentials(settings, credentials)
+        print(
+            "Component scenario provisioned (fictional placements, explicit grants). "
+            f"New account credentials are stored privately at {destination}"
+        )
+    elif arguments.command == "provision-scenario-operations":
+        credentials = seed_scenario_operations(
+            database,
+            os.getenv("SOLAR_DEMO_PASSWORD"),
+            arguments.inputs,
+            arguments.sites,
+            arguments.assets,
+        )
+        destination = store_credentials(settings, credentials)
+        print(
+            "Scenario operations provisioned (synthetic crews, shifts and travel matrix). "
+            f"New account credentials are stored privately at {destination}"
+        )
+    elif arguments.command == "correlate":
+        print(json.dumps(run_correlation(database), indent=2, default=str))
+    elif arguments.command == "scenario":
+        if arguments.scenario_command == "start":
+            result = start_scenario(database, arguments.name, _aware(arguments.at))
+        elif arguments.scenario_command == "advance":
+            result = advance_scenario(
+                database,
+                to=_aware(arguments.to) if arguments.to else None,
+                by=parse_duration(arguments.by) if arguments.by else None,
+            )
+            if arguments.correlate:
+                result["correlation"] = run_correlation(database)
+            if arguments.settle:
+                result["offers_worker"] = settle_due(database, None, settings)
+        else:
+            result = scenario_status(database)
+        print(json.dumps(result, indent=2))
     elif arguments.command == "import":
         payload = json.loads(arguments.path.read_text())
         rejected = 0
@@ -304,6 +429,13 @@ def execute(arguments, database: Database, settings: Settings):
         timestamp = utc(
             datetime.fromisoformat(arguments.timestamp.replace("Z", "+00:00"))
         )
+        with database.connect() as connection:
+            scenario_running = clock_state(connection).mode == "scenario"
+        if scenario_running:
+            # In a scenario run the replay clock is the forward-only analytical clock.
+            result = advance_scenario(database, to=timestamp)
+            print(f"Scenario clock {result['status']}: {result['analytical_now']}")
+            return
         with database.connect() as connection:
             connection.execute(
                 "INSERT INTO settings VALUES ('replay_at',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",

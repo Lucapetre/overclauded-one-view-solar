@@ -1,0 +1,79 @@
+{
+ "evaluation_only": true,
+ "profile_id": "b1_victron_gx_battery_modbus",
+ "asset_id": "F1-B1-BMS",
+ "windows": [
+  {
+   "case": "normal",
+   "effective_time_utc": "2026-07-17T09:00:00.387Z",
+   "expected": [
+    {
+     "metric": "soc_pct",
+     "value": 20.0
+    },
+    {
+     "metric": "battery_voltage_v",
+     "value": 50.4
+    },
+    {
+     "metric": "battery_current_a",
+     "value": -0.0
+    },
+    {
+     "metric": "battery_net_kw",
+     "value": 0.0
+    },
+    {
+     "metric": "battery_max_discharge_current_a",
+     "value": 100.0
+    },
+    {
+     "metric": "battery_max_charge_current_a",
+     "value": 70.0
+    },
+    {
+     "metric": "battery_alarm_raw",
+     "channel": "internal_failure",
+     "value": 0.0
+    }
+   ],
+   "tolerance": 1e-09
+  },
+  {
+   "case": "derated",
+   "effective_time_utc": "2026-07-18T07:00:01.180Z",
+   "expected": [
+    {
+     "metric": "soc_pct",
+     "value": 20.0
+    },
+    {
+     "metric": "battery_voltage_v",
+     "value": 50.4
+    },
+    {
+     "metric": "battery_current_a",
+     "value": -0.0
+    },
+    {
+     "metric": "battery_net_kw",
+     "value": 0.0
+    },
+    {
+     "metric": "battery_max_discharge_current_a",
+     "value": 25.0
+    },
+    {
+     "metric": "battery_max_charge_current_a",
+     "value": 70.0
+    },
+    {
+     "metric": "battery_alarm_raw",
+     "channel": "internal_failure",
+     "value": 2.0
+    }
+   ],
+   "tolerance": 1e-09
+  }
+ ]
+}

@@ -1,0 +1,5 @@
+"TOA5","TEST_BENCH_CS","CR1000X","1","CR1000X.Std.07.02","CPU:PV_STATION.CR1X","31742","OneMin"
+"TIMESTAMP","RECORD","POA_Irr_Avg","POA_Irr_Max","POA_Irr_Min","AirT_C_Avg","ModT_C_Avg"
+"TS","RN","W/m^2","W/m^2","W/m^2","Deg C","Deg C"
+"","","Avg","Max","Min","Avg","Avg"
+"2026-07-16 09:01:00",1,812.4,815.0,809.9,27.40,41.30

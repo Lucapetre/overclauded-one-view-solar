@@ -1,0 +1,32 @@
+{
+ "evaluation_only": true,
+ "profile_id": "m3_shelly_pro3em_rpc",
+ "asset_id": "H2-M3-PCC",
+ "effective_time_utc_em": "2026-07-17T09:00:00.577Z",
+ "effective_time_utc_emdata": "2026-07-17T09:00:02.577Z",
+ "expected": [
+  {
+   "metric": "grid_net_kw",
+   "value": -1.83563
+  },
+  {
+   "metric": "phase_active_power_kw",
+   "channel": "L1",
+   "value": -0.5982
+  },
+  {
+   "metric": "phase_voltage_v",
+   "channel": "L2",
+   "value": 233.4
+  },
+  {
+   "metric": "resettable_grid_import_kwh",
+   "value": 0.0
+  },
+  {
+   "metric": "resettable_grid_export_kwh",
+   "value": 2.74343
+  }
+ ],
+ "tolerance": 1e-09
+}

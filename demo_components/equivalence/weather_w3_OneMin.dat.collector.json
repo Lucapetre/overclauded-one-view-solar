@@ -1,0 +1,26 @@
+{
+ "transport_schema": "component-collector/1",
+ "synthetic": true,
+ "delivery_id_prefix": "EQ-W3",
+ "provider_profile_id": "w3_campbell_toa5_station",
+ "endpoint_key": "toa5_OneMin",
+ "binding": {
+  "asset_id": "EQ-W3"
+ },
+ "collector_id": "COL-TEST-BENCH",
+ "gateway_id": null,
+ "request_scope": {
+  "method": "loggernet_collect",
+  "table": "OneMin"
+ },
+ "transport_status": "ok",
+ "http_status": null,
+ "transport_error": null,
+ "collections": [
+  {
+   "through_line": 5,
+   "recorded_at_utc": "2026-07-16T07:02:00.000Z",
+   "received_at_utc": "2026-07-16T07:02:05.000Z"
+  }
+ ]
+}

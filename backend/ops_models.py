@@ -2,6 +2,16 @@ from datetime import datetime
 from typing import Literal
 
 from backend.models import Identifier, Model
+from backend.status_models import (
+    Condition,
+    CrewMarker,
+    CrewProfileView,
+    RouteLine,
+    SiteStatus,
+    StatusCounts,
+    TelemetryState,
+    Workflow,
+)
 
 Tier = Literal["P0", "P1", "P2", "P3"]
 TIERS: tuple[str, ...] = ("P0", "P1", "P2", "P3")
@@ -13,6 +23,7 @@ Family = Literal[
     "Area event",
     "Local issue",
     "Billing",
+    "Battery",
     "Other",
 ]
 FAMILIES: tuple[str, ...] = Family.__args__
@@ -50,6 +61,12 @@ class MapSite(Model):
     freshness_status: FreshnessStatus
     open_incidents: int
     worst_tier: Tier | None
+    # From the common site-status projection (same revision as the queue).
+    condition: Condition | None = None
+    telemetry_state: TelemetryState | None = None
+    workflow: Workflow | None = None
+    highest_priority: Tier | None = None
+    episode_ids: list[str] = []
 
 
 ClusterKind = Literal[
@@ -71,6 +88,15 @@ class OpsMap(Model):
     note: str
     sites: list[MapSite]
     clusters: list[MapCluster]
+    # Common status projection: every scoped site (provider scenario sites included), the
+    # unmapped list, scoped counts, authorized crew markers and labelled schematic routes.
+    revision: int = 0
+    status_as_of: datetime | None = None
+    status_sites: list[SiteStatus] = []
+    unmapped: list[SiteStatus] = []
+    counts: StatusCounts | None = None
+    crews: list[CrewMarker] = []
+    routes: list[RouteLine] = []
 
 
 class AssignmentSummary(Model):
@@ -177,6 +203,7 @@ class Crew(Model):
     available: bool
     active_assignment: CrewActiveAssignment | None
     report: CrewReport
+    profile: CrewProfileView | None = None
 
 
 class AssignmentReportRow(Model):
@@ -200,6 +227,7 @@ class TeamsView(Model):
     crews: list[Crew]
     unassigned_incidents: int
     assignments: list[AssignmentReportRow]
+    revision: int = 0
 
 
 class RevenueAmounts(Model):

@@ -370,3 +370,88 @@
 .home-grid + .friendly-strip {
   margin-top: 20px;
 }
+
+/* Contract time bands (read-only list and minimal editor). */
+.band-list {
+  list-style: none;
+  padding: 0;
+  margin: 4px 0;
+}
+.band-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid #eef1e6;
+  font-size: 12px;
+  color: #5d6957;
+}
+.band-list li > span {
+  text-align: right;
+}
+.band-list b {
+  color: #3f4d37;
+}
+.band-list small {
+  display: block;
+  font-size: 11px;
+  color: #8f9887;
+  margin-top: 3px;
+}
+.band-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 12px 0;
+}
+.band-row {
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 10px 12px;
+  min-width: 0;
+}
+.band-row legend {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 0 4px;
+}
+.band-row label {
+  margin: 8px 0;
+}
+.band-days {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.band-days button {
+  border: 1px solid #dce2d4;
+  background: white;
+  border-radius: 6px;
+  padding: 6px 8px;
+  min-height: 34px;
+  font-size: 11px;
+  color: #56634e;
+  cursor: pointer;
+}
+.band-days button.on {
+  background: #f0d14d;
+  border-color: #d7bf4c;
+  color: #343821;
+  font-weight: 600;
+}
+.band-days button:focus-visible {
+  outline: 2px solid #8d781d;
+  outline-offset: 2px;
+}
+.band-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 10px;
+}
+.band-hint {
+  display: block;
+  font-size: 11px;
+  color: #8d781d;
+  min-height: 1em;
+}

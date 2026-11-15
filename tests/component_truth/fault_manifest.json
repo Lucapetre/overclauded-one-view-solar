@@ -1,0 +1,294 @@
+{
+ "evaluation_only": true,
+ "synthetic": true,
+ "warning": "Hidden labels for tests. Runtime code (engine/, scraper.py, backend/) must never read this file.",
+ "scenario_version": "components-2026.11.15-1",
+ "faults": [
+  {
+   "fault_id": "F-M1-ACCESS",
+   "profile_id": "m1_schneider_iem3255_modbus",
+   "asset_id": "F1-M1-PCC",
+   "kind": "missing_interval_access_failure",
+   "window_utc": [
+    "2026-07-16T00:00:00.000Z",
+    "2026-07-16T00:40:00.000Z"
+   ],
+   "delivery_ids": [
+    "F1-M1-000324",
+    "F1-M1-000325",
+    "F1-M1-000326",
+    "F1-M1-000327",
+    "F1-M1-000328",
+    "F1-M1-000329",
+    "F1-M1-000330",
+    "F1-M1-000331",
+    "F1-M1-000332"
+   ],
+   "injected": "collector timeouts (envelope only, no payload) for 9 consecutive 5-min polls",
+   "expected_handling": "delivery_events class 'timeout'; no observations; counter delta across the gap is a gap_span_total (not allocated); authority frames 'no_complete_source' (null, no zero)"
+  },
+  {
+   "fault_id": "F-M1-WORDORDER",
+   "profile_id": "m1_schneider_iem3255_modbus",
+   "asset_id": "F1-M1-PCC",
+   "kind": "wrong_word_order_without_evidence",
+   "window_utc": [
+    "2026-07-20T11:00:00.000Z",
+    "2026-07-20T11:25:00.000Z"
+   ],
+   "delivery_ids": [
+    "F1-M1-001608",
+    "F1-M1-001609",
+    "F1-M1-001610",
+    "F1-M1-001611",
+    "F1-M1-001612",
+    "F1-M1-001613"
+   ],
+   "injected": "collector captured multi-register values low-word-first (configuration fault) for 6 polls",
+   "expected_handling": "decoded values implausible (bounds) -> register_decode_configuration_suspect; all register values of those snapshots invalid; NOT re-decoded with another word order"
+  },
+  {
+   "fault_id": "F-B1-SOC108",
+   "profile_id": "b1_victron_gx_battery_modbus",
+   "asset_id": "F1-B1-BMS",
+   "kind": "invalid_soc",
+   "window_utc": [
+    "2026-07-16T11:05:00.000Z",
+    "2026-07-16T11:06:00.000Z"
+   ],
+   "injected": "register 266 raw 1080 (= 108.0 %) in one snapshot",
+   "expected_handling": "soc_pct availability=invalid (out_of_range), never clamped to 100; the other fields of the snapshot stay valid; battery_status keeps the previous valid SoC"
+  },
+  {
+   "fault_id": "F-B1-DERATE-ALARM",
+   "profile_id": "b1_victron_gx_battery_modbus",
+   "asset_id": "F1-B1-BMS",
+   "kind": "reported_battery_fault_and_bms_derating",
+   "window_utc": [
+    "2026-07-18T06:40:00.000Z",
+    "2026-07-21T21:00:00.000Z"
+   ],
+   "delivery_ids": [
+    "F1-B1-000980",
+    "F1-B1-000981",
+    "F1-B1-000982"
+   ],
+   "genuine_event": true,
+   "injected": "same latent event: /Alarms/InternalFailure (323) = 2 and /Info/MaxDischargeCurrent (308) 100.0 A -> 25.0 A from 2026-07-18 09:40 local; latent dispatch honours the derated limit",
+   "expected_handling": "state_episodes active internal_failure alarm; limit_history shows 308 below the declared nominal; battery_status limits_available=1 with the derated value; planner must restrict battery flexibility (phase b rule)"
+  },
+  {
+   "fault_id": "F-M2-VISIBLE0",
+   "profile_id": "m2_fronius_smart_meter_solar_api",
+   "asset_id": "F2-M2-FEEDIN",
+   "kind": "source_quality_gate",
+   "window_utc": [
+    "2026-07-16T15:10:00.000Z",
+    "2026-07-16T15:20:00.000Z"
+   ],
+   "delivery_ids": [
+    "F2-M2-000506",
+    "F2-M2-000507",
+    "F2-M2-000508"
+   ],
+   "injected": "Visible = 0 (documented 'incomplete or outdated values') in 3 snapshots",
+   "expected_handling": "values kept as evidence with availability=withheld; excluded from counters/frames; coverage warning"
+  },
+  {
+   "fault_id": "F-M2-BACKSTEP",
+   "profile_id": "m2_fronius_smart_meter_solar_api",
+   "asset_id": "F2-M2-FEEDIN",
+   "kind": "unexplained_backwards_cumulative_step",
+   "window_utc": [
+    "2026-07-19T09:35:00.000Z",
+    "2026-07-19T09:40:00.000Z"
+   ],
+   "injected": "EnergyReal_WAC_Sum_Produced steps back by 1800 Wh at 2026-07-19 12:40 local and continues from the lower value",
+   "expected_handling": "counter_discontinuity flagged (unexplained_counter_decrease); no reset invented, no negative export; the crossing interval energy unknown; deltas resume; authority falls back to the M2 power-integration estimate for that frame (labelled estimated)"
+  },
+  {
+   "fault_id": "F-F2-MIRROR",
+   "profile_id": "m2_fronius_smart_meter_solar_api",
+   "asset_id": "F2-M2-FEEDIN",
+   "kind": "mirrored_meter",
+   "window_utc": [
+    "2026-07-14T21:00:00.000Z",
+    "2026-07-21T21:00:00.000Z"
+   ],
+   "injected": "the same physical Smart Meter also appears as P_Grid in the EXISTING F2 GetPowerFlowRealtimeData fixture (inverter gateway copy)",
+   "expected_handling": "both kept as evidence; authority: M2 counters primary, M2 estimate fallback, mirror estimate only as last labelled fallback; never summed (authority_frames.mirrors_excluded)"
+  },
+  {
+   "fault_id": "F-M3-RESET",
+   "profile_id": "m3_shelly_pro3em_rpc",
+   "asset_id": "H2-M3-PCC",
+   "kind": "known_resettable_counter_reset",
+   "window_utc": [
+    "2026-07-17T07:59:30.000Z",
+    "2026-07-17T08:05:30.000Z"
+   ],
+   "injected": "EMData.ResetCounters at 2026-07-17 11:02:30 local (logged in assets.json maintenance_log); total_act / total_act_ret / phase energies restart from 0",
+   "expected_handling": "new counter segment (segment_start_known_reset); delta across the reset withheld; later deltas valid; authority frame of the reset uses the labelled estimate fallback"
+  },
+  {
+   "fault_id": "F-M3-GAP",
+   "profile_id": "m3_shelly_pro3em_rpc",
+   "asset_id": "H2-M3-PCC",
+   "kind": "missing_interval_access_failure",
+   "window_utc": [
+    "2026-07-17T11:00:00.000Z",
+    "2026-07-17T12:30:00.000Z"
+   ],
+   "delivery_ids": [
+    "H2-M3-EM-000744",
+    "H2-M3-EMD-000744",
+    "H2-M3-EM-000745",
+    "H2-M3-EMD-000745"
+   ],
+   "injected": "LAN collector timeouts for EM and EMData polls 14:00-15:30 local",
+   "expected_handling": "no values; counter delta over the gap = gap_span_total (not allocated); frames null (no zero); authority 'no_complete_source'"
+  },
+  {
+   "fault_id": "F-M3-DUP",
+   "profile_id": "m3_shelly_pro3em_rpc",
+   "asset_id": "H2-M3-PCC",
+   "kind": "exact_duplicate_record",
+   "window_utc": [
+    "2026-07-17T06:00:00.000Z",
+    "2026-07-17T06:30:00.000Z"
+   ],
+   "delivery_ids": [
+    "H2-M3-EMD-000684",
+    "H2-M3-EMD-000685",
+    "H2-M3-EMD-000686",
+    "H2-M3-EMD-000687",
+    "H2-M3-EMD-000688",
+    "H2-M3-EMD-000689",
+    "H2-M3-EMD-000690"
+   ],
+   "injected": "EMData.GetStatus snapshots re-delivered by the collector 120 s later (same capture time and content)",
+   "expected_handling": "raw_records status exact_duplicate; counted once (idempotent dedupe)"
+  },
+  {
+   "fault_id": "F-M3-OOO",
+   "profile_id": "m3_shelly_pro3em_rpc",
+   "asset_id": "H2-M3-PCC",
+   "kind": "out_of_order_record",
+   "window_utc": [
+    "2026-07-17T13:00:00.000Z",
+    "2026-07-17T14:00:00.000Z"
+   ],
+   "delivery_ids": [
+    "H2-M3-EM-000768",
+    "H2-M3-EM-000769",
+    "H2-M3-EM-000770",
+    "H2-M3-EM-000771",
+    "H2-M3-EM-000772",
+    "H2-M3-EM-000773",
+    "H2-M3-EM-000774",
+    "H2-M3-EM-000775",
+    "H2-M3-EM-000776",
+    "H2-M3-EM-000777",
+    "H2-M3-EM-000778",
+    "H2-M3-EM-000779",
+    "H2-M3-EM-000780"
+   ],
+   "injected": "EM.GetStatus snapshots 16:00-17:00 delivered 3 h late (later in the file)",
+   "expected_handling": "ordered by source (capture) time; received time retained; late_arrival flag; derived estimates recomputed over the full series"
+  },
+  {
+   "fault_id": "F-W2-NIGHT-OFFSET",
+   "profile_id": "w2_kipp_smp10x_modbus",
+   "asset_id": "S2-W2-POA",
+   "kind": "small_negative_night_offset",
+   "window_utc": [
+    "2026-07-14T21:00:00.000Z",
+    "2026-07-21T21:00:00.000Z"
+   ],
+   "genuine_event": true,
+   "injected": "night radiation -0.4 .. -3.6 W/m2 (documented zero offset type A)",
+   "expected_handling": "kept as valid observations (within bounds); NOT a fault, no review candidate"
+  },
+  {
+   "fault_id": "F-W3-MODT-MISSING",
+   "profile_id": "w3_campbell_toa5_station",
+   "asset_id": "WX-S1-CS01-LOGGER",
+   "kind": "missing_optional_sensor",
+   "window_utc": [
+    "2026-07-17T08:00:00.000Z",
+    "2026-07-17T13:00:00.000Z"
+   ],
+   "injected": "ModT_C_Avg = \"NAN\" for 300 rows (module sensor disconnected, logger clock 10:00-15:00)",
+   "expected_handling": "module_temperature_c availability=missing (source_missing_token); ambient and POA rows unaffected; never replaced by ambient; capability module_temperature degraded in that window"
+  },
+  {
+   "fault_id": "F-H1H2-COLLECTOR",
+   "profile_id": "huawei_smartpvms_nbi_2025_07_28",
+   "asset_id": "COL-HW-NBI-01",
+   "kind": "shared_collector_outage",
+   "window_utc": [
+    "2026-07-19T06:10:00.000Z",
+    "2026-07-19T08:59:00.000Z"
+   ],
+   "delivery_ids": [
+    "H1-POLL-006315",
+    "H1-POLL-006330",
+    "H1-POLL-006345",
+    "H1-POLL-006360",
+    "H1-POLL-006375",
+    "H1-POLL-006390"
+   ],
+   "injected": "realtime polls of BOTH H1 and H2 (same NBI account / declared collector) time out 09:10-11:59 local; the existing hourly history fixtures (separate batch path) stay complete",
+   "expected_handling": "collector_outages row for COL-HW-NBI-01 covering H1+H2; one monitoring-path episode (phase c); missing feeds do not establish loss of supply; no zeros"
+  },
+  {
+   "fault_id": "F-UNITS-INHERENT",
+   "profile_id": "*",
+   "asset_id": "*",
+   "kind": "different_w_kw_wh_kwh_formats",
+   "window_utc": [
+    "2026-07-14T21:00:00.000Z",
+    "2026-07-21T21:00:00.000Z"
+   ],
+   "injected": "inherent: Schneider kW Float32 + Wh Int64; Fronius/Shelly W + Wh JSON; Victron W int16 / scaled uint16; IMT/Kipp scaled INT16; TOA5 W/m^2 and Deg C header units",
+   "expected_handling": "configuration-driven conversion to kW/kWh/W/m2/degC; raw value + mapping provenance kept (original_value, original_unit, transform_log, exact_value_text)"
+  },
+  {
+   "fault_id": "F-SIGNED-TEMP",
+   "profile_id": "w1_imt_si_rs485tc",
+   "asset_id": "EQ-W1",
+   "kind": "signed_int16_negative",
+   "window_utc": [
+    "2026-07-16T07:01:00.000Z",
+    "2026-07-16T07:02:00.000Z"
+   ],
+   "injected": "test-only bench snapshot: IMT cell -4.3 degC (0xFFD5), module -6.1 degC; Kipp body -2.5 degC, night radiation -2.3 W/m2 (July production data has no sub-zero temperatures)",
+   "expected_handling": "two's-complement decode preserves the negative values; never clamped"
+  },
+  {
+   "fault_id": "F-CLOUD-EVENT",
+   "profile_id": "*",
+   "asset_id": "F1/S2/station",
+   "kind": "cloud_driven_pv_decrease",
+   "window_utc": [
+    "2026-07-17T21:00:00.000Z",
+    "2026-07-18T21:00:00.000Z"
+   ],
+   "genuine_event": true,
+   "injected": "shared latent weather: 2026-07-16 13:00-17:00 cumulus (brief dips) and 2026-07-18 overcast; PV (existing inverter fixtures) and POA irradiance (W1, W2, W3) drop together",
+   "expected_handling": "irradiance observations explain the drop ('consistent with reduced sunlight'); no equipment-failure claim, no quality issue on the values"
+  },
+  {
+   "fault_id": "F-B2-ACCESS",
+   "profile_id": "b2_solaredge_storagedata",
+   "asset_id": "S3-B2-BAT",
+   "kind": "missing_interval_access_failure",
+   "window_utc": [
+    "2026-07-18T21:00:00.000Z",
+    "2026-07-19T21:00:00.000Z"
+   ],
+   "injected": "EXISTING fixture (INJ-SE-09/10): storageData HTTP 403 for 2026-07-19 and one HTTP 400 then fix",
+   "expected_handling": "access_denied delivery events, no values, no substitute zeros; battery SoC stays the last valid observation with its (old) timestamp"
+  }
+ ]
+}

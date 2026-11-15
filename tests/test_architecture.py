@@ -9,7 +9,9 @@ import pytest
 from conftest import AS_OF, CONFIG, ROOT, obs
 
 ENGINE_FILES = sorted((ROOT / "engine").glob("*.py")) + [ROOT / "scraper.py"]
-VENDOR_WORDS = re.compile(r"huawei|fronius|solaredge|fusionsolar|gen24|snapinverter|storedge", re.I)
+VENDOR_WORDS = re.compile(r"huawei|fronius|solaredge|fusionsolar|gen24|snapinverter|storedge|schneider|iem3255|"
+                          r"shelly|victron|venus|cerbo|enphase|\bkipp|zonen|smp10|campbell|cr1000|toa5|\bimt\b",
+                          re.I)
 
 
 def _hash_engine():

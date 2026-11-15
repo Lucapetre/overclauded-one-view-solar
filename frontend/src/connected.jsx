@@ -32,6 +32,8 @@ import {
   Users,
   Coins,
   Handshake,
+  CalendarClock,
+  ListChecks,
 } from "lucide-react";
 import {
   SolarClient,
@@ -62,6 +64,7 @@ import {
   useEnergy,
 } from "./customer";
 import { FriendlyEnergy } from "./features";
+import { EquipmentCards, ReplayBadge } from "./equipment";
 import { NotificationBell } from "./notifications";
 import { SavingsCounter } from "./offersSavings";
 import { notificationTarget } from "./offersLogic";
@@ -72,12 +75,25 @@ import "./ops.css";
 const lazyOps = (name) =>
   lazy(() => import("./opsPages").then((module) => ({ default: module[name] })));
 const RadarOps = lazyOps("RadarOps");
-const IncidentsPage = lazyOps("IncidentsPage");
+// Ranked queue + map + episode drawer, and the technician agenda (phase d2).
+const IncidentsPage = lazy(() =>
+  import("./opsQueue").then((module) => ({ default: module.IncidentsPage })),
+);
+const AgendaPage = lazy(() =>
+  import("./opsAgenda").then((module) => ({ default: module.AgendaPage })),
+);
 const TeamsPage = lazyOps("TeamsPage");
 const RevenuePage = lazyOps("RevenuePage");
 // Power Block Offers pages load on first visit.
 const OffersPage = lazy(() =>
   import("./offersClient").then((module) => ({ default: module.OffersPage })),
+);
+// Business task planner (Plan page and the Home "Next task" card) loads on first use.
+const PlanPage = lazy(() =>
+  import("./planner").then((module) => ({ default: module.PlanPage })),
+);
+const NextTaskCard = lazy(() =>
+  import("./planner").then((module) => ({ default: module.NextTaskCard })),
 );
 const ManagerOffersPage = lazy(() =>
   import("./offersManager").then((module) => ({ default: module.ManagerOffersPage })),
@@ -95,6 +111,8 @@ const roles = {
 };
 const pageIcons = {
   Home: House,
+  Plan: CalendarClock,
+  Agenda: ListChecks,
   "Area Radar": Radio,
   Incidents: Tickets,
   Teams: Users,
@@ -292,6 +310,8 @@ export default function ConnectedApp() {
   // Notification link → item to highlight on the Offers page.
   const [offerFocus, setOfferFocus] = useState(null);
   const [bellNudge, setBellNudge] = useState(0);
+  // Analytical clock (live wall time or the local replay scenario), all roles.
+  const [clock, setClock] = useState(null);
   const expire = useCallback((error) => {
     if (error instanceof SolarApiError && error.status === 401) {
       setSession(null);
@@ -314,6 +334,7 @@ export default function ConnectedApp() {
     setIncidentFocus(null);
     setRequestFocus(null);
     setOfferFocus(null);
+    setClock(null);
     setSession(value);
     setPage(pagesFor(value.user.role)[0]);
     const path = value.user.role === "customer" ? "/consumer" : "/ops";
@@ -367,6 +388,19 @@ export default function ConnectedApp() {
       },
     );
   }, [user?.user_id, reload, expire]);
+  useEffect(() => {
+    if (!user) return;
+    return poll(
+      (signal) => api.clock(signal),
+      (value) =>
+        setClock((previous) =>
+          JSON.stringify(previous) === JSON.stringify(value) ? previous : value,
+        ),
+      (error) => {
+        if (!expire(error)) setClock(null);
+      },
+    );
+  }, [user?.user_id, expire]);
   const providers = useMemo(
     () =>
       Object.fromEntries(scope.providers.map((site) => [site.site_id, site])),
@@ -473,7 +507,7 @@ export default function ConnectedApp() {
     scopeError || Object.values(records).some((item) => item.error),
   );
   const mobileNav = bottomNav(pages, active);
-  const opsPage = ["Incidents", "Teams", "Revenue", "Requests", "Offers"].includes(active);
+  const opsPage = ["Agenda", "Incidents", "Teams", "Revenue", "Requests", "Offers"].includes(active);
   function navigate(next) {
     setPage(next);
     setMenu(false);
@@ -498,6 +532,7 @@ export default function ConnectedApp() {
   }
   function openIncident(id) {
     navigate("Incidents");
+    setIncidentSite(null);
     setIncidentFocus(id);
   }
   function openRequest(id) {
@@ -619,6 +654,7 @@ export default function ConnectedApp() {
             </button>
           </div>
         </header>
+        <ReplayBadge clock={clock} />
         <main>
           <div className="page-heading">
             <div>
@@ -630,12 +666,16 @@ export default function ConnectedApp() {
               <h1>
                 {active === "Home"
                   ? `Your energy, ${user.username}`
+                  : active === "Plan"
+                    ? "Run flexible work at the right time"
                   : active === "Area Radar"
                     ? "Your monitored installations"
+                    : active === "Agenda"
+                      ? "Your visits for today"
                     : active === "Incidents"
                       ? "Every case, in the right order"
                       : active === "Teams"
-                        ? "Crews and assignments"
+                        ? "Plan teams and assignments"
                         : active === "Revenue"
                           ? "Estimated revenue"
                     : active === "Offers"
@@ -656,12 +696,16 @@ export default function ConnectedApp() {
                 <span className="yellow-dot">.</span>
               </h1>
               <p>
-                {active === "Area Radar"
+                {active === "Plan"
+                  ? "Your tasks, a recommended time and the evidence behind it. Costs are estimates; you decide."
+                  : active === "Area Radar"
                   ? "Map, forecast and source coverage across your authorized scope. Equipment health remains unassessed."
+                  : active === "Agenda"
+                    ? "Your crew's planned visits in order, with progress you report. Synthetic planning inputs; times are estimates."
                   : active === "Incidents"
-                    ? "Synthetic demo incidents in your scope, safety tier first. Each change is kept in the incident log."
+                    ? "Correlated synthetic episodes in your scope, safety and deadlines first, next to the same cases on the map. Each change is kept in the log."
                     : active === "Teams"
-                      ? "Who is on which case, and which crews are free. Synthetic crews and assignments."
+                      ? "Propose, review and apply a crew plan, then follow who is on which case. Synthetic crews, shifts and travel times."
                       : active === "Revenue"
                         ? "A monthly estimate from synthetic billing profiles. Not invoices."
                   : active === "Offers"
@@ -704,7 +748,7 @@ export default function ConnectedApp() {
               Loading your authorized installations…
             </section>
           ) : !scope.sites.length &&
-            !["Account", "Learn", "Requests", "Incidents", "Teams", "Revenue", "Offers"].includes(
+            !["Account", "Learn", "Requests", "Agenda", "Incidents", "Teams", "Revenue", "Offers"].includes(
               active,
             ) ? (
             <section className="card empty">
@@ -750,6 +794,16 @@ export default function ConnectedApp() {
                   onError={expire}
                   userId={user.user_id}
                   showOffers={pages.includes("Offers")}
+                  clock={clock}
+                />
+              )}
+              {active === "Plan" && customer && current && (
+                <PlanPage
+                  key={siteId}
+                  api={api}
+                  site={current}
+                  clock={clock}
+                  onError={expire}
                 />
               )}
               {active === "History" &&
@@ -787,16 +841,20 @@ export default function ConnectedApp() {
                   focusIncident={incidentFocus}
                   onFocusHandled={() => setIncidentFocus(null)}
                   onOpenRequest={openRequest}
+                  onOpenPlan={pages.includes("Teams") ? () => navigate("Teams") : null}
                   onError={expire}
                   reload={reload}
                 />
+              )}
+              {active === "Agenda" && (
+                <AgendaPage api={api} onError={expire} reload={reload} />
               )}
               {active === "Teams" && (
                 <TeamsPage
                   api={api}
                   user={user}
                   aliases={aliases}
-                  onOpenRequest={openRequest}
+                  onOpenIncident={openIncident}
                   onError={expire}
                   reload={reload}
                 />
@@ -942,8 +1000,11 @@ function SiteHome({
   onError,
   userId,
   showOffers,
+  clock,
 }) {
   const w = words(accountType);
+  const clockNudge =
+    clock?.mode === "scenario" ? Date.parse(clock.analytical_now) || 0 : 0;
   const today = useEnergy(api, site, record, "Today", onError);
   const info = sourceInfo(record);
   const data = record?.data;
@@ -979,6 +1040,27 @@ function SiteHome({
           compact
           onOpenOffers={() => navigate("Offers")}
         />
+      )}
+      {customer && (
+        <>
+          <EquipmentCards
+            key={site.site_id}
+            api={api}
+            siteId={site.site_id}
+            onError={onError}
+            nudge={clockNudge}
+          />
+          <Suspense fallback={null}>
+            <NextTaskCard
+              key={site.site_id}
+              api={api}
+              site={site}
+              clock={clock}
+              onError={onError}
+              onOpenPlan={() => navigate("Plan")}
+            />
+          </Suspense>
+        </>
       )}
       <div className="home-grid">
         <section className="energy-hero">

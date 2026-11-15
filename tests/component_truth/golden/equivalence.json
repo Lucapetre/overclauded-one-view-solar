@@ -1,0 +1,83 @@
+{
+ "evaluation_only": true,
+ "meter": {
+  "t0_utc": "2026-07-16T07:00:00.500Z",
+  "t1_utc": "2026-07-16T07:05:00.500Z",
+  "tolerance": 1e-06,
+  "canonical": [
+   {
+    "metric": "grid_net_kw",
+    "t": 0,
+    "value": -1.234
+   },
+   {
+    "metric": "grid_net_kw",
+    "t": 1,
+    "value": 0.75
+   },
+   {
+    "metric": "phase_active_power_kw",
+    "channel": "L1",
+    "t": 0,
+    "value": -0.6
+   },
+   {
+    "metric": "phase_voltage_v",
+    "channel": "L2",
+    "t": 0,
+    "value": 229.8
+   },
+   {
+    "metric": "grid_frequency_hz",
+    "t": 1,
+    "value": 49.99
+   },
+   {
+    "metric": "import_counter_kwh",
+    "t": 0,
+    "value": 12345.678
+   },
+   {
+    "metric": "export_counter_kwh",
+    "t": 1,
+    "value": 9876.601
+   },
+   {
+    "metric": "interval_grid_import_kwh",
+    "value": 0.042
+   },
+   {
+    "metric": "interval_grid_export_kwh",
+    "value": 0.058
+   }
+  ],
+  "assets": {
+   "m1": "EQ-M1",
+   "m2": "EQ-M2",
+   "m3": "EQ-M3"
+  },
+  "note": "M2 uses its device TimeStamp (t0/t1 without the 0.5 s capture offset)"
+ },
+ "weather": {
+  "poa_wm2": 812.4,
+  "module_temperature_c": 41.3,
+  "ghi_wm2_w2_horizontal": 640.0,
+  "signed_cases": {
+   "w1_cell_c": -4.3,
+   "w1_module_c": -6.1,
+   "w2_body_c": -2.5,
+   "w2_night_offset_wm2": -2.3
+  },
+  "assets": {
+   "w1": "EQ-W1",
+   "w2_poa": "EQ-W2-POA",
+   "w2_ghi": "EQ-W2-GHI",
+   "w3": "EQ-W3"
+  }
+ },
+ "ct_reversed": {
+  "asset": "EQ-M3-CTREV",
+  "phase_active_power_kw_L3_expected": 0.23,
+  "note": "registry declares phase c CT reversed: per-phase value negated with provenance; nothing auto-flipped elsewhere"
+ }
+}

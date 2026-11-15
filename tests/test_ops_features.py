@@ -603,3 +603,533 @@ def test_crew_cli_creates_crews_and_members(database, monkeypatch, capsys):
         "invalid_account",
     ):
         assert code in errors
+
+
+# ------------------------------------------------------- correlated episodes and crew plans
+
+
+def _scenario_ops(database):
+    """Correlated episodes on compact sector-6 sites from fixture evidence, plus synthetic
+    planning inputs (crew profiles, shifts, a remote desk, windows, travel)."""
+    from datetime import UTC, datetime, timedelta
+
+    from backend.clock import start_scenario
+    from backend.correlation import (
+        EvidenceBundle,
+        Sample,
+        Series,
+        SiteEvidence,
+        StaticEvidenceSource,
+    )
+    from backend.dispatch import run_correlation
+
+    now = datetime(2026, 7, 15, 12, 30, tzinfo=UTC)
+    start_scenario(database, "ops-test", now)
+    slot = timedelta(minutes=15)
+    frames = [now - slot * (i + 1) for i in reversed(range(6))]
+
+    def series(source, value, prefix):
+        return Series(
+            source, [Sample(t, value, f"{prefix}:{i}") for i, t in enumerate(frames)]
+        )
+
+    voltage = SiteEvidence(
+        "s6-01",
+        pcc_asset_id="s6-01-pcc",
+        capabilities={"pcc_phase_voltage": "available"},
+        pcc_voltage_mean={"L1": series("pcc-meter", 255.0, "v")},
+        pcc_voltage_max={"L1": series("pcc-meter", 256.0, "vmax")},
+        responsibility={
+            "grid_connection": ("distributor_network_review", "distributor")
+        },
+    )
+    battery = SiteEvidence(
+        "s6-02",
+        battery_asset_id="s6-02-bms",
+        capabilities={"battery_alarms_available": "available"},
+        battery_alarms={"internal_failure": series("bms", 2.0, "alarm")},
+        responsibility={
+            "battery_service": ("customer_installation_service", "battery_partner")
+        },
+    )
+    bundle = EvidenceBundle(now, {"s6-01": voltage, "s6-02": battery})
+    run_correlation(database, source=StaticEvidenceSource(bundle))
+    day = "2026-07-15"
+    with database.connect() as connection:
+        connection.execute(
+            "INSERT INTO crews(crew_id,name,area_id,skills,shift) VALUES "
+            "('test-desk','Test Remote Desk','sector-6','[\"Telemetry\"]','08:00-18:00')"
+        )
+        connection.execute(
+            "INSERT INTO crew_members SELECT 'test-desk', user_id FROM users "
+            "WHERE username='technician-s5'"
+        )
+        for crew_id, kind, services, quals, node in (
+            (
+                "sector-6-solar-care",
+                "field",
+                ["battery_partner"],
+                ["battery_storage_service", "electrical_lv"],
+                "DEPOT-6",
+            ),
+            (
+                "test-desk",
+                "remote_desk",
+                ["monitoring_provider"],
+                ["remote_triage"],
+                None,
+            ),
+        ):
+            connection.execute(
+                "INSERT INTO crew_profiles VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+                (
+                    crew_id,
+                    kind,
+                    "test-org",
+                    json.dumps(services),
+                    json.dumps(quals),
+                    json.dumps(["battery_diagnostic_kit"]),
+                    json.dumps(["sector-6"]),
+                    node,
+                    f"{day}T05:00:00.000000+00:00",
+                    "fictional test depot",
+                    "test",
+                    "test",
+                ),
+            )
+            connection.execute(
+                "INSERT INTO crew_shifts VALUES (?,?,?,?)",
+                (
+                    crew_id,
+                    f"{day}T05:00:00.000000+00:00",
+                    f"{day}T15:00:00.000000+00:00",
+                    "[]",
+                ),
+            )
+        for node, site, lat, lon in (
+            ("DEPOT-6", None, 44.43, 26.02),
+            ("s6-01", "s6-01", 44.431, 26.03),
+            ("s6-02", "s6-02", 44.432, 26.04),
+        ):
+            connection.execute(
+                "INSERT INTO planning_nodes VALUES (?,?,?,?,'test node',1)",
+                (node, site, lat, lon),
+            )
+        for a, b, minutes in (
+            ("DEPOT-6", "s6-01", 15),
+            ("DEPOT-6", "s6-02", 20),
+            ("s6-01", "s6-02", 10),
+        ):
+            connection.execute(
+                "INSERT INTO travel_times VALUES (?,?,?,'approximate demo "
+                "matrix (test)','2026-07-15')",
+                (a, b, minutes),
+            )
+        connection.execute(
+            "INSERT INTO job_templates VALUES ('battery_operational_restriction',1,"
+            "'field_visit',?)",
+            (
+                json.dumps(
+                    {
+                        "service_minutes": 60,
+                        "qualifications": ["battery_storage_service"],
+                        "tools": ["battery_diagnostic_kit"],
+                        "crew_size": 1,
+                    }
+                ),
+            ),
+        )
+        connection.execute(
+            "INSERT INTO job_templates VALUES ('pcc_voltage_sustained',1,'external_review',?)",
+            (json.dumps({"service_minutes": 45}),),
+        )
+        for site in ("s6-01", "s6-02"):
+            connection.execute(
+                "INSERT INTO site_access_windows VALUES (?,?,'test')",
+                (site, json.dumps([{"start": "08:00", "end": "20:00"}])),
+            )
+    return now
+
+
+@pytest.fixture
+def scenario_ops(database):
+    _scenario_ops(database)
+    return database
+
+
+def episode_ids(client):
+    view = client.get(f"{OPS}/queue").json()
+    return {
+        item["episode"]["rule_id"]: item["incident"]["incident_id"]
+        for item in view["items"]
+        if item["episode"]
+    }
+
+
+def test_queue_detail_map_and_teams_share_ids_ranks_and_revisions(
+    scenario_ops, client, signed_in
+):
+    signed_in("dispatcher")
+    queue = client.get(f"{OPS}/queue").json()
+    revision = queue["revision"]
+    episodes = {i["incident"]["incident_id"]: i for i in queue["items"] if i["episode"]}
+    assert {i["episode"]["rule_id"] for i in episodes.values()} == {
+        "battery_operational_restriction",
+        "pcc_voltage_sustained",
+    }
+    bands = [item["rank"]["band"] for item in queue["items"]]
+    assert bands == sorted(bands)  # priority bands first
+    battery = next(
+        i
+        for i in episodes.values()
+        if i["episode"]["rule_id"] == "battery_operational_restriction"
+    )
+    assert (
+        battery["rank"]["band"] == "P1"
+        and battery["episode"]["confidence"] == "reported"
+    )
+    detail = client.get(f"{OPS}/episodes/{battery['incident']['incident_id']}").json()
+    assert detail["revision"] == revision
+    assert (
+        detail["rank"] == battery["rank"]
+    )  # identical explanation in queue and drawer
+    assert detail["hypothesis"]["cannot_prove"].startswith("Does not establish")
+    assert detail["evidence"] and detail["episode"]["responsibility"] == (
+        "customer_installation_service"
+    )
+    assert "do not open equipment" in detail["customer_guidance"]
+    view = client.get(f"{OPS}/map").json()
+    assert view["revision"] == revision == client.get(f"{OPS}/teams").json()["revision"]
+    by_site = {s["site_id"]: s for s in view["status_sites"] + view["unmapped"]}
+    assert set(by_site["s6-02"]["episode_ids"]) >= {battery["incident"]["incident_id"]}
+    marker = next(s for s in view["sites"] if s["site_id"] == "s6-02")
+    assert marker["episode_ids"] == by_site["s6-02"]["episode_ids"]
+    # Freshness is a separate dimension from the asset condition.
+    assert by_site["s6-02"]["condition"] == "observed_active"
+    assert by_site["s6-02"]["telemetry"]["state"] == "stale"
+    assert "telemetry_stale" in by_site["s6-02"]["badges"]
+    counts = view["counts"]
+    assert counts["unique_episodes"] == len(
+        {i["incident"]["incident_id"] for i in queue["items"]}
+    )
+    assert counts["affected_sites"] == sum(
+        1 for s in by_site.values() if s["episode_ids"]
+    )
+
+
+def test_projection_is_scoped_and_lists_unmapped_sites(scenario_ops, client, signed_in):
+    from backend.models import Site, SiteRegistration
+    from backend.provisioning import register_site
+
+    register_site(
+        scenario_ops,
+        SiteRegistration(
+            site=Site(
+                site_id="s6-nomap",
+                alias="No coordinates",
+                area_id="sector-6",
+                topology_mode="simulated",
+                reporting_interval_seconds=900,
+                stale_after_seconds=2700,
+                capabilities=["pv_power"],
+                measurement_requirements={"pv_power": "mandatory"},
+            ),
+            device_id="d-nomap",
+            source_id="test",
+        ),
+    )
+    signed_in("dispatcher")
+    unmapped = client.get(f"{OPS}/unmapped").json()
+    assert [s["site_id"] for s in unmapped["sites"]] == ["s6-nomap"]
+    assert unmapped["sites"][0]["position"] is None and unmapped["count"] == 1
+    status = client.get(f"{OPS}/status").json()
+    assert all(s["area_id"] == "sector-6" for s in status["sites"] + status["unmapped"])
+    assert status["counts"]["unmapped_sites"] == 1
+    signed_in("area-manager")  # supervisor of sector-6 only
+    assert (
+        client.get(f"{OPS}/status").json()["counts"]["sites"]
+        == status["counts"]["sites"]
+    )
+    signed_in("technician-s3")  # another zone: none of the sector-6 episodes
+    other = client.get(f"{OPS}/status").json()
+    assert not {e for s in other["sites"] for e in s["episode_ids"]} & set(
+        e for s in status["sites"] for e in s["episode_ids"]
+    )
+    signed_in("customer")
+    assert client.get(f"{OPS}/status").status_code == 403
+    assert client.get(f"{OPS}/queue").status_code == 403
+
+
+def test_crew_plan_lifecycle_permissions_stale_and_idempotent_apply(
+    scenario_ops, client, signed_in
+):
+    supervisor = signed_in("area-manager")
+    proposal = post(client, supervisor, f"{OPS}/plans")
+    assert proposal.status_code == 201  # proposing is a read/proposal operation
+    plan = proposal.json()
+    assert plan["status"] == "draft" and plan["label"].startswith("feasible heuristic")
+    assert (
+        post(client, supervisor, f"{OPS}/plans/{plan['plan_id']}/review").status_code
+        == 403
+    )
+    denied = post(
+        client,
+        supervisor,
+        f"{OPS}/plans/{plan['plan_id']}/apply",
+        {"expected_input_digest": plan["input_digest"]},
+    )
+    assert (
+        denied.status_code == 403
+        and denied.json()["code"] == "dispatch_capability_required"
+    )
+    dispatcher = signed_in("dispatcher")
+    [visit] = plan["visits"]
+    assert visit["crew_id"] == "sector-6-solar-care" and visit["travel_minutes"] == 20
+    assert "qualifications" in visit["constraints_checked"]
+    reasons = {u["activity"]: u["reasons"] for u in plan["unassigned"]}
+    assert "crew_not_authorised_for_responsible_service" in reasons["external_review"]
+    assert any(
+        "service_duration_unknown" in r for r in reasons["field_visit"]
+    )  # legacy
+    assert plan["comparison"]["verdict"] in (
+        "heuristic_improves",
+        "mixed",
+        "no_improvement",
+    )
+    assert post(
+        client,
+        dispatcher,
+        f"{OPS}/plans/{plan['plan_id']}/apply",
+        {"expected_input_digest": plan["input_digest"]},
+    ).json()["code"] == ("plan_not_reviewed")
+    assert (
+        post(client, dispatcher, f"{OPS}/plans/{plan['plan_id']}/review").status_code
+        == 200
+    )
+    other = post(client, dispatcher, f"{OPS}/plans").json()
+    post(client, dispatcher, f"{OPS}/plans/{other['plan_id']}/review")
+    headers = {"X-CSRF-Token": dispatcher["csrf_token"], "Idempotency-Key": "apply-1"}
+    body = {"expected_input_digest": plan["input_digest"]}
+    applied = client.post(
+        f"{OPS}/plans/{plan['plan_id']}/apply", json=body, headers=headers
+    )
+    assert applied.status_code == 200, applied.text
+    assert applied.json()["status"] == "applied"
+    again = client.post(
+        f"{OPS}/plans/{plan['plan_id']}/apply", json=body, headers=headers
+    )
+    assert (
+        again.json()["applied_assignment_ids"]
+        == applied.json()["applied_assignment_ids"]
+    )
+    other_key = client.post(
+        f"{OPS}/plans/{plan['plan_id']}/apply",
+        json=body,
+        headers={**headers, "Idempotency-Key": "apply-2"},
+    )
+    assert (
+        other_key.status_code == 409
+        and other_key.json()["code"] == "plan_already_applied"
+    )
+    # The concurrent proposal was superseded: it can never double-book the crew.
+    second = post(
+        client,
+        dispatcher,
+        f"{OPS}/plans/{other['plan_id']}/apply",
+        {"expected_input_digest": other["input_digest"]},
+    )
+    assert second.status_code == 409 and second.json()["code"] == "plan_superseded"
+    with scenario_ops.connect() as connection:
+        active = connection.execute(
+            "SELECT crew_id, COUNT(*) FROM assignments WHERE status IN "
+            "('assigned','team_sent','meeting_scheduled') AND plan_id IS NOT NULL "
+            "GROUP BY crew_id"
+        ).fetchall()
+    assert [tuple(r) for r in active] == [("sector-6-solar-care", 1)]
+    view = client.get(f"{OPS}/map").json()
+    assert [r["state"] for r in view["routes"]] == ["applied"]
+    assert "Schematic" in view["routes"][0]["label"]
+
+
+def test_stale_proposal_is_rejected_and_recomputed(scenario_ops, client, signed_in):
+    dispatcher = signed_in("dispatcher")
+    plan = post(client, dispatcher, f"{OPS}/plans").json()
+    post(client, dispatcher, f"{OPS}/plans/{plan['plan_id']}/review")
+    voltage = episode_ids(client)["pcc_voltage_sustained"]
+    override = post(
+        client,
+        dispatcher,
+        f"{OPS}/episodes/{voltage}/priority-override",
+        {
+            "band": "P1",
+            "reason": "demo: customer reports flicker",
+            "expires_at": "2026-07-15T18:00:00+00:00",
+        },
+    )
+    assert override.status_code == 200
+    rank = override.json()["rank"]
+    assert (rank["band"], rank["computed_band"]) == ("P1", "P2")
+    stale = post(
+        client,
+        dispatcher,
+        f"{OPS}/plans/{plan['plan_id']}/apply",
+        {"expected_input_digest": plan["input_digest"]},
+    )
+    assert stale.status_code == 409 and stale.json()["code"] == "plan_stale"
+    latest = client.get(f"{OPS}/plans/latest").json()
+    assert latest["plan_id"] != plan["plan_id"] and latest["status"] == "draft"
+    assert client.get(f"{OPS}/plans/{plan['plan_id']}").json()["status"] == "superseded"
+
+
+def test_technician_agenda_progress_and_documented_closure(
+    scenario_ops, client, signed_in
+):
+    dispatcher = signed_in("dispatcher")
+    plan = post(client, dispatcher, f"{OPS}/plans").json()
+    post(client, dispatcher, f"{OPS}/plans/{plan['plan_id']}/review")
+    post(
+        client,
+        dispatcher,
+        f"{OPS}/plans/{plan['plan_id']}/apply",
+        {"expected_input_digest": plan["input_digest"]},
+    )
+    battery = episode_ids(client)["battery_operational_restriction"]
+    outsider = signed_in("technician-s3")
+    assert client.get(f"{OPS}/agenda").json()["items"] == []
+    technician = signed_in("technician")
+    [item] = client.get(f"{OPS}/agenda").json()["items"]
+    assert item["incident_id"] == battery and item["eta_arrival"]
+    path = f"{OPS}/assignments/{item['assignment_id']}/progress"
+    stale = post(
+        client, technician, path, {"state": "en_route", "expected_revision": 9}
+    )
+    assert stale.status_code == 409 and stale.json()["code"] == "assignment_changed"
+    assert (
+        post(
+            client, technician, path, {"state": "en_route", "expected_revision": 1}
+        ).status_code
+        == 200
+    )
+    assert (
+        post(
+            client, technician, path, {"state": "on_site", "expected_revision": 2}
+        ).status_code
+        == 200
+    )
+    done = post(
+        client,
+        technician,
+        path,
+        {
+            "state": "done",
+            "expected_revision": 3,
+            "outcome": "resolved",
+            "note": "BMS reset by service",
+        },
+    )
+    assert done.status_code == 200
+    signed_in("dispatcher")
+    detail = client.get(f"{OPS}/episodes/{battery}").json()
+    assert detail["episode"]["resolution_kind"] == "authorized_closure"
+    assert detail["incident"]["status"] == "resolved"
+    assert [h["status"] for h in detail["assignment_history"]][-1] == "completed"
+    assert outsider and post(
+        client, outsider, path, {"state": "done", "expected_revision": 4}
+    ).status_code in (403, 404)
+
+
+def test_losing_the_feed_never_resolves_an_episode(scenario_ops, client, signed_in):
+    from datetime import UTC, datetime
+
+    from backend.clock import advance_scenario
+    from backend.correlation import EvidenceBundle, StaticEvidenceSource
+    from backend.dispatch import run_correlation
+
+    advance_scenario(scenario_ops, to=datetime(2026, 7, 15, 14, 0, tzinfo=UTC))
+    empty = EvidenceBundle(datetime(2026, 7, 15, 14, 0, tzinfo=UTC), {})
+    result = run_correlation(scenario_ops, source=StaticEvidenceSource(empty))
+    assert result["recovered"] == 0
+    signed_in("dispatcher")
+    assert set(episode_ids(client)) == {
+        "battery_operational_restriction",
+        "pcc_voltage_sustained",
+    }
+
+
+def test_correlated_episodes_reject_legacy_mutations_but_keep_reviewed_workflow(
+    scenario_ops, client, signed_in
+):
+    dispatcher = signed_in("dispatcher")
+    battery = episode_ids(client)["battery_operational_restriction"]
+    legacy = f"{OPS}/incidents/{battery}"
+    for action in ("assign", "resolve"):
+        response = post(client, dispatcher, f"{legacy}/{action}")
+        assert response.status_code == 409, response.text
+        assert response.json()["code"] == "episode_workflow_required"
+
+    plan = post(client, dispatcher, f"{OPS}/plans").json()
+    assert (
+        post(client, dispatcher, f"{OPS}/plans/{plan['plan_id']}/review").status_code
+        == 200
+    )
+    applied = post(
+        client,
+        dispatcher,
+        f"{OPS}/plans/{plan['plan_id']}/apply",
+        {"expected_input_digest": plan["input_digest"]},
+    )
+    assert applied.status_code == 200, applied.text
+    technician = signed_in("technician")
+    for action, body in (
+        ("send-team", {}),
+        (
+            "meeting",
+            {
+                "start": "2026-07-15T13:00:00Z",
+                "end": "2026-07-15T14:00:00Z",
+            },
+        ),
+        ("resolve", {}),
+    ):
+        response = post(client, technician, f"{legacy}/{action}", body)
+        assert response.status_code == 409, response.text
+        assert response.json()["code"] == "episode_workflow_required"
+    [item] = client.get(f"{OPS}/agenda").json()["items"]
+    progress = post(
+        client,
+        technician,
+        f"{OPS}/assignments/{item['assignment_id']}/progress",
+        {"state": "en_route", "expected_revision": item["revision"]},
+    )
+    assert progress.status_code == 200, progress.text
+    closure = post(
+        client,
+        technician,
+        f"{OPS}/episodes/{battery}/close",
+        {"reason_code": "repaired", "note": "Service inspected and repaired BMS"},
+    )
+    assert closure.status_code == 200, closure.text
+    assert closure.json()["episode"]["resolution_kind"] == "authorized_closure"
+
+
+def test_legacy_auto_dispatch_excludes_correlated_work_and_keeps_compact_demo(
+    scenario_ops, client, signed_in
+):
+    dispatcher = signed_in("dispatcher")
+    episodes = set(episode_ids(client).values())
+    response = post(client, dispatcher, f"{OPS}/dispatch/auto")
+    assert response.status_code == 200, response.text
+    result = response.json()
+    assigned = {item["incident_id"] for item in result["assigned"]}
+    skipped = {item["incident_id"] for item in result["skipped"]}
+    assert "demo-inc-s6-09-production" in assigned
+    assert assigned <= SECTOR_6
+    assert not episodes.intersection(assigned | skipped)
+    with scenario_ops.connect() as connection:
+        assert (
+            connection.execute(
+                "SELECT COUNT(*) FROM assignments WHERE incident_id IN "
+                "(SELECT incident_id FROM episodes)"
+            ).fetchone()[0]
+            == 0
+        )

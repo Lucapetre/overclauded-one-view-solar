@@ -1,0 +1,34 @@
+{
+ "evaluation_only": true,
+ "profile_id": "w3_campbell_toa5_station",
+ "asset_id": "WX-S1-CS01-LOGGER",
+ "row_timestamp_logger_clock": "2026-07-17 11:00:00",
+ "effective_time_utc": "2026-07-17T09:00:00.000Z",
+ "interval_start_utc": "2026-07-17T08:59:00.000Z",
+ "expected": [
+  {
+   "metric": "irradiance_wm2",
+   "channel": "avg",
+   "aggregation": "interval_average",
+   "value": 356.0
+  },
+  {
+   "metric": "irradiance_wm2",
+   "channel": "max",
+   "aggregation": "interval_max",
+   "value": 410.6
+  },
+  {
+   "metric": "irradiance_wm2",
+   "channel": "min",
+   "aggregation": "interval_min",
+   "value": 301.5
+  },
+  {
+   "metric": "ambient_temperature_c",
+   "value": 26.69
+  }
+ ],
+ "tolerance": 1e-09,
+ "note": "logger clock UTC+02:00: '2026-07-17 11:00:00' = 12:00 Europe/Bucharest (EEST)"
+}

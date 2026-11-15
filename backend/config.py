@@ -4,6 +4,8 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 
+from backend.clock import AnalyticalClock
+
 
 def utc_now() -> datetime:
     return datetime.now(UTC)
@@ -56,5 +58,11 @@ class Settings:
     offer_worker_interval_seconds: int = 30
     offer_settlement_grace_minutes: int = 60
     offer_max_active_per_client: int = 3
-    # Injectable UTC clock for acceptance and settlement (tests and demos).
-    clock: Callable[[], datetime] = utc_now
+    # Injectable analytical UTC clock for planning, offers acceptance and settlement.
+    # By default it is wall time, or the forward-only scenario clock stored in the database
+    # (`python -m backend scenario ...`). Sessions and audit receipt always use wall time.
+    clock: Callable[[], datetime] | None = None
+
+    def __post_init__(self):
+        if self.clock is None:
+            object.__setattr__(self, "clock", AnalyticalClock(self.database_path))

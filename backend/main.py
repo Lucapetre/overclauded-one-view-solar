@@ -13,6 +13,10 @@ from fastapi.staticfiles import StaticFiles
 from starlette.concurrency import run_in_threadpool
 from starlette.exceptions import HTTPException
 
+from backend import dispatch
+from backend.clock import clock_state, wall_now
+from backend.component_models import EquipmentEvidence, EquipmentSummary
+from backend.components import equipment_evidence, equipment_summary
 from backend.config import Settings
 from backend.customer import (
     REQUEST_TYPES,
@@ -110,6 +114,39 @@ from backend.ops_models import (
     OpsMap,
     RevenueView,
     TeamsView,
+)
+from backend.planner import (
+    accept_task,
+    cancel_task,
+    create_task,
+    list_tasks,
+    plan,
+    review_task,
+    task_progress,
+    update_task,
+)
+from backend.planner_models import (
+    AcceptTask,
+    ClockView,
+    PlanDecision,
+    ReviewTask,
+    Task,
+    TaskCreate,
+    TaskProgress,
+    TaskUpdate,
+)
+from backend.planning_models import (
+    AgendaView,
+    ApplyRequest,
+    CloseRequest,
+    CrewPlanView,
+    EpisodeDetail,
+    OverrideRequest,
+    ProgressRequest,
+    ProposeRequest,
+    QueueView,
+    StatusProjection,
+    UnmappedSites,
 )
 from backend.provider_models import (
     ProviderFrames,
@@ -487,6 +524,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         "/api/v1/sites/{site_id}/contract",
         response_model=ContractView,
         tags=["customer"],
+        response_model_exclude_unset=True,
     )
     def contract(site_id: str, session: Session):
         with database.connect() as connection:
@@ -496,6 +534,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         "/api/v1/sites/{site_id}/contract",
         response_model=ContractView,
         tags=["customer"],
+        response_model_exclude_unset=True,
     )
     def update_contract(
         site_id: str, payload: Contract, request: Request, session: Session
@@ -1012,6 +1051,419 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     def ingest_record(request: Request, payload: Annotated[Any, Body()]):
         return ingest(database, payload, request.state.request_id)
+
+    # ------------------------------------------------------------ analytical clock, planner
+
+    @app.get("/api/v1/clock", response_model=ClockView, tags=["runtime"])
+    def analytical_clock(session: Session):
+        """Read-only analytical clock (live = wall time, or the local scenario clock)."""
+        with database.connect() as connection:
+            state = clock_state(connection)
+            return ClockView(
+                mode=state.mode,
+                analytical_now=state.now,
+                wall_now=wall_now(),
+                scenario_id=state.scenario_id,
+                run_id=state.run_id,
+                scenario_started_at=state.started_at,
+                synthetic=state.mode == "scenario",
+            )
+
+    @app.get(
+        "/api/v1/sites/{site_id}/tasks", response_model=list[Task], tags=["planner"]
+    )
+    def planner_tasks(site_id: str, session: Session):
+        with database.connect() as connection:
+            return list_tasks(connection, session.user, site_id)
+
+    @app.post(
+        "/api/v1/sites/{site_id}/tasks",
+        response_model=Task,
+        status_code=201,
+        tags=["planner"],
+    )
+    def new_planner_task(
+        site_id: str, payload: TaskCreate, request: Request, session: Session
+    ):
+        require_csrf(request, session)
+        with database.connect() as connection:
+            return create_task(
+                database,
+                connection,
+                session.user,
+                site_id,
+                payload,
+                request.state.request_id,
+            )
+
+    @app.post(
+        "/api/v1/sites/{site_id}/tasks/{task_id}",
+        response_model=Task,
+        tags=["planner"],
+    )
+    def edit_planner_task(
+        site_id: str,
+        task_id: str,
+        payload: TaskUpdate,
+        request: Request,
+        session: Session,
+    ):
+        require_csrf(request, session)
+        with database.connect() as connection:
+            return update_task(
+                database,
+                connection,
+                session.user,
+                site_id,
+                task_id,
+                payload,
+                request.state.request_id,
+            )
+
+    @app.post(
+        "/api/v1/sites/{site_id}/tasks/{task_id}/cancel",
+        response_model=Task,
+        tags=["planner"],
+    )
+    def cancel_planner_task(
+        site_id: str, task_id: str, request: Request, session: Session
+    ):
+        require_csrf(request, session)
+        with database.connect() as connection:
+            return cancel_task(
+                database,
+                connection,
+                session.user,
+                site_id,
+                task_id,
+                request.state.request_id,
+            )
+
+    @app.get(
+        "/api/v1/sites/{site_id}/plan", response_model=PlanDecision, tags=["planner"]
+    )
+    def planner_decision(
+        site_id: str,
+        session: Session,
+        task: Annotated[str, Query(min_length=1, max_length=64)],
+    ):
+        with database.connect() as connection:
+            return plan(connection, session.user, site_id, task)
+
+    @app.post(
+        "/api/v1/sites/{site_id}/tasks/{task_id}/accept",
+        response_model=Task,
+        status_code=201,
+        tags=["planner"],
+        responses={200: {"model": Task, "description": "Idempotent repeat"}},
+    )
+    def accept_planner_task(
+        site_id: str,
+        task_id: str,
+        payload: AcceptTask,
+        request: Request,
+        response: Response,
+        session: Session,
+        idempotency_key: Annotated[
+            str | None,
+            Header(alias="Idempotency-Key", min_length=1, max_length=128),
+        ] = None,
+    ):
+        require_csrf(request, session)
+        with database.connect() as connection:
+            view, created = accept_task(
+                database,
+                connection,
+                session.user,
+                site_id,
+                task_id,
+                payload,
+                idempotency_key,
+                request.state.request_id,
+            )
+        if not created:
+            response.status_code = 200
+        return view
+
+    @app.post(
+        "/api/v1/sites/{site_id}/tasks/{task_id}/review",
+        response_model=Task,
+        tags=["planner"],
+    )
+    def review_planner_task(
+        site_id: str,
+        task_id: str,
+        payload: ReviewTask,
+        request: Request,
+        session: Session,
+    ):
+        require_csrf(request, session)
+        with database.connect() as connection:
+            return review_task(
+                database,
+                connection,
+                session.user,
+                site_id,
+                task_id,
+                payload,
+                request.state.request_id,
+            )
+
+    @app.get(
+        "/api/v1/sites/{site_id}/tasks/{task_id}/progress",
+        response_model=TaskProgress,
+        tags=["planner"],
+    )
+    def planner_progress(site_id: str, task_id: str, session: Session):
+        with database.connect() as connection:
+            return task_progress(connection, session.user, site_id, task_id)
+
+    @app.get(
+        "/api/v1/sites/{site_id}/equipment/summary",
+        response_model=EquipmentSummary,
+        tags=["equipment"],
+    )
+    def site_equipment(site_id: str, session: Session):
+        with database.connect() as connection:
+            return equipment_summary(connection, session.user, site_id)
+
+    @app.get(
+        "/api/v1/sites/{site_id}/equipment/evidence",
+        response_model=EquipmentEvidence,
+        tags=["equipment"],
+    )
+    def site_equipment_evidence(
+        site_id: str,
+        session: Session,
+        start: Annotated[datetime, Query(alias="from")],
+        end: Annotated[datetime, Query(alias="to")],
+        family: Literal["meter", "battery", "weather"] | None = None,
+        metric: Annotated[str | None, Query(max_length=128)] = None,
+        limit: Annotated[int, Query(ge=1, le=1000)] = 200,
+        offset: Annotated[int, Query(ge=0, le=100000)] = 0,
+    ):
+        try:
+            start, end = utc(start), utc(end)
+        except ValueError as exc:
+            raise ApiError(422, "invalid_time_range", str(exc)) from exc
+        with database.connect() as connection:
+            return equipment_evidence(
+                connection,
+                session.user,
+                site_id,
+                family,
+                start,
+                end,
+                metric,
+                limit,
+                offset,
+            )
+
+    # ------------------------------------------------ correlated episodes, ranking, crew plans
+
+    @app.get("/api/v1/ops/queue", response_model=QueueView, tags=["operations"])
+    def operations_queue(session: Session, status: Literal["open", "all"] = "open"):
+        with database.connect() as connection:
+            return dispatch.ranked_queue(connection, session.user, status)
+
+    @app.get(
+        "/api/v1/ops/episodes/{incident_id}",
+        response_model=EpisodeDetail,
+        tags=["operations"],
+    )
+    def operations_episode(incident_id: str, session: Session):
+        with database.connect() as connection:
+            return dispatch.episode_detail(connection, session.user, incident_id)
+
+    @app.post(
+        "/api/v1/ops/episodes/{incident_id}/acknowledge",
+        response_model=EpisodeDetail,
+        tags=["operations"],
+    )
+    def acknowledge_episode(incident_id: str, request: Request, session: Session):
+        require_csrf(request, session)
+        with database.connect() as connection:
+            return dispatch.acknowledge(
+                database,
+                connection,
+                session.user,
+                incident_id,
+                request.state.request_id,
+            )
+
+    @app.post(
+        "/api/v1/ops/episodes/{incident_id}/close",
+        response_model=EpisodeDetail,
+        tags=["operations"],
+    )
+    def close_episode(
+        incident_id: str, payload: CloseRequest, request: Request, session: Session
+    ):
+        require_csrf(request, session)
+        with database.connect() as connection:
+            return dispatch.close_episode(
+                database,
+                connection,
+                session.user,
+                incident_id,
+                payload.reason_code,
+                payload.note,
+                request.state.request_id,
+            )
+
+    @app.post(
+        "/api/v1/ops/episodes/{incident_id}/priority-override",
+        response_model=EpisodeDetail,
+        tags=["operations"],
+    )
+    def override_priority(
+        incident_id: str, payload: OverrideRequest, request: Request, session: Session
+    ):
+        require_csrf(request, session)
+        with database.connect() as connection:
+            return dispatch.set_override(
+                database,
+                connection,
+                session.user,
+                incident_id,
+                payload.band,
+                payload.reason,
+                payload.expires_at,
+                request.state.request_id,
+            )
+
+    @app.post(
+        "/api/v1/ops/episodes/{incident_id}/priority-override/revoke",
+        response_model=EpisodeDetail,
+        tags=["operations"],
+    )
+    def revoke_priority_override(incident_id: str, request: Request, session: Session):
+        require_csrf(request, session)
+        with database.connect() as connection:
+            return dispatch.revoke_override(
+                database,
+                connection,
+                session.user,
+                incident_id,
+                request.state.request_id,
+            )
+
+    @app.get("/api/v1/ops/status", response_model=StatusProjection, tags=["operations"])
+    def operations_status(session: Session):
+        with database.connect() as connection:
+            return dispatch.projection(connection, session.user)
+
+    @app.get("/api/v1/ops/unmapped", response_model=UnmappedSites, tags=["operations"])
+    def operations_unmapped(session: Session):
+        with database.connect() as connection:
+            view = dispatch.projection(connection, session.user)
+        return {
+            "revision": view["revision"],
+            "status_as_of": view["status_as_of"],
+            "count": len(view["unmapped"]),
+            "sites": view["unmapped"],
+        }
+
+    @app.post(
+        "/api/v1/ops/plans",
+        response_model=CrewPlanView,
+        status_code=201,
+        tags=["operations"],
+    )
+    def propose_crew_plan(
+        request: Request,
+        session: Session,
+        payload: Annotated[ProposeRequest | None, Body()] = None,
+    ):
+        require_csrf(request, session)
+        with database.connect() as connection:
+            return dispatch.propose_plan(
+                database,
+                connection,
+                session.user,
+                request.state.request_id,
+                (payload or ProposeRequest()).horizon_hours,
+            )
+
+    @app.get(
+        "/api/v1/ops/plans/latest", response_model=CrewPlanView, tags=["operations"]
+    )
+    def latest_crew_plan(session: Session):
+        with database.connect() as connection:
+            return dispatch.latest_plan(connection, session.user)
+
+    @app.get(
+        "/api/v1/ops/plans/{plan_id}", response_model=CrewPlanView, tags=["operations"]
+    )
+    def crew_plan(plan_id: str, session: Session):
+        with database.connect() as connection:
+            return dispatch.plan_view(connection, session.user, plan_id)
+
+    @app.post(
+        "/api/v1/ops/plans/{plan_id}/review",
+        response_model=CrewPlanView,
+        tags=["operations"],
+    )
+    def review_crew_plan(plan_id: str, request: Request, session: Session):
+        require_csrf(request, session)
+        with database.connect() as connection:
+            return dispatch.review_plan(
+                database, connection, session.user, plan_id, request.state.request_id
+            )
+
+    @app.post(
+        "/api/v1/ops/plans/{plan_id}/apply",
+        response_model=CrewPlanView,
+        tags=["operations"],
+    )
+    def apply_crew_plan(
+        plan_id: str,
+        payload: ApplyRequest,
+        request: Request,
+        session: Session,
+        idempotency_key: Annotated[
+            str | None,
+            Header(alias="Idempotency-Key", min_length=1, max_length=128),
+        ] = None,
+    ):
+        require_csrf(request, session)
+        with database.connect() as connection:
+            return dispatch.apply_plan(
+                database,
+                connection,
+                session.user,
+                plan_id,
+                payload.expected_input_digest,
+                idempotency_key,
+                request.state.request_id,
+            )
+
+    @app.get("/api/v1/ops/agenda", response_model=AgendaView, tags=["operations"])
+    def operations_agenda(session: Session):
+        with database.connect() as connection:
+            return dispatch.agenda(connection, session.user)
+
+    @app.post(
+        "/api/v1/ops/assignments/{assignment_id}/progress",
+        response_model=AgendaView,
+        tags=["operations"],
+    )
+    def assignment_progress(
+        assignment_id: str, payload: ProgressRequest, request: Request, session: Session
+    ):
+        require_csrf(request, session)
+        with database.connect() as connection:
+            return dispatch.update_progress(
+                database,
+                connection,
+                session.user,
+                assignment_id,
+                payload.state,
+                payload.expected_revision,
+                payload.outcome,
+                payload.note,
+                request.state.request_id,
+            )
 
     def openapi():
         if app.openapi_schema is None:

@@ -1,0 +1,672 @@
+{
+ "schema": "operations-inputs/1",
+ "synthetic": true,
+ "label": "SYNTHETIC PLANNING INPUTS - fictional crews, people, shifts, depots, access windows, service estimates, prices and travel times for the component demo scenario. Not equipment telemetry; never part of any vendor data export.",
+ "scenario_id": "components-2026-07",
+ "timezone": "Europe/Bucharest",
+ "dates": [
+  "2026-07-15",
+  "2026-07-16",
+  "2026-07-17",
+  "2026-07-18",
+  "2026-07-19",
+  "2026-07-20",
+  "2026-07-21"
+ ],
+ "organisations": [
+  {
+   "organisation_id": "demo-installer-service",
+   "name": "Demo Installer Service (fictional)",
+   "serves": [
+    "customer_installation_service"
+   ]
+  },
+  {
+   "organisation_id": "battery-service-partner",
+   "name": "Battery Service Partner (fictional)",
+   "serves": [
+    "battery_service_partner",
+    "customer_installation_service"
+   ]
+  },
+  {
+   "organisation_id": "demo-monitoring-desk",
+   "name": "Monitoring & Remote Triage Desk (fictional)",
+   "serves": [
+    "monitoring_provider",
+    "customer_installation_service"
+   ]
+  }
+ ],
+ "service_boundaries": {
+  "basis": "Fictional service-boundary registry for the demo population (complements demo_components/assets.json responsible_service). Never derived from brand or geography.",
+  "default": {
+   "pv_installation": [
+    "customer_installation_service",
+    "demo-installer-service"
+   ],
+   "grid_connection": [
+    "distributor_network_review",
+    "distributor (network side of the PCC)"
+   ],
+   "monitoring_path": [
+    "monitoring_provider",
+    "demo-monitoring-desk"
+   ]
+  },
+  "asset_services": {
+   "battery_service_partner (fictional)": [
+    "customer_installation_service",
+    "battery_service_partner"
+   ],
+   "customer_installation_service": [
+    "customer_installation_service",
+    "demo-installer-service"
+   ]
+  }
+ },
+ "crews": [
+  {
+   "crew_id": "scn-battery-service",
+   "name": "Battery Service Crew (fictional)",
+   "kind": "field",
+   "organisation": "battery-service-partner",
+   "authorised_services": [
+    "battery_service_partner",
+    "customer_installation_service"
+   ],
+   "qualifications": [
+    "battery_storage_service",
+    "electrical_lv",
+    "pv_inverter_service"
+   ],
+   "tools": [
+    "battery_diagnostic_kit",
+    "insulation_tester"
+   ],
+   "areas": [
+    "sector-1",
+    "ilfov"
+   ],
+   "families": [
+    "Battery",
+    "Production",
+    "Voltage",
+    "Other"
+   ],
+   "home_area": "sector-1",
+   "members": [
+    {
+     "username": "tech-battery-1",
+     "label": "Battery technician A (fictional)"
+    },
+    {
+     "username": "tech-battery-2",
+     "label": "Battery technician B (fictional)"
+    }
+   ],
+   "shift": {
+    "start": "08:00",
+    "end": "16:00"
+   },
+   "breaks": [
+    {
+     "start": "12:00",
+     "end": "12:30"
+    }
+   ],
+   "base_node": "DEPOT-AVIATIEI",
+   "location_basis": "last reported base (fictional depot), not live GPS"
+  },
+  {
+   "crew_id": "scn-pv-om",
+   "name": "PV O&M Crew (fictional)",
+   "kind": "field",
+   "organisation": "demo-installer-service",
+   "authorised_services": [
+    "customer_installation_service",
+    "demo-installer-service"
+   ],
+   "qualifications": [
+    "pv_string_inspection",
+    "pv_inverter_service",
+    "electrical_lv"
+   ],
+   "tools": [
+    "iv_curve_tracer",
+    "insulation_tester"
+   ],
+   "areas": [
+    "sector-1",
+    "ilfov"
+   ],
+   "families": [
+    "Production",
+    "Temperature",
+    "Other"
+   ],
+   "home_area": "ilfov",
+   "members": [
+    {
+     "username": "tech-pv-1",
+     "label": "PV technician (fictional)"
+    },
+    {
+     "username": "tech-battery-1",
+     "label": "Battery technician A (shared member, fictional)"
+    }
+   ],
+   "shift": {
+    "start": "09:00",
+    "end": "17:00"
+   },
+   "breaks": [
+    {
+     "start": "13:00",
+     "end": "13:30"
+    }
+   ],
+   "base_node": "DEPOT-OTOPENI",
+   "location_basis": "last reported base (fictional depot), not live GPS"
+  },
+  {
+   "crew_id": "scn-remote-desk",
+   "name": "Monitoring & Remote Triage Desk (fictional)",
+   "kind": "remote_desk",
+   "organisation": "demo-monitoring-desk",
+   "authorised_services": [
+    "monitoring_provider",
+    "customer_installation_service"
+   ],
+   "qualifications": [
+    "remote_triage",
+    "monitoring_path_troubleshooting",
+    "pv_performance_review"
+   ],
+   "tools": [],
+   "areas": [
+    "sector-1",
+    "ilfov"
+   ],
+   "families": [
+    "Telemetry",
+    "Production",
+    "Battery",
+    "Other"
+   ],
+   "home_area": "sector-1",
+   "members": [
+    {
+     "username": "desk-operator",
+     "label": "Remote triage operator (fictional)"
+    }
+   ],
+   "shift": {
+    "start": "08:00",
+    "end": "18:00"
+   },
+   "breaks": [
+    {
+     "start": "12:30",
+     "end": "13:00"
+    }
+   ],
+   "base_node": null,
+   "location_basis": "remote activity, no field location"
+  }
+ ],
+ "member_unavailability": [
+  {
+   "username": "tech-pv-1",
+   "date": "2026-07-20",
+   "start": "09:00",
+   "end": "17:00",
+   "reason": "training (fictional)"
+  }
+ ],
+ "accounts": {
+  "dispatcher": "scenario-dispatcher",
+  "supervisor": "scenario-supervisor",
+  "note": "The dispatcher applies plans (dispatch capability via the dispatcher role); the supervisor views ranked jobs and proposals but cannot apply."
+ },
+ "job_templates": {
+  "battery_operational_restriction": [
+   {
+    "activity": "field_visit",
+    "service_minutes": 90,
+    "qualifications": [
+     "battery_storage_service",
+     "electrical_lv"
+    ],
+    "tools": [
+     "battery_diagnostic_kit"
+    ],
+    "crew_size": 2,
+    "parts_required": [],
+    "repair_estimate": {
+     "currency": "RON",
+     "low": 450,
+     "high": 900,
+     "source": "manual demo catalog: battery service diagnostic visit (fictional)",
+     "as_of": "2026-07-01"
+    }
+   }
+  ],
+  "persistent_underperformance": [
+   {
+    "activity": "remote_review",
+    "service_minutes": 30,
+    "qualifications": [
+     "pv_performance_review"
+    ]
+   },
+   {
+    "activity": "field_visit",
+    "service_minutes": 120,
+    "qualifications": [
+     "pv_string_inspection"
+    ],
+    "tools": [
+     "iv_curve_tracer"
+    ],
+    "crew_size": 1,
+    "depends_on": [
+     "remote_review"
+    ],
+    "repair_estimate": {
+     "currency": "RON",
+     "low": 300,
+     "high": 1200,
+     "source": "manual demo catalog: string inspection and connector repair (fictional)",
+     "as_of": "2026-07-01"
+    }
+   }
+  ],
+  "pcc_voltage_sustained": [
+   {
+    "activity": "external_review",
+    "service_minutes": 45,
+    "qualifications": [],
+    "note": "voltage review belongs to the distributor/network side; proposed for review, never auto-sent"
+   }
+  ],
+  "shared_monitoring_path": [
+   {
+    "activity": "remote_troubleshooting",
+    "service_minutes": 45,
+    "qualifications": [
+     "monitoring_path_troubleshooting"
+    ]
+   }
+  ],
+  "common_upstream": [
+   {
+    "activity": "external_review",
+    "service_minutes": 60,
+    "qualifications": []
+   }
+  ],
+  "weather_consistent_drop": []
+ },
+ "access_windows": {
+  "basis": "fictional customer access windows (local time, every scenario day)",
+  "default": [
+   {
+    "start": "09:00",
+    "end": "19:00"
+   }
+  ],
+  "sites": {
+   "F1": [
+    {
+     "start": "07:00",
+     "end": "22:00"
+    }
+   ],
+   "S2": [
+    {
+     "start": "10:00",
+     "end": "18:00"
+    }
+   ]
+  }
+ },
+ "travel": {
+  "source": "approximate demo matrix",
+  "method": "straight-line distance between fictional demo coordinates x 1.4 detour / 30 km/h + 5 min handling, rounded up to 5 min; not road routing, not live traffic",
+  "nodes": {
+   "DEPOT-AVIATIEI": {
+    "latitude": 44.487,
+    "longitude": 26.101,
+    "label": "Fictional demo depot, Aviatiei (Sector 1)"
+   },
+   "DEPOT-OTOPENI": {
+    "latitude": 44.544,
+    "longitude": 26.07,
+    "label": "Fictional demo depot, Otopeni (Ilfov)"
+   },
+   "F1": {
+    "latitude": 44.4898,
+    "longitude": 26.0951,
+    "label": "Fictional demo point, Aviatiei (Sector 1)"
+   },
+   "F2": {
+    "latitude": 44.4911,
+    "longitude": 26.0987,
+    "label": "Fictional demo point, Aviatiei (Sector 1)"
+   },
+   "F3": {
+    "latitude": 44.5465,
+    "longitude": 26.079,
+    "label": "Fictional demo point, Otopeni (Ilfov)"
+   },
+   "H1": {
+    "latitude": 44.4935,
+    "longitude": 26.0855,
+    "label": "Fictional demo point, Baneasa (Sector 1)"
+   },
+   "H2": {
+    "latitude": 44.4952,
+    "longitude": 26.0889,
+    "label": "Fictional demo point, Baneasa (Sector 1)"
+   },
+   "H3": {
+    "latitude": 44.4921,
+    "longitude": 26.0903,
+    "label": "Fictional demo point, Baneasa (Sector 1)"
+   },
+   "S1": {
+    "latitude": 44.5482,
+    "longitude": 26.0832,
+    "label": "Fictional demo point, Otopeni (Ilfov)"
+   },
+   "S2": {
+    "latitude": 44.545,
+    "longitude": 26.1305,
+    "label": "Fictional demo point, Tunari (Ilfov)"
+   },
+   "S3": {
+    "latitude": 44.5501,
+    "longitude": 26.1342,
+    "label": "Fictional demo point, Tunari (Ilfov)"
+   }
+  },
+  "minutes": [
+   {
+    "from": "DEPOT-AVIATIEI",
+    "to": "DEPOT-OTOPENI",
+    "minutes": 25
+   },
+   {
+    "from": "DEPOT-AVIATIEI",
+    "to": "F1",
+    "minutes": 10
+   },
+   {
+    "from": "DEPOT-AVIATIEI",
+    "to": "F2",
+    "minutes": 10
+   },
+   {
+    "from": "DEPOT-AVIATIEI",
+    "to": "F3",
+    "minutes": 25
+   },
+   {
+    "from": "DEPOT-AVIATIEI",
+    "to": "H1",
+    "minutes": 10
+   },
+   {
+    "from": "DEPOT-AVIATIEI",
+    "to": "H2",
+    "minutes": 10
+   },
+   {
+    "from": "DEPOT-AVIATIEI",
+    "to": "H3",
+    "minutes": 10
+   },
+   {
+    "from": "DEPOT-AVIATIEI",
+    "to": "S1",
+    "minutes": 25
+   },
+   {
+    "from": "DEPOT-AVIATIEI",
+    "to": "S2",
+    "minutes": 25
+   },
+   {
+    "from": "DEPOT-AVIATIEI",
+    "to": "S3",
+    "minutes": 30
+   },
+   {
+    "from": "DEPOT-OTOPENI",
+    "to": "F1",
+    "minutes": 25
+   },
+   {
+    "from": "DEPOT-OTOPENI",
+    "to": "F2",
+    "minutes": 25
+   },
+   {
+    "from": "DEPOT-OTOPENI",
+    "to": "F3",
+    "minutes": 10
+   },
+   {
+    "from": "DEPOT-OTOPENI",
+    "to": "H1",
+    "minutes": 25
+   },
+   {
+    "from": "DEPOT-OTOPENI",
+    "to": "H2",
+    "minutes": 25
+   },
+   {
+    "from": "DEPOT-OTOPENI",
+    "to": "H3",
+    "minutes": 25
+   },
+   {
+    "from": "DEPOT-OTOPENI",
+    "to": "S1",
+    "minutes": 10
+   },
+   {
+    "from": "DEPOT-OTOPENI",
+    "to": "S2",
+    "minutes": 20
+   },
+   {
+    "from": "DEPOT-OTOPENI",
+    "to": "S3",
+    "minutes": 20
+   },
+   {
+    "from": "F1",
+    "to": "F2",
+    "minutes": 10
+   },
+   {
+    "from": "F1",
+    "to": "F3",
+    "minutes": 25
+   },
+   {
+    "from": "F1",
+    "to": "H1",
+    "minutes": 10
+   },
+   {
+    "from": "F1",
+    "to": "H2",
+    "minutes": 10
+   },
+   {
+    "from": "F1",
+    "to": "H3",
+    "minutes": 10
+   },
+   {
+    "from": "F1",
+    "to": "S1",
+    "minutes": 25
+   },
+   {
+    "from": "F1",
+    "to": "S2",
+    "minutes": 25
+   },
+   {
+    "from": "F1",
+    "to": "S3",
+    "minutes": 30
+   },
+   {
+    "from": "F2",
+    "to": "F3",
+    "minutes": 25
+   },
+   {
+    "from": "F2",
+    "to": "H1",
+    "minutes": 10
+   },
+   {
+    "from": "F2",
+    "to": "H2",
+    "minutes": 10
+   },
+   {
+    "from": "F2",
+    "to": "H3",
+    "minutes": 10
+   },
+   {
+    "from": "F2",
+    "to": "S1",
+    "minutes": 25
+   },
+   {
+    "from": "F2",
+    "to": "S2",
+    "minutes": 25
+   },
+   {
+    "from": "F2",
+    "to": "S3",
+    "minutes": 25
+   },
+   {
+    "from": "F3",
+    "to": "H1",
+    "minutes": 25
+   },
+   {
+    "from": "F3",
+    "to": "H2",
+    "minutes": 25
+   },
+   {
+    "from": "F3",
+    "to": "H3",
+    "minutes": 25
+   },
+   {
+    "from": "F3",
+    "to": "S1",
+    "minutes": 10
+   },
+   {
+    "from": "F3",
+    "to": "S2",
+    "minutes": 20
+   },
+   {
+    "from": "F3",
+    "to": "S3",
+    "minutes": 20
+   },
+   {
+    "from": "H1",
+    "to": "H2",
+    "minutes": 10
+   },
+   {
+    "from": "H1",
+    "to": "H3",
+    "minutes": 10
+   },
+   {
+    "from": "H1",
+    "to": "S1",
+    "minutes": 25
+   },
+   {
+    "from": "H1",
+    "to": "S2",
+    "minutes": 25
+   },
+   {
+    "from": "H1",
+    "to": "S3",
+    "minutes": 30
+   },
+   {
+    "from": "H2",
+    "to": "H3",
+    "minutes": 10
+   },
+   {
+    "from": "H2",
+    "to": "S1",
+    "minutes": 25
+   },
+   {
+    "from": "H2",
+    "to": "S2",
+    "minutes": 25
+   },
+   {
+    "from": "H2",
+    "to": "S3",
+    "minutes": 25
+   },
+   {
+    "from": "H3",
+    "to": "S1",
+    "minutes": 25
+   },
+   {
+    "from": "H3",
+    "to": "S2",
+    "minutes": 25
+   },
+   {
+    "from": "H3",
+    "to": "S3",
+    "minutes": 30
+   },
+   {
+    "from": "S1",
+    "to": "S2",
+    "minutes": 20
+   },
+   {
+    "from": "S1",
+    "to": "S3",
+    "minutes": 20
+   },
+   {
+    "from": "S2",
+    "to": "S3",
+    "minutes": 10
+   }
+  ]
+ }
+}

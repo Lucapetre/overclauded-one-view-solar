@@ -10,6 +10,7 @@ import threading
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
+from backend.clock import analytical_now
 from backend.config import Settings
 from backend.db import Database, stamp
 from backend.errors import ApiError
@@ -67,8 +68,12 @@ def _remind(connection, row, metered: Decimal, now: datetime) -> int:
 def settle_due(
     database: Database, now: datetime | None = None, settings: Settings | None = None
 ) -> dict[str, int]:
-    """One idempotent worker pass at `now` (UTC)."""
-    settings = settings or Settings()
+    """One idempotent worker pass at `now` (UTC), by default the analytical clock.
+
+    Repeating a pass at the same (or a later) analytical time never adds notifications,
+    reminders or ledger rows: every write is guarded by status or a reminder timestamp.
+    """
+    settings = settings or Settings(database_path=database.path)
     now = (now or settings.clock()).astimezone(UTC)
     grace = timedelta(minutes=settings.offer_settlement_grace_minutes)
     summary = {"expired_offers": 0, "progressed": 0, "settled": 0, "reminders": 0}
@@ -210,13 +215,17 @@ def simulate_offer_meter(
     Writes 15-minute records (the last one may be shorter) through `ingest()` so the energy
     attributed to the offer reaches about `fraction` x energy_kwh. Only already-ended intervals
     are written, with received_at = now. Re-running tops up to the requested fraction.
+
+    Live-mode helper only: in a component scenario, offers at provider sites settle from the
+    imported authoritative meter energy, so no synthetic readings are needed.
     """
     if not 0 <= fraction <= 2 or not 0 <= coverage <= 1:
         raise ApiError(
             422, "invalid_simulation", "Use 0 <= fraction <= 2 and 0 <= coverage <= 1"
         )
-    now = (now or datetime.now(UTC)).astimezone(UTC)
     with database.connect() as connection:
+        # Live mode: wall time. In a scenario run: the analytical scenario clock.
+        now = (now or analytical_now(connection)).astimezone(UTC)
         row = connection.execute(
             "SELECT uo.*, s.capabilities, s.measurement_requirements, e.device_id, "
             "e.source_id FROM user_offers uo JOIN sites s ON s.site_id=uo.site_id "

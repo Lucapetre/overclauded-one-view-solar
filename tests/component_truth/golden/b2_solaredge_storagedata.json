@@ -1,0 +1,27 @@
+{
+ "evaluation_only": true,
+ "profile_id": "b2_solaredge_storagedata",
+ "asset_id": "S3-B2-BAT",
+ "native_timestamp_local": "2026-07-17 12:00:00",
+ "effective_time_utc": "2026-07-17T09:00:00.000Z",
+ "expected": [
+  {
+   "metric": "battery_net_kw",
+   "value": -0.4622
+  },
+  {
+   "metric": "soc_pct",
+   "value": 99.5
+  },
+  {
+   "metric": "battery_temperature_c",
+   "value": 24.8
+  },
+  {
+   "metric": "lifetime_battery_charge_kwh",
+   "value": 1260.6439
+  }
+ ],
+ "tolerance": 1e-09,
+ "note": "native power + charging -> canonical + discharge"
+}

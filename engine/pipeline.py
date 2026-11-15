@@ -10,11 +10,14 @@ import hashlib
 import json
 from collections import Counter, defaultdict
 
+from decimal import Decimal
+
 from .selectors import MISSING, condition, resolve_ref, select
 from .sites import device_key, id_to_str
 from .storage import ACTION_COLS, DELIVERY_COLS, ISSUE_COLS, OBS_COLS, RECORD_COLS
 from .timeparse import parse_time, to_ms
-from .transforms import convert_unit, edge_flow_value, edge_set, parse_number
+from .transforms import (REGISTER_TYPES, convert_unit, decimal_text, decode_words, edge_flow_value, edge_set,
+                         exact_convert, gather_words, parse_number, scale_from_register)
 
 
 def sha(s: str) -> str:
@@ -91,6 +94,11 @@ class Ingestor:
         self.tol = float(registry.default("conflict_abs_tolerance", 1e-7))
         rv = registry.rule_version
         self.rv = {k: rv(k) for k in registry.data.get("rule_versions", {})}
+        self.obs_cols = getattr(store, "obs_cols", OBS_COLS)
+        self.env_keys = list(registry.default("envelope_keys", ["mock_transport"]))
+        self.file_ctx: dict = {}   # per-file reader context: profile_override {envelope profile -> mapping profile}
+        self._cur_ctx = None
+        self._rec_state = {"bad": 0, "objs": []}
 
     # ================================================================== audit helpers
     def issue(self, stage, category, code, severity, where: dict, *, metric=None, original=None, output=None,
@@ -155,7 +163,12 @@ class Ingestor:
                    reason=reason, action="quarantine_delivery")
 
     def _envelope(self, obj, d, line):
-        env = obj.get("mock_transport") if isinstance(obj, dict) else None
+        env = None
+        if isinstance(obj, dict):
+            for k in self.env_keys:
+                if isinstance(obj.get(k), dict):
+                    env = obj[k]
+                    break
         if not isinstance(env, dict):
             return self._quarantine_delivery(d, "invalid_transport_envelope", "no transport envelope object", line)
         d["delivery_id"] = env.get("delivery_id")
@@ -166,16 +179,39 @@ class Ingestor:
         rec_t = parse_time(env.get("recorded_at_utc", MISSING), "iso_offset")
         recv_t = parse_time(env.get("received_at_utc", MISSING), "iso_offset")
         d["recorded_at_ms"], d["received_at_ms"] = to_ms(rec_t.utc), to_ms(recv_t.utc)
+        override = (self.file_ctx.get("profile_override") or {}).get(pid)
+        if override:
+            accepted = (self.reg.profiles.get(override) or {}).get("accepts_envelope_profiles") or []
+            if pid not in accepted:
+                return self._quarantine_delivery(d, "profile_override_not_accepted",
+                                                 f"mapping profile {override!r} does not declare that it accepts "
+                                                 f"envelopes of {pid!r}", line, "schema_review")
+            pid = override
+            d["provider_profile_id"] = pid
         prof = self.reg.profiles.get(pid)
         if prof is None:
             return self._quarantine_delivery(d, "unregistered_provider_profile",
                                              f"profile {pid!r} is not in the registry", line, "schema_review")
         d["provider"] = prof["provider"]
         b = env.get("binding") if isinstance(env.get("binding"), dict) else {}
-        acc, _ = id_to_str(b.get("account_id"))
-        sid, _ = id_to_str(b.get("site_id"))
+        if "asset_id" in b:
+            lookup = getattr(self.sites, "lookup_asset", None)
+            site, adev = lookup(b.get("asset_id")) if lookup else (None, None)
+            if site is None:
+                return self._quarantine_delivery(d, "unregistered_source_identity",
+                                                 f"source asset {b.get('asset_id')!r} is not in the asset registry; "
+                                                 f"no customer/site guessed", line)
+            if adev.get("profile_id") and adev["profile_id"] != pid:
+                return self._quarantine_delivery(d, "asset_profile_mismatch",
+                                                 f"asset {b.get('asset_id')!r} is registered for profile "
+                                                 f"{adev['profile_id']!r}, envelope says {pid!r}", line,
+                                                 "schema_review")
+            acc, sid = site["account_id"], site["site_id"]
+        else:
+            acc, _ = id_to_str(b.get("account_id"))
+            sid, _ = id_to_str(b.get("site_id"))
+            site = self.sites.lookup(prof["provider"], acc, sid)
         d.update(account_id=acc, site_id=sid)
-        site = self.sites.lookup(prof["provider"], acc, sid)
         if site is None:
             return self._quarantine_delivery(d, "unregistered_binding",
                                              f"account/site binding ({acc!r}, {sid!r}) is not registered; "
@@ -203,10 +239,16 @@ class Ingestor:
             return self._quarantine_delivery(d, "unrouted_endpoint", why, line, "schema_review")
         d.update(variant=ep["variant"], mapping_version=ep["mapping_version"])
         http, terr = env.get("http_status"), env.get("transport_error")
-        if terr or http != 200:
-            classes = (prof.get("transport") or {}).get("http_status_classes") or {}
-            cls = ("timeout" if terr and "timeout" in str(terr).lower() else
-                   classes.get(str(http), "transport_error" if terr else "http_error"))
+        ok = not terr and (http == 200 or (http is None and env.get("transport_status") == "ok"))
+        if not ok:
+            tcfg = prof.get("transport") or {}
+            classes = tcfg.get("http_status_classes") or {}
+            eclasses = tcfg.get("error_classes") or {}
+            if terr and str(terr) in eclasses:
+                cls = eclasses[str(terr)]
+            else:
+                cls = ("timeout" if terr and "timeout" in str(terr).lower() else
+                       classes.get(str(http), "transport_error" if terr else "http_error"))
             detail = env.get("error_body_text") or terr or ""
             s, e_ = self._window(ep, ctx, site, d)
             self._event(d, cls, http, str(http), False, s, e_, None, detail)
@@ -364,12 +406,31 @@ class Ingestor:
             dkey = device_key(skey, did)
             row["device_key"] = dkey
         rctx["device"] = dev or {}
+        # ---- declared identity / boundary / model checks (registry values vs. what the source says)
+        for chk in rec.get("identity_checks") or []:
+            got = select(rctx, chk["path"])
+            want = chk["equals"] if "equals" in chk else select(rctx, chk["ref"])
+            if got is MISSING or want is MISSING or str(got) != str(want):
+                return self._quarantine_record(
+                    row, chk.get("code", "identity_check_failed"),
+                    f"{chk['path']} = {_short(got, 40)} but the registry declares {chk.get('ref', 'value')} = "
+                    f"{_short(want, 40)}; not guessed", item_json)
+        for chk in rec.get("register_checks") or []:
+            n = REGISTER_TYPES[chk["type"]][0]
+            words, prob = gather_words(None if select(rctx, chk["source"]) is MISSING else select(rctx, chk["source"]),
+                                       chk["address"], n)
+            val = decode_words(words, chk["type"], chk.get("word_order", "high_word_first"))[0] if words else None
+            if val != chk["equals"]:
+                return self._quarantine_record(
+                    row, chk.get("code", "model_identity_mismatch"),
+                    f"register {chk['address']} decodes to {val!r} ({prob or 'ok'}); the profile requires "
+                    f"{chk['equals']!r}", item_json)
         # ---- times
         tz = site.get("timezone")
         times, parsed = {}, {}
         for t in rec["times"]:
             raw = select(rctx, aliases.get(t["path"], t["path"]))
-            res = parse_time(raw, t["format"], tz, t.get("pattern"))
+            res = parse_time(raw, t["format"], t.get("timezone") or tz, t.get("pattern"))
             parsed[t["role"]] = (t, raw, res)
             times[t["role"]] = {"raw": None if raw is MISSING else raw, "status": res.status,
                                 "utc_ms": to_ms(res.utc), "is_measurement": bool(t.get("is_measurement"))}
@@ -450,7 +511,26 @@ class Ingestor:
         unknown = self._unknown_keys(rec.get("known_keys", []), extra_known, rctx, aliases)
         origin = "simulated_observation" if d.get("synthetic") else "observation"
         obs = []
-        base = dict(raw_record_id=rid, site_key=skey, endpoint_key=ep["endpoint_key"], effective_time_ms=eff_ms)
+        base = dict(raw_record_id=rid, site_key=skey, endpoint_key=ep["endpoint_key"], effective_time_ms=eff_ms,
+                    family=prof.get("family"), profile_version=prof["profile_version"],
+                    scenario_version=getattr(self.sites, "scenario_version", None))
+        iv = rec.get("interval")
+        if iv:
+            dur = int(float(iv["duration_s"]) * 1000)
+            if iv.get("time_marks", "end") == "end":
+                base.update(interval_start_ms=eff_ms - dur, interval_end_ms=eff_ms)
+            else:
+                base.update(interval_start_ms=eff_ms, interval_end_ms=eff_ms + dur)
+        for w in rec.get("withhold_if") or []:
+            if condition(rctx, w["when"]):
+                base["_withhold"] = w["flag"]
+                self.issue("ingest", "unresolved", w["flag"], "warning", row,
+                           original=f"{w['when']['path']} {w['when']['op']} {w['when'].get('value')!r}",
+                           output="record values kept as evidence but availability=withheld",
+                           reason=w.get("reason", "source marks these values as not usable"), rule="quality_gate",
+                           action="withhold_values")
+                break
+        self._rec_state = {"bad": 0, "objs": []}
         numeric_cfg = prof.get("numeric") or {}
         for ent in ep["entities"]:
             ectxs, _ = iterate(ent.get("iterate", []), rctx)
@@ -470,9 +550,24 @@ class Ingestor:
                     edev, edid, edkey = None, None, ""
                 ectx["device"] = edev or {}
                 unknown += self._unknown_keys(ent.get("known_keys", []), extra_known, ectx, aliases)
-                ob = dict(base, device_id=edid, device_key=edkey, entity_scope=ent["scope"])
+                ob = dict(base, device_id=edid, device_key=edkey, entity_scope=ent["scope"],
+                          physical_asset_id=(edev or {}).get("asset_id") or edid,
+                          source_role=(edev or {}).get("source_role"))
                 for f in ent["fields"]:
                     self._map_field(f, ectx, ob, prof, ep, aliases, stale, origin, site, row, numeric_cfg, obs)
+        thr = rec.get("decode_suspect_threshold")
+        if thr and self._rec_state["bad"] >= int(thr):
+            for o in self._rec_state["objs"]:
+                if o["availability_status"] in ("available", "stale", "withheld"):
+                    o.update(availability_status="invalid", canonical_value=None, exact_value_text=None)
+                o["quality_flags"] = ",".join(filter(None, [o["quality_flags"], "decode_configuration_suspect"]))
+            self.issue("ingest", "unresolved", "register_decode_configuration_suspect", "warning", row,
+                       original=f"{self._rec_state['bad']} decoded register fields failed validation in one snapshot",
+                       output="all register-decoded values of this snapshot invalid; raw words preserved; "
+                              "NOT re-decoded with another word order or unit",
+                       reason="several implausible decodes in the same response point to a word-order/unit "
+                              "configuration or capture problem; flagged for configuration review",
+                       rule="register_decode", action="flag_decode_configuration")
         if unknown:
             self.issue("ingest", "schema_review", "unknown_field", "warning", row, original=", ".join(unknown),
                        output="sent to review; not mapped automatically",
@@ -499,11 +594,15 @@ class Ingestor:
                          f.get("channel") or "", state, reason, f["id"])] += 1
 
     def _emit(self, out, ob, f, metric, *, raw, unit, cv=None, ctext=None, avail="available", flags=(), log=(),
-              origin="simulated_observation", boundary=None, stale=False):
+              origin="simulated_observation", boundary=None, stale=False, exact_text=None, state_label=None,
+              ctx=None):
         md = self.reg.metrics[metric]
         if stale and avail == "available":
             avail = "stale"
             flags = list(flags) + ["stale_response"]
+        if ob.get("_withhold") and avail in ("available", "stale"):
+            avail = "withheld"
+            flags = list(flags) + [ob["_withhold"]]
         o = dict(ob)
         o.update(channel=f.get("channel"), metric_name=metric,
                  original_value=None if raw is MISSING else canon(raw), original_unit=unit,
@@ -511,10 +610,28 @@ class Ingestor:
                  boundary=boundary or f.get("boundary"), value_origin=origin, availability_status=avail,
                  quality_flags=",".join(flags) or None, assumption_basis=f.get("assumption_basis", "documented"),
                  requirement_class=f.get("requirement", "optional"), transform_log=";".join(log) or None,
-                 field_rule_id=f["id"], is_conflicted=0)
+                 field_rule_id=f["id"], is_conflicted=0, exact_value_text=exact_text, state_label=state_label,
+                 sensor_position=f.get("sensor_position"), phase=f.get("phase"),
+                 aggregation=self._aggregation(f, ctx if ctx is not None else self._cur_ctx),
+                 mounting=self._mounting(f, ctx if ctx is not None else self._cur_ctx))
         out.append(o)
         self.stats[f"avail:{avail}"] += 1
         return o
+
+    @staticmethod
+    def _aggregation(f, ctx):
+        if f.get("processing_from") and ctx is not None:
+            p = select(ctx, f["processing_from"])
+            return (f.get("processing_map") or {}).get(p if isinstance(p, str) else "", f.get("aggregation"))
+        return f.get("aggregation")
+
+    @staticmethod
+    def _mounting(f, ctx):
+        if f.get("mounting") != "from_asset_registry":
+            return f.get("mounting")
+        dev = (ctx or {}).get("device") or {}
+        m = dev.get("mounting")
+        return (m.get("plane") if isinstance(m, dict) else m) or "unknown"
 
     def _bounds(self, metric, cv, ctx):
         b = self.reg.metrics[metric].get("bounds")
@@ -524,6 +641,14 @@ class Ingestor:
         if b.get("max_ref"):
             ref = resolve_ref(ctx, b["max_ref"])
             hi = ref * float(b.get("max_factor", 1.0)) if ref is not None else None
+        if b.get("abs_max_ref"):
+            ref = resolve_ref(ctx, b["abs_max_ref"])
+            if ref is not None:
+                hi = ref * float(b.get("max_factor", 1.0))
+                lo = -hi
+                if abs(cv) > hi:
+                    return (b.get("on_exceed", "out_of_range"),
+                            f"|value| exceeds plausible bound {hi:g} (= {ref:g} x {b.get('max_factor', 1.0)})")
         if lo is not None and cv < lo:
             return "out_of_range", f"below minimum {lo}"
         if hi is not None and cv > hi:
@@ -533,17 +658,24 @@ class Ingestor:
             return how, f"above maximum {hi:g}"
         return None
 
-    def _finish_numeric(self, out, ob, f, metric, v, unit, raw, log, flags, ctx, origin, stale, where, boundary=None):
+    def _finish_numeric(self, out, ob, f, metric, v, unit, raw, log, flags, ctx, origin, stale, where, boundary=None,
+                        exact=None):
         md = self.reg.metrics[metric]
         u = unit or md["unit"]
         cv, err = convert_unit(v, u, md["unit"], self.reg.units)
+        exact_text = None
         if cv is not None:
-            cv = round(cv, 9)  # remove binary floating-point residue of unit scaling (e.g. 700 W -> 0.7 kW)
+            if exact is not None:  # integer source: exact decimal conversion, float only as the derived view
+                ex = exact_convert(exact, u, self.reg.units)
+                exact_text = decimal_text(ex)
+                cv = float(ex)
+            else:
+                cv = round(cv, 9)  # remove binary floating-point residue of unit scaling (e.g. 700 W -> 0.7 kW)
         if err:
             self.issue("ingest", "unresolved", "unsupported_unit", "warning", where, metric=metric, original=raw,
                        output="invalid", reason=err, rule="unit_conversion")
             return self._emit(out, ob, f, metric, raw=raw, unit=u, avail="invalid", flags=flags + ["unsupported_unit"],
-                              log=log, origin=origin, boundary=boundary)
+                              log=log, origin=origin, boundary=boundary, ctx=ctx)
         if self.reg.units[u]["factor"] != 1.0:
             log = log + [f"unit:{u}->{md['unit']}"]
             self.routine[(where["provider"], where["endpoint_key"], "unit_scale", f"{u}->{md['unit']}")] += 1
@@ -557,14 +689,123 @@ class Ingestor:
                            reason=f"canonical {cv:g} {md['unit']} {why}; no trustworthy unit-change evidence, "
                                   f"so dividing by 1000 would be a guess", rule="bounds", action="flag_unit_ambiguity")
                 return self._emit(out, ob, f, metric, raw=raw, unit=u, avail="invalid",
-                                  flags=flags + ["unit_ambiguity_suspected"], log=log, origin=origin, boundary=boundary)
+                                  flags=flags + ["unit_ambiguity_suspected"], log=log, origin=origin, boundary=boundary,
+                                  ctx=ctx)
             self.issue("ingest", "unresolved", "value_out_of_range", "warning", where, metric=metric,
-                       original=f"{raw} {u}", output="invalid; original preserved; never clamped",
+                       original=f"{_short(raw, 120)} {u}", output="invalid; original preserved; never clamped",
                        reason=f"canonical {cv:g} {md['unit']} {why}", rule="bounds", action="flag_out_of_range")
             return self._emit(out, ob, f, metric, raw=raw, unit=u, avail="invalid", flags=flags + ["out_of_range"],
-                              log=log, origin=origin, boundary=boundary)
+                              log=log, origin=origin, boundary=boundary, ctx=ctx)
         return self._emit(out, ob, f, metric, raw=raw, unit=u, cv=cv, flags=flags, log=log, origin=origin,
-                          boundary=boundary, stale=stale)
+                          boundary=boundary, stale=stale, exact_text=exact_text, ctx=ctx)
+
+    # ------------------------------------------------------------------ configured sign convention
+    def _sign(self, f, ctx, where, metric):
+        """Return (multiplier | None, log). 'sign_convention: negate' converts a documented opposite native
+        convention; 'sign_from' takes the sign from DECLARED installation configuration (e.g. CT orientation).
+        Nothing is ever auto-flipped from the value itself."""
+        if f.get("sign_convention") == "negate":
+            return -1, ["sign:documented_native_convention_negated"]
+        sf = f.get("sign_from")
+        if not sf:
+            return 1, []
+        v = select(ctx, sf["path"])
+        m = (sf.get("map") or {}).get(str(v)) if v is not MISSING else None
+        if m not in (1, -1):
+            self.issue("ingest", "unresolved", "sign_configuration_missing", "warning", where, metric=metric,
+                       original=f"{sf['path']} = {_short(v, 40)}", output="invalid; sign not guessed",
+                       reason="the registry does not declare a usable orientation for this channel",
+                       rule="sign_convention")
+            return None, []
+        return m, ([f"sign:configured_{v}"] if m == -1 else [f"sign:configured_{v}_unchanged"])
+
+    # ------------------------------------------------------------------ captured register words
+    def _register_field(self, f, ctx, ob, origin, stale, where, out):
+        metric = f["metric"]
+        spec = f["register"]
+        rtype, order = spec["type"], spec.get("word_order", "high_word_first")
+        n = REGISTER_TYPES[rtype][0]
+        blocks = select(ctx, f["source"])
+        words, prob = gather_words(None if blocks is MISSING else blocks, spec["address"], n)
+        raw = {"register": spec.get("number"), "address": spec["address"], "type": rtype, "word_order": order,
+               "words": words}
+        unit = f.get("unit")
+        st = self._rec_state
+
+        def bad(code, flag, reason, avail="invalid"):
+            if avail == "invalid":
+                st["bad"] += 1
+            self.issue("ingest", "unresolved" if avail == "invalid" else "informational", code,
+                       "warning" if avail == "invalid" else "info", where, metric=metric, original=raw,
+                       output=f"availability={avail}; raw words preserved; not repaired", reason=reason,
+                       rule="register_decode", action="flag_register_value")
+            o = self._emit(out, ob, f, metric, raw=raw, unit=unit, avail=avail, flags=[flag], origin=origin, ctx=ctx)
+            st["objs"].append(o)
+
+        if words is None:
+            return bad("register_not_captured", "register_not_captured", prob, avail="missing")
+        val, rawint, status, note = decode_words(words, rtype, order)
+        if val is None:
+            return bad("register_decode_invalid", status, note)
+        raw["decoded"] = str(val) if isinstance(val, int) else repr(val)
+        if rawint in (f.get("invalid_sentinels") or []):
+            return bad("register_invalid_sentinel", "invalid_sentinel",
+                       f"raw 0x{rawint:X} is a configured invalid sentinel for this register")
+        vb = f.get("invalid_if_bits")
+        if vb:
+            bw, _ = gather_words(blocks, vb["address"], 1)
+            flags_word = bw[0] if bw else None
+            hit = [b for b in vb["bits"] if flags_word is not None and flags_word >> b & 1]
+            if flags_word is None or hit:
+                return bad("source_status_invalid", "source_status_invalid",
+                           f"status register {vb['address']} = {flags_word!r}; validity bits {hit} set "
+                           f"(documented status flags)" if flags_word is not None else "status register not captured")
+        md = self.reg.metrics[metric]
+        if md["kind"] == "state":
+            text = str(val)
+            label = (f.get("enum") or {}).get(text)
+            o = self._emit(out, ob, f, metric, raw=raw, unit="none", cv=float(val), ctext=text, state_label=label,
+                           log=[f"register:{rtype}@{spec['address']}"] + ([f"enum:{label}"] if label else
+                                                                          ["raw_state_preserved"]),
+                           origin=origin, stale=stale, ctx=ctx)
+            st["objs"].append(o)
+            return
+        scale = Decimal(str(f.get("scale", 1)))
+        log = [f"register:{rtype}@{spec['address']}:{order}"]
+        sr = f.get("scale_register")
+        if sr:
+            sw, _ = gather_words(blocks, sr["address"], 1)
+            sf = decode_words(sw, sr.get("type", "int16"), "high_word_first")[0] if sw else None
+            raw["scale_factor"] = sf
+            if sf is None or sf not in sr.get("allowed", [sf]):
+                return bad("scale_factor_invalid", "scale_factor_invalid",
+                           f"scale-factor register {sr['address']} = {sf!r} is not an allowed value; "
+                           f"value not decoded by guessing")
+            scale = scale * scale_from_register(sf, sr.get("mode", "pow10"))
+            log.append(f"scale_register:{sf}")
+        if scale != 1:
+            log.append(f"scale:{decimal_text(scale)}")
+        offset = Decimal(str(f.get("offset", 0)))
+        if isinstance(val, int):
+            exact = Decimal(val) * scale + offset
+            num = float(exact)
+        else:
+            exact = None
+            num = val * float(scale) + float(offset)
+        sign, slog = self._sign(f, ctx, where, metric)
+        if sign is None:
+            o = self._emit(out, ob, f, metric, raw=raw, unit=unit, avail="invalid",
+                           flags=["sign_configuration_missing"], origin=origin, ctx=ctx)
+            st["objs"].append(o)
+            return
+        if sign == -1:
+            num = -num
+            exact = -exact if exact is not None else None
+        o = self._finish_numeric(out, ob, f, metric, num, unit, raw, log + slog, [], ctx, origin, stale, where,
+                                 exact=exact)
+        if o["availability_status"] == "invalid":
+            st["bad"] += 1
+        st["objs"].append(o)
 
     def _track_unit(self, where, f, unit, raw):
         key = (where["site_key"], f["id"])
@@ -585,8 +826,18 @@ class Ingestor:
                 self._cap(ob, m, f, "not_installed", "not applicable to this device (applies_if)")
             return
         caps = site.get("capabilities") or {}
+        dcaps = (ctx.get("device") or {}).get("capabilities")
+        if isinstance(dcaps, dict) and dcaps:  # asset-level capability declarations refine the site's
+            caps = {**caps, **dcaps}
+        self._cur_ctx = ctx
+        if f.get("capability") == "unsupported_on_model":
+            for m in metrics:
+                self._cap(ob, m, f, "unsupported", f.get("reason", "documented: not supported by this model"))
+            return
         if tr == "edge_flow":
             return self._edge_flow(f, ctx, ob, caps, origin, stale, where, out)
+        if tr == "register_words":
+            return self._register_field(f, ctx, ob, origin, stale, where, out)
         path = aliases.get(f["source"], f["source"])
         raw = select(ctx, path)
         cstate = caps.get(f["requires_capability"]) if f.get("requires_capability") else None
@@ -637,6 +888,8 @@ class Ingestor:
                 return
             self._track_unit(where, f, unit, raw)
         pres = f.get("presence", "optional")
+        if value is MISSING and f.get("absence") == "normal":
+            return  # documented: the key is present only when non-empty (e.g. an error list); absence = none reported
         if value is MISSING:
             if pres in ("required", "required_nullable"):
                 self.issue("ingest", "schema_damage", "required_key_missing", "warning", where, metric=",".join(metrics),
@@ -670,7 +923,16 @@ class Ingestor:
             text = value if isinstance(value, str) else canon(value)
             label = (f.get("status_map") or {}).get(text)
             log = [f"status_map:{label}"] if label else ["raw_state_preserved"]
-            self._emit(out, ob, f, metrics[0], raw=value, unit="none", ctext=text, log=log, origin=origin, stale=stale)
+            self._emit(out, ob, f, metrics[0], raw=value, unit="none", ctext=text, log=log, origin=origin, stale=stale,
+                       state_label=label if f.get("label_in_state_column") else None)
+            return
+        if isinstance(value, str) and value in ((f.get("numeric") or numeric_cfg).get("missing_tokens") or []):
+            self.issue("ingest", "informational", "source_missing_token", "info", where, metric=",".join(metrics),
+                       original=value, output="availability=missing; never replaced by another sensor",
+                       reason="configured missing-value token", rule="capability", action="preserve_absence")
+            for m in metrics:
+                self._emit(out, ob, f, m, raw=value, unit=unit, avail="missing", flags=["source_missing_token"],
+                           origin=origin)
             return
         num, st, note = parse_number(value, f.get("numeric") or numeric_cfg)
         if num is None:
@@ -695,6 +957,15 @@ class Ingestor:
                 self._emit(out, ob, f, m, raw=value, unit=unit, avail="invalid", flags=["unexpected_sign"],
                            origin=origin)
             return
+        if f.get("sign_from") or f.get("sign_convention"):
+            mult, slog = self._sign(f, ctx, where, ",".join(metrics))
+            if mult is None:
+                for m in metrics:
+                    self._emit(out, ob, f, m, raw=value, unit=unit, avail="invalid",
+                               flags=["sign_configuration_missing"], origin=origin)
+                return
+            num = num * mult
+            log = log + slog
         if tr == "sign_split":
             pos, neg = f["sign_split"]["positive"], f["sign_split"]["negative"]
             self.routine[(where["provider"], where["endpoint_key"], "sign_split", f["id"])] += 1
@@ -803,7 +1074,7 @@ class Ingestor:
         st = self.store
         st.insert_many("raw_deliveries", DELIVERY_COLS, self.del_buf, "INSERT OR IGNORE")
         st.insert_many("raw_records", RECORD_COLS, self.rec_buf, "INSERT OR IGNORE")
-        st.insert_many("observations", OBS_COLS, [tuple(o.get(c) for c in OBS_COLS) for o in self.obs_buf])
+        st.insert_many("observations", self.obs_cols, [tuple(o.get(c) for c in self.obs_cols) for o in self.obs_buf])
         st.insert_many("delivery_events", ["delivery_hash", "site_key", "endpoint_key", "status_class", "http_status",
                                            "code", "informational", "start_ms", "end_ms", "event_time_ms", "detail"],
                        self.event_buf, "INSERT OR IGNORE")

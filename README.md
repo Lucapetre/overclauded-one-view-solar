@@ -1,10 +1,128 @@
 # One View Solar
 
-Combined phase 1 provider scraper and phase 2 backend for the customer and PPC Operations applications. Provider payloads become canonical measurements, then authorized FastAPI queries expose those measurements and their quality information to either frontend. The architecture follows pages 5, 12 and 13 of [the build plan](./Challenge1_Build_Plan.pdf).
+One shared ingestion engine, an authorized FastAPI/SQLite backend and connected customer and PPC Operations workspaces. Provider payloads become canonical measurements with provenance, quality and capability gates, then serve customer decisions and operations review. The original architecture context is on pages 5, 12 and 13 of [the build plan](./Challenge1_Build_Plan.pdf).
 
 The [phase 1 walkthrough](./STEP1_README.md), [data dictionary](./DATA_DICTIONARY.md) and [source notes](./SOURCE_NOTES.md) describe the registry-driven scraper, nine fictional Huawei/Fronius/SolarEdge sites, and its generated datasets. All bundled provider data are synthetic. The [React frontend](./frontend/README.md) now connects customer and operations workspaces to this backend using the shared API client and generated types.
 
+## Equipment, customer planning and operations replay
+
+The connected app now includes Grid / Battery / Solar evidence cards, the business-load planner, correlated and ranked incidents on the existing map, and crew proposal → review → apply with a technician agenda. **Eight of nine candidate component profiles are delivered: three meters, two battery paths and three weather sources. Enphase is excluded because an accessible response schema was not established.** All readings, tariffs, coordinates, crews and travel estimates are synthetic. Read the [feasibility matrix](./docs/COMPONENT_SOURCE_NOTES.md), [architecture](./docs/COMPONENT_ARCHITECTURE.md), [five-minute demo script](./docs/COMPONENT_DEMO.md), [three-slide outline](./docs/COMPONENT_SLIDES.md), [dispatch policy](./docs/DISPATCH_POLICY.md) and [problems solved](./docs/PROBLEMS_SOLVED.md). [`docs/demo_run_output.txt`](./docs/demo_run_output.txt) is the recorded output of the runner on a clean scratch workspace.
+
+Three data populations exist. They never share identities, and none of them is real:
+
+| Population | Created by | Contents |
+| --- | --- | --- |
+| **Component scenario** (this section) | `import-provider`, `import-components`, `provision-component-scenario`, `provision-scenario-operations` | Nine provider sites H1 H2 H3 (Huawei-like), F1 F2 F3 (Fronius-like), S1 S2 S3 (SolarEdge-like), backend ids `provider-<hash>`, placed in `sector-1` and `ilfov` at fictional coordinates |
+| Compact demo | `python -m backend seed-demo` (see [Run locally](#run-locally)) | 60 fictional sites `s1-01` … `s6-NN`, `ilfov-NN` in Bucharest Sectors 1–6 and Ilfov |
+| Browser-only workflow demo | Nothing to run; open `/demo/` | Local simulation in `localStorage`; no API access |
+
+Do not run `seed-demo` against a component-scenario database.
+
+### Run the component demo
+
+Quick start on Windows PowerShell, from the repository root.
+
+Needs Python 3.12 and Node/npm. The existing workspace already has `.venv\Scripts\python.exe`; create it only on a fresh checkout.
+
+```powershell
+# 1. One-time install and frontend build
+py -3.12 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -e ".[dev]"
+npm.cmd --prefix frontend ci
+npm.cmd --prefix frontend run build
+
+# 2. Create a scenario in a NEW, EMPTY directory outside the repository (at least 2 GB free)
+$demo = 'D:\one-view-demos\rehearsal-1'
+.\.venv\Scripts\python.exe -m scripts.demo_scenes --workspace $demo setup
+
+# 3. Serve the built app on port 8016 (never port 8000 or the repository's .local/), in a second terminal
+#    (set $demo to the same directory there)
+$env:SOLAR_DATABASE = Join-Path $demo 'api.sqlite3'
+$env:SOLAR_MEDIA_DIR = Join-Path $demo 'media'
+$env:SOLAR_OFFER_WORKER = 'false'
+.\.venv\Scripts\python.exe -m uvicorn backend.main:app --host 127.0.0.1 --port 8016
+```
+
+Open <http://localhost:8016/consumer> or <http://localhost:8016/ops>, using the same hostname throughout, and sign in with an account below. Passwords are random and saved only in `<demo>\demo-credentials.json` (a JSON object keyed by username). Read them locally; never copy them into documentation or screenshots.
+
+`setup` runs, in order, and prints each command: `generate_components.py` only when the checked-in fixtures are missing (otherwise it prints the regeneration command), `scraper.py --component all …` only when `build/components/component.sqlite` is absent (about 2 minutes, about 467 MB, git-ignored), `backend migrate`, `import-provider`, `import-components`, `provision-component-scenario`, `provision-scenario-operations` and `scenario start component-four-scenes-v1 --at 2026-07-17T07:30:00+03:00`. The workspace must be empty because snapshots are immutable and time never rewinds; for another rehearsal use another directory. `--rebuild-components` forces regeneration of the fixtures and snapshot.
+
+Then run each scene in order, inspecting the UI between stages, or run everything in one go:
+
+```powershell
+.\.venv\Scripts\python.exe -m scripts.demo_scenes --workspace $demo A     # accepts the laundry batch, advances to 17 Jul 14:00
+.\.venv\Scripts\python.exe -m scripts.demo_scenes --workspace $demo B     # 18 Jul 10:00: clouds plus battery alarm and derate
+.\.venv\Scripts\python.exe -m scripts.demo_scenes --workspace $demo C     # data quality, meter-gap waiver, repeated import/worker
+.\.venv\Scripts\python.exe -m scripts.demo_scenes --workspace $demo D     # 19 Jul 11:30 correlation, crew plan, apply, closure at 12:30
+.\.venv\Scripts\python.exe -m scripts.demo_scenes --workspace $demo all   # setup and every unfinished scene
+```
+
+Each stage prints its actual values and writes them to `<demo>\demo-report.json` (no passwords or cookies). Repeating a finished stage only prints its recorded result. The runner uses its own API sessions, so do not also accept the same tasks manually in the UI on that database; follow the [demo script](./docs/COMPONENT_DEMO.md) for the live walkthrough. Choose the stages you want visible before advancing, because the clock only moves forward.
+
+### Accounts in the component scenario
+
+Passwords are in `<demo>\demo-credentials.json`.
+
+| Account | Role and access |
+| --- | --- |
+| `laundry-owner` | Business customer, site F1 only; Plan, evidence cards, offers |
+| `h2-resident` | Home customer, site H2 only; the meter-gap offer demonstration |
+| `scenario-dispatcher` | Dispatcher, `sector-1` and `ilfov`; propose, review and apply crew plans; audited priority overrides |
+| `scenario-supervisor` | Supervisor, `sector-1` and `ilfov`; view and propose, cannot review or apply |
+| `tech-battery-1`, `tech-battery-2` | Technicians of the fictional Battery Service Crew; `tech-battery-1` is also a shared member of the PV O&M crew |
+| `tech-pv-1` | Technician of the fictional PV O&M crew |
+| `desk-operator` | Fictional remote-triage desk (technician role) agenda |
+
+The other populations use their own accounts: `seed-demo` writes its credentials to `.local/demo-credentials.json` (accounts are listed under [Run locally](#run-locally)), and `/demo/` uses the public development accounts listed in the [frontend README](./frontend/README.md).
+
+### Manual setup (what the runner does)
+
+Use these commands to build the same scenario by hand. Set the three environment variables before the first backend command, in the same shell that runs them:
+
+```powershell
+$demo = 'D:\one-view-demos\manual-1'
+New-Item -ItemType Directory -Path $demo -Force | Out-Null
+$env:SOLAR_DATABASE = Join-Path $demo 'api.sqlite3'
+$env:SOLAR_MEDIA_DIR = Join-Path $demo 'media'
+$env:SOLAR_OFFER_WORKER = 'false'
+.\.venv\Scripts\python.exe -m backend migrate
+.\.venv\Scripts\python.exe -m backend import-provider --database build/scraper.sqlite.gz --sites demo_data/sites.json --frames build/site_frames_15min.csv
+.\.venv\Scripts\python.exe scraper.py --component all --config config/component_profiles.yaml --input demo_components --out build/components --as-of 2026-07-22T00:00:00+03:00
+.\.venv\Scripts\python.exe -m backend import-components --database build/components/component.sqlite
+.\.venv\Scripts\python.exe -m backend provision-component-scenario
+.\.venv\Scripts\python.exe -m backend provision-scenario-operations
+.\.venv\Scripts\python.exe -m backend scenario start component-four-scenes-v1 --at 2026-07-17T07:30:00+03:00
+```
+
+Skip the `scraper.py` line when `build/components/component.sqlite` already exists for the unchanged fixtures; importing the same snapshot again reports `duplicate`. Provider and component imports grant no access; the two `provision-…` commands create the explicit grants and write new passwords to `<demo>\demo-credentials.json`.
+
+The checked-in component fixtures are already generated. To reproduce them explicitly (deterministic), use the generator below. Do not run the original `generate_demo.py` unless you intend to rewrite the tracked `demo_data/` population and its truth files:
+
+```powershell
+.\.venv\Scripts\python.exe generate_components.py --seed 42 --start 2026-07-15 --days 7 --out demo_components --truth-out tests/component_truth --provider-data demo_data
+```
+
+Advance time forward only; each command prints the new analytical time:
+
+```powershell
+.\.venv\Scripts\python.exe -m backend scenario advance --to 2026-07-17T14:00:00+03:00
+.\.venv\Scripts\python.exe -m backend scenario advance --to 2026-07-18T10:00:00+03:00
+.\.venv\Scripts\python.exe -m backend scenario advance --to 2026-07-19T11:30:00+03:00 --correlate
+.\.venv\Scripts\python.exe -m backend offers-worker --once
+.\.venv\Scripts\python.exe -m backend scenario status
+```
+
+`scenario advance` also accepts `--by 30m`, and `--settle` runs one offers-worker pass at the new time; `python -m backend correlate` runs the incident rules at the current analytical time. For the documented Scene D deadlines, run correlation first at 19 July 11:30. Correlating the battery alarm the evening before opens its four-hour response window earlier and changes the next day's deadline result. The customer equipment and planning screens do not require an earlier correlation pass.
+
+`build/components/component.sqlite` is git-ignored; run the scraper once on a fresh clone. Do not run `seed-demo` for this nine-provider-site scenario.
+
+### Offline use and limits
+
+The replay works without internet after dependencies, fixtures, snapshots and the frontend are prepared. OSM map tiles and the older live city-weather widget need internet: map markers, boundaries and the list remain available on a plain background, and the component planner uses local replay evidence. Routes are schematic estimates from an approximate demo matrix; crew markers show reported bases, never live GPS. Fronius meter units remain inferred, Victron uses only the 16-bit power register, SolarEdge battery-state numbers have no invented labels, and legal applicability remains unverified.
+
 ## Run the integrated app
+
+This and the following sections use macOS/Linux paths (`.venv/bin/python`). On Windows use `.\.venv\Scripts\python.exe` and `npm.cmd` instead. They target the default database `.local/solar.sqlite3` on port 8000; the component demo above uses its own database and port 8016.
 
 After creating an account and importing data as described below, build the frontend and start the backend from the repository root:
 
@@ -24,7 +142,7 @@ npm --prefix frontend run dev
 
 Open [http://127.0.0.1:5173](http://127.0.0.1:5173). Vite proxies `/api` to `http://127.0.0.1:8000`, preserving same-origin session behavior. Set `SOLAR_BACKEND_URL` when starting Vite to use a different backend port. Built apps are served directly by FastAPI from the same origin; `SOLAR_FRONTEND_DIST` can override the build directory. Build before starting or restarting the backend. API-only use still works without a frontend build.
 
-The frontend branch's complete planning, support, video-review and dispatch simulation remains available at `/demo/`, with a visible browser-only simulation banner. Those workflows retain their fictional accounts and local browser storage. The connected `/consumer` and `/ops` applications use real API sessions and telemetry; they do not silently fall back to mock data or claim that the simulation's mutations were saved to the backend. Planning, incidents, media and dispatch write APIs are separate work beyond phase 2.
+The original browser-only simulation remains available at `/demo/`, with a visible simulation banner and separate fictional accounts/local storage. The connected `/consumer` and `/ops` applications use API sessions, telemetry and the planner, support, incident, offer and dispatch write APIs. They never silently fall back to browser-only data.
 
 Use `npm --prefix frontend test` to run the frontend's domain and telemetry-presentation tests. Backend hosting and authorization tests are included in the Python suite.
 
@@ -68,7 +186,7 @@ History endpoints accept optional `metric`, `endpoint`, `device` and `channel` f
 
 Use these provider endpoints for the scraper dataset. They retain `integration_required`, `vendor_response_required` and `optional` exactly, and keep the separate native AC/DC/phase/unspecified boundaries. Missing measurements remain null, conflicted observations remain visibly conflicted, and access-denied/stale frames are not fabricated zero readings. Regulatory reference information remains distinct from telemetry requirements. Frames retain their original aggregation: for example temperature maxima are not relabeled as temperature means.
 
-The older `/energy` endpoints below continue to serve the compact, normalized interval contract and its separate 60-site demo. They do not flatten imported provider observations into that narrower schema. Imported sites have unknown topology and receive no inferred area grouping.
+The older `/energy` endpoints below continue to serve the compact, normalized interval contract and its separate 60-site demo. They do not flatten imported provider observations into that narrower schema. Imported sites have unknown topology. Component-scenario provisioning adds explicitly fictional area placements separately from import; area membership does not imply electrical topology.
 
 Frontend example after login:
 
@@ -84,7 +202,7 @@ const page = await api.providerObservations(sites[0].site_id, {
 
 ## Run locally
 
-Requires Python 3.11 or later. Validation in this workspace used Python 3.14.
+Requires Python 3.11 or later; this component build uses Python 3.12 in `.venv/Scripts/python.exe`.
 
 ```sh
 python3 -m venv .venv
@@ -97,7 +215,7 @@ Open [interactive API documentation](http://127.0.0.1:8000/docs). Startup applie
 
 Sites are listed in `backend/fixtures/site_profiles.json`: ids `s1-01` … `s6-NN` for the sectors and `ilfov-NN` for Ilfov, a fictional display name, the real neighbourhood or locality (`zone`), and an optional `cluster` of nearby installations drawn as one map highlight (for example 8 homes in Militari, 4 hospitality venues in the Old Town, logistics on the A1 at Chiajna). About 35 are homes in residential clusters, 10 are restaurants, cafés, bars, a hotel and a supermarket in the centre, and 15 are factories, warehouses, cold storage, a data centre and office parks, mostly in Ilfov and on the city's industrial platforms. Every name, coordinate, capacity and billing figure is invented; no real customer, business or address is represented. The area outlines in `backend/fixtures/bucharest_areas.geojson` are simplified OpenStreetMap administrative boundaries, © OpenStreetMap contributors, available under the [Open Database License 1.0](https://www.openstreetmap.org/copyright). `tests/test_geography.py` checks that every site lies inside its area polygon.
 
-**Databases seeded before this geography.** Earlier versions seeded three fictional areas (`north`, `central`, `south`) with 24 sites. `seed-demo` refuses to mix the two: on such a database it stops with `legacy_demo_geography` and names the file. The content is synthetic demo data, so stop the server, delete the database file (by default `.local/solar.sqlite3` with its `-wal` and `-shm` files) and run `seed-demo` again; there is no data migration.
+**Databases seeded by an earlier release.** An earlier release seeded a different, smaller geography. `seed-demo` refuses to mix the two: on such a database it stops with `legacy_demo_geography` and names the file. The content is synthetic demo data, so stop the server, delete the database file (by default `.local/solar.sqlite3` with its `-wal` and `-shm` files) and run `seed-demo` again; there is no data migration.
 
 The seed command generates passwords and writes them to the ignored, mode-0600 file `.local/demo-credentials.json`. Repeating the command does not reset passwords or duplicate readings. The accounts are:
 
@@ -388,7 +506,7 @@ Use a matching hostname for browser and API (`localhost` with `localhost`, or `1
 
 Set secure cookies and HTTPS before non-loopback session use. Allowed origins are comma-separated exact origins, not a wildcard. Passwords use salted scrypt, session tokens are stored hashed, login attempts are rate-limited, and state changes require CSRF protection. Requests are bounded to 256 KiB. Accepted/rejected ingestion, login/logout and local provisioning produce audit entries without passwords or session secrets.
 
-Advance or rewind analytical time without changing actual session expiry or ingestion audit timestamps:
+Set analytical time without changing actual session expiry or ingestion audit timestamps. In a running scenario, this command accepts forward-only movement; restart with a new scenario database:
 
 ```sh
 .venv/bin/python -m backend replay-clock 2026-07-15T13:00:00Z
@@ -406,6 +524,8 @@ SQLite uses WAL mode, foreign keys, transactional writes and versioned [migratio
 .venv/bin/python -m scripts.export_contracts --check
 ```
 
+On Windows use `.\.venv\Scripts\python.exe` and `.\.venv\Scripts\ruff.exe`; `export_contracts` writes CRLF there, so convert `packages/contracts/openapi.json` and `index.ts` back to LF before `--check`. The component and operations suites are `tests/test_components_*`, `test_tariff`, `test_planner`, `test_replay_clock`, `test_correlation`, `test_ranking`, `test_crew_planner` and `test_ops_features`, plus `test_component_scenes` for the cross-cutting scenario checks. The frontend has `npm --prefix frontend test` and `npm --prefix frontend run build`.
+
 The exporter writes OpenAPI, standalone telemetry/registration schemas and TypeScript types from the backend models. Commit regenerated outputs whenever the contract changes. Run `--check` in CI to detect drift.
 
 Type-check the frontend contracts with TypeScript installed in the consuming frontend, or:
@@ -416,4 +536,72 @@ npm exec --yes --package typescript -- tsc --noEmit --strict --target ES2020 --m
 
 The [tests](./tests) cover both original pipelines plus the handoff: synthetic generation and provider mapping, quarantine and validation, requirement classes, immutable/conflicting records, concurrent retries, site and area isolation, session expiry and CSRF, replay time, missing and stale feeds, AC/DC boundaries, battery capability gates, energy integration, coverage, DST ranges, local provisioning, read-only snapshots, WAL updates and authorized canonical queries. The original scraper fixtures and phase 2 fixtures are loaded together without replacing one another.
 
-Forecasting, incident detection, recommendation scheduling, media handling and dispatch remain separate modules. Phase 2 provides the shared data interface they will consume.
+The component scenario adds the planner, bridge, correlation, ranking, status projection and crew planner as separate modules (`backend/planner.py`, `bridge.py`, `correlation.py`, `ranking.py`, `status.py`, `crew_planner.py`, `dispatch.py`) on top of this data interface; media handling stays in `backend/media.py`.
+
+## Component scenario backend: clock, tariff bands, planner, equipment bridge
+
+All component data are SYNTHETIC. Internal/PCC meters are operational evidence, not certified billing meters.
+
+### Local setup (separate scenario database)
+
+Use the [component demo quick start above](#run-the-component-demo) for install, generation, import, both provisioning commands, external scenario storage and port 8016. The [staged demo runner](./docs/COMPONENT_DEMO.md) records actual values from the four scenes.
+
+- `import-components` copies the snapshot with SQLite `backup()` (WAL pages included) to `<db dir>/component-snapshots/<import_id>.sqlite`. The import id comes from the snapshot's input manifest, asset registry, config and engine hashes. A repeat is `duplicate`, and every covered site switches in one transaction. The provider sites must already be imported. Importing never grants access.
+- `provision-component-scenario` places H1 H2 H3 F1 F2 in `sector-1` and F3 S1 S2 S3 in `ilfov` at labelled fictional coordinates (`site_placements`). It creates `laundry-owner` (business, F1), `h2-resident` (home, H2), `scenario-supervisor` and `scenario-dispatcher` (both granted sector-1 and ilfov), a demo time-of-use contract for F1 and the illustrative 4 kW x 2 h laundry task. New passwords go only to `<db dir>/demo-credentials.json`, as with `seed-demo`. It is idempotent and does not touch the compact demo.
+
+### Analytical clock
+
+- With no scenario, analytical time is wall time. In a scenario run, it is the forward-only clock stored in the database (`settings.replay_at` plus `settings.scenario`, with `scenario_runs` and `scenario_clock_events`).
+- Analytical time drives planning, forecast issue time, telemetry freshness, offer acceptance, expiry, reminders, progress and settlement. Component data after it are never read.
+- Sessions, login and `audit.received_at` keep real wall time. Audit details carry the analytical event time.
+- Rewinds are refused. To restart a scenario, create a new local database.
+- `replay-clock` advances the scenario clock in scenario mode and keeps its old behaviour otherwise. `simulate-offer-meter` is only needed in live mode.
+- `GET /api/v1/clock` reports the mode and both times. It is read-only.
+
+### Contract time bands (`backend/tariff.py`)
+
+- `POST /api/v1/sites/{id}/contract` accepts `pricing: "time_of_use"` with `bands[]`, where each band has `days` (ISO weekdays), `start_minute`, `end_minute`, import rate, export value and optional local validity dates. When end ≤ start, the band crosses midnight.
+- It also accepts `export_compensation` (`payment`, `credit` or `unspecified`) and an optional future `effective_from`.
+- Every save creates an immutable version. Existing fixed contracts became version 1 with one all-day band.
+- Intervals are split at every band and version boundary in Europe/Bucharest time, so DST days have 23 or 25 hours.
+- Missing coverage is an explicit gap (null plus a reason), never zero.
+- Power Block Offers still use the flat reference rates, so the offer rule is unchanged.
+
+### Business task planner (`backend/planner.py`)
+
+The planner is a backend port of the demo's `recommend()`. Each task is non-interruptible and has power, energy, earliest start, deadline, an optional latest start, an optional local daily window, an optional usual start and an optional site import limit.
+
+For every 15-minute start, the incremental cost is `site_cost(with task) - site_cost(without task)` over one common horizon, where `site_cost = Σ import kWh × band rate − export kWh × band value − terminal stored energy × η_d × terminal import rate`.
+
+- Self-consumed solar costs the export value it displaces.
+- A battery is used only when the bridge reports fresh SoC, capacity, reserve, BMS limits, efficiencies and the conversion boundary, and no active alarm. Its AC limits are the minimum of the converted BMS limits and the battery inverter rating.
+- Unknown inputs give `null` costs with reasons, or tariff bounds (`cost_range`). Ties go to the earliest start.
+- The forecast uses only data known at decision time: clear-sky PV for the registered arrays, scaled by recent measured clearness. POA irradiance on the same plane is preferred, else measured AC PV, with a bounded three-hour adjustment. Base load is the measured three-day profile, or the typical-shape assumption.
+
+Routes (customer writes need CSRF):
+
+- `GET`/`POST /api/v1/sites/{id}/tasks`
+- `POST …/tasks/{task_id}` (edit, `expected_revision`; refused once accepted)
+- `POST …/tasks/{task_id}/cancel`
+- `GET /api/v1/sites/{id}/plan?task=`
+- `POST …/tasks/{task_id}/accept` (`recommendation_revision`, Idempotency-Key)
+- `POST …/tasks/{task_id}/review` (`release`)
+- `GET …/tasks/{task_id}/progress` (measured whole-site PCC energy and coverage, with the attribution note and an estimated comparison)
+
+### Equipment bridge and API (`backend/bridge.py`, `backend/components.py`)
+
+- Offers and progress read the authoritative PCC meter per 15 minutes: consume offers use `grid_import` and export offers use `grid_export`.
+- Only *measured* counter energy settles. Estimated or unknown frames reduce coverage, so the existing `meter_data_incomplete` waiver applies.
+- Gateway mirrors are never added. Hybrid inverter output is never PV, and DC battery power is never grid energy. Compact sites keep the `telemetry` path.
+- `GET /api/v1/sites/{id}/equipment/summary` returns, per family, the selected source, recent values, freshness and declared capabilities. It also returns these decisions: `grid_energy_verified`, `battery_assisted_planning`, `irradiance_explanation` and `pv_performance_review`.
+- `GET /api/v1/sites/{id}/equipment/evidence?family=&metric=&from=&to=&limit=&offset=` covers at most 7 days and at most 1000 rows, with no raw payloads or paths.
+- Both routes are scoped like other site routes: out-of-scope sites return 404.
+
+### Correlation, ranking, status projection and crew planning (`backend/correlation.py`, `ranking.py`, `status.py`, `crew_planner.py`, `dispatch.py`)
+
+These run only on the analytical clock and read only data that exist at that time. The demonstration policy is in `config/dispatch_policy.yaml` and described in [`docs/DISPATCH_POLICY.md`](./docs/DISPATCH_POLICY.md); the synthetic crews, shifts, access windows, reported bases and approximate travel matrix are in `demo_components/operations_inputs.json` and never appear in vendor payloads.
+
+- `provision-scenario-operations` creates the fictional technicians, crews and planning inputs; `correlate` (or `scenario advance --correlate`) runs the rules once and is idempotent. A rule without its evidence reports `not_evaluated`; mirrored evidence is not independent corroboration; a lost feed never resolves an episode.
+- Operations routes (non-customer session; writes need `X-CSRF-Token`): `GET /api/v1/ops/queue`, `GET /api/v1/ops/episodes/{id}` (plus `acknowledge`, `close`, `priority-override` and its `revoke`), `GET /api/v1/ops/status`, `GET /api/v1/ops/unmapped`, the extended `GET /api/v1/ops/map` and `GET /api/v1/ops/teams`, `POST /api/v1/ops/plans`, `GET /api/v1/ops/plans/latest` and `/plans/{id}`, `POST …/plans/{id}/review` and `…/apply`, `GET /api/v1/ops/agenda` and `POST /api/v1/ops/assignments/{id}/progress`. Queue, map, status and teams report one operations `revision`.
+- A plan is a bounded, deterministic **feasible heuristic proposal** (draft → reviewed → applied or superseded) compared with a feasible FIFO baseline under identical constraints; the verdict may be `no_improvement`. Only a dispatcher may review and apply (the supervisor receives 403 `dispatch_capability_required`); a stale proposal returns 409 `plan_stale` and a new draft; a repeated apply with the same idempotency key returns the same assignments.
+- The full request and response shapes are in `packages/contracts/openapi.json` and `packages/contracts/client.ts`.

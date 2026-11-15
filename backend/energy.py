@@ -1,6 +1,7 @@
 import math
 from datetime import UTC, datetime, timedelta
 
+from backend.clock import clock_state
 from backend.db import site_from_row, stamp
 from backend.errors import ApiError
 from backend.models import (
@@ -78,9 +79,18 @@ def readings(site: Site, record: TelemetryRecord) -> dict[Metric, Measurement]:
 
 
 def snapshot(connection, site: Site, now: datetime | None = None) -> EnergySnapshot:
+    # In a scenario run every record is judged against the analytical (scenario) clock,
+    # and records after it are not known yet.
+    state = clock_state(connection) if now is None else None
+    known = ""
+    if state is not None and state.mode == "scenario":
+        now = state.now
+        known = " AND interval_end<=?"
     row = connection.execute(
-        "SELECT payload FROM telemetry WHERE site_id=? ORDER BY interval_end DESC LIMIT 1",
-        (site.site_id,),
+        "SELECT payload FROM telemetry WHERE site_id=?"
+        + known
+        + " ORDER BY interval_end DESC LIMIT 1",
+        (site.site_id, *((stamp(now),) if known else ())),
     ).fetchone()
     if not row:
         return EnergySnapshot(
@@ -91,7 +101,9 @@ def snapshot(connection, site: Site, now: datetime | None = None) -> EnergySnaps
             freshness=Freshness(
                 status="unavailable",
                 age_seconds=None,
-                clock="wall",
+                clock="replay"
+                if state is not None and state.mode == "scenario"
+                else "wall",
                 evaluated_at=now or datetime.now(UTC),
             ),
             provenance=None,
@@ -102,7 +114,9 @@ def snapshot(connection, site: Site, now: datetime | None = None) -> EnergySnaps
     record = TelemetryRecord.model_validate_json(row["payload"])
     clock = "wall"
     reference = now or datetime.now(UTC)
-    if record.source_mode != "live":
+    if state is not None and state.mode == "scenario":
+        clock = "replay"
+    elif record.source_mode != "live":
         setting = connection.execute(
             "SELECT value FROM settings WHERE key='replay_at'"
         ).fetchone()

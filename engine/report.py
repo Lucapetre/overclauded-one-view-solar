@@ -466,3 +466,138 @@ def export_tables(store, out: Path, frames):
         c["evidence"] = json.loads(c["evidence"])
     (out / "review_candidates.json").write_text(json.dumps({"synthetic_demonstration": True, "candidates": cands},
                                                            indent=1), encoding="utf-8")
+
+
+# ============================================================================== component snapshot exports
+COMPONENT_NOTICE = ("SYNTHETIC DEMONSTRATION. Component payloads are generated fixtures shaped after pinned public "
+                    "references (docs/COMPONENT_SOURCE_NOTES.md); internal/PCC operational meters are NOT certified "
+                    "billing meters; nothing here is a field-accuracy or compliance claim.")
+
+
+def _csv(store, out: Path, name, sql, args=(), gz=False):
+    cur = store.con.execute(sql, args)
+    if gz:
+        fh = gzip.open(out / name, "wt", newline="", encoding="utf-8", compresslevel=3)
+    else:
+        fh = open(out / name, "w", newline="", encoding="utf-8")
+    n = 0
+    with fh:
+        w = csv.writer(fh)
+        w.writerow([c[0] for c in cur.description])
+        while True:
+            chunk = cur.fetchmany(20000)
+            if not chunk:
+                break
+            w.writerows(chunk)
+            n += len(chunk)
+    return n
+
+
+def mapping_notes(reg):
+    notes = {"synthetic_demonstration": True, "profiles": {}}
+    keys = ("id", "native_ref", "source", "register", "metric", "unit", "unit_from", "channel", "boundary",
+            "aggregation", "processing_map", "mounting", "sensor_position", "sign_convention", "sign_from", "scale",
+            "scale_register", "assumption_basis", "evidence_status", "capability", "reason")
+    for pid, prof in sorted(reg.profiles.items()):
+        if "family" not in prof:
+            continue
+        eps = []
+        for ep in prof["endpoints"]:
+            fields = [{k: f.get(k) for k in keys if f.get(k) is not None}
+                      for ent in ep["entities"] for f in ent["fields"]]
+            eps.append({"endpoint_key": ep["endpoint_key"], "variant": ep["variant"],
+                        "input_format": ep.get("input_format", "ndjson_envelope"), "cadence_s": ep["cadence_s"],
+                        "cadence_note": ep.get("cadence_note"), "mapping_version": ep["mapping_version"],
+                        "fields": fields, "derive": ep.get("derive") or []})
+        notes["profiles"][pid] = {"family": prof["family"], "provider": prof["provider"],
+                                  "outcome": prof.get("outcome"), "profile_version": prof["profile_version"],
+                                  "provenance": " ".join(str(prof.get("provenance", "")).split()),
+                                  "evidence_ref": prof.get("evidence_ref"), "endpoints": eps}
+    notes["excluded_profiles"] = list(reg.data.get("excluded_profiles") or [])
+    return notes
+
+
+def quality_summary(store, reg, sites, as_of_ms, engine_version, side):
+    q = {"synthetic_demonstration": True, "notice": COMPONENT_NOTICE, "engine_version": engine_version,
+         "registry_version": reg.registry_version, "scenario_version": getattr(sites, "scenario_version", None),
+         "as_of_utc": ms_to_iso(as_of_ms), "sources": []}
+    for pid, ek, sk, _n in store.q("SELECT provider_profile_id, endpoint_key, site_key, COUNT(*) FROM raw_deliveries "
+                                   "WHERE provider_profile_id IS NOT NULL GROUP BY 1,2,3 ORDER BY 1,2,3"):
+        d = dict(store.q("SELECT status, COUNT(*) FROM raw_deliveries WHERE provider_profile_id=? AND endpoint_key=? "
+                         "AND site_key=? GROUP BY 1", (pid, ek, sk)))
+        r_ = dict(store.q("SELECT status, COUNT(*) FROM raw_records WHERE provider_profile_id=? AND endpoint_key=? AND "
+                          "site_key=? GROUP BY 1", (pid, ek, sk)))
+        o = dict(store.q("SELECT availability_status, COUNT(*) FROM observations WHERE endpoint_key=? AND site_key=? "
+                         "GROUP BY 1", (ek, sk)))
+        iss = dict(store.q("SELECT issue_code, COUNT(*) FROM quality_issues WHERE endpoint_key=? AND site_key=? "
+                           "GROUP BY 1 ORDER BY 1", (ek, sk)))
+        h = store.q("SELECT freshness_status, latest_source_age_s, historical_gaps FROM source_health WHERE "
+                    "endpoint_key=? AND site_key=? LIMIT 1", (ek, sk))
+        q["sources"].append({"profile_id": pid, "endpoint_key": ek, "site_key": sk,
+                             "site_label": (sites.sites.get(sk) or {}).get("demo_site_key") or sk,
+                             "deliveries": d, "records": r_, "observations_by_availability": o, "issues": iss,
+                             "freshness": h[0][0] if h else None, "historical_gaps": h[0][2] if h else None})
+    q["authority"] = [dict(zip(["site_key", "metric_name", "status", "n"], r)) for r in store.q(
+        "SELECT site_key, metric_name, authority_status, COUNT(*) FROM authority_frames GROUP BY 1,2,3 ORDER BY 1,2,3")]
+    q["authority_conflicts"] = store.q("SELECT COUNT(*) FROM authority_conflicts")[0][0]
+    q["collector_outages"] = _rows(store, "SELECT collector_id, start_utc, end_utc, affected_site_keys, failed_attempts "
+                                          "FROM collector_outages ORDER BY start_ms")
+    q["state_episodes"] = _rows(store, "SELECT site_key, physical_asset_id, metric_name, channel, state_value, "
+                                       "state_label, start_utc, last_seen_utc, active_at_as_of FROM state_episodes "
+                                       "ORDER BY start_ms")
+    q["side_databases"] = side
+    return q
+
+
+COMPONENT_TABLE_EXPORTS = (
+    ("authority_frames.csv", "SELECT * FROM authority_frames ORDER BY site_key, metric_name, frame_start_ms"),
+    ("authority_conflicts.csv", "SELECT * FROM authority_conflicts ORDER BY site_key, metric_name, frame_start_ms, "
+                                "other_role"),
+    ("capability_registry.csv", "SELECT * FROM capability_registry ORDER BY site_key, capability"),
+    ("battery_status.csv", "SELECT * FROM battery_status ORDER BY site_key, physical_asset_id"),
+    ("state_episodes.csv", "SELECT * FROM state_episodes ORDER BY site_key, physical_asset_id, start_ms"),
+    ("limit_history.csv", "SELECT * FROM limit_history ORDER BY site_key, physical_asset_id, metric_name, start_ms"),
+    ("collector_outages.csv", "SELECT * FROM collector_outages ORDER BY collector_id, start_ms"),
+    ("interval_energy.csv", "SELECT * FROM interval_energy ORDER BY site_key, endpoint_key, rule_id, start_ms"),
+    ("source_health.csv", "SELECT site_key, endpoint_key, device_key, provider, variant, n_records, first_source_ms, "
+                          "latest_source_ms, latest_received_ms, cadence_s, as_of_ms, latest_source_age_s, "
+                          "stale_threshold_s, freshness_status, late_arrivals, historical_gaps, events_json, "
+                          "access_status, notes FROM source_health ORDER BY site_key, endpoint_key, device_key"),
+    ("data_gaps.csv", "SELECT * FROM data_gaps ORDER BY site_key, endpoint_key, start_ms"),
+    ("quality_issues.csv", "SELECT stage, category, issue_code, severity, provider, site_key, endpoint_key, "
+                           "device_key, metric_name, raw_record_id, delivery_hash, source_path, source_line, "
+                           "effective_time_ms, rule_id, rule_version, mapping_version, original_value, output_state, "
+                           "reason, series_key FROM quality_issues ORDER BY site_key, endpoint_key, effective_time_ms, "
+                           "issue_code, raw_record_id, source_line, metric_name"),
+    ("quarantine.csv", "SELECT 'delivery' AS level, delivery_hash AS ref, provider_profile_id, endpoint_key, site_key, "
+                       "source_path, source_line, status, status_class AS code, status_detail AS reason FROM "
+                       "raw_deliveries WHERE status <> 'parsed_ok' UNION ALL SELECT 'record', raw_record_id, "
+                       "provider_profile_id, endpoint_key, site_key, source_path, source_line, status, NULL, "
+                       "status_reason FROM raw_records WHERE status IN ('quarantined','exact_duplicate',"
+                       "'conflict_version') ORDER BY 5, 4, 6, 7, 2"),
+    ("field_rejections.csv", "SELECT obs_id, site_key, physical_asset_id, endpoint_key, metric_name, channel, "
+                             "effective_time_ms, original_value, availability_status, quality_flags, field_rule_id "
+                             "FROM observations WHERE availability_status IN ('invalid','withheld') ORDER BY site_key, "
+                             "endpoint_key, effective_time_ms, obs_id"),
+)
+
+
+def export_components(store, reg, sites, out: Path, frames, as_of_ms, engine_version, side=None):
+    out = Path(out)
+    n = _csv(store, out, "component_observations.csv.gz",
+             "SELECT * FROM component_observations ORDER BY site_key, physical_asset_id, endpoint_key, metric_name, "
+             "channel, effective_time_ms, obs_id", gz=True)
+    with gzip.open(out / "component_frames_15min.csv.gz", "wt", newline="", encoding="utf-8", compresslevel=3) as fh:
+        frames.to_csv(fh, index=False)
+    for name, sql in COMPONENT_TABLE_EXPORTS:
+        _csv(store, out, name, sql)
+    doc = {"synthetic_demonstration": True, "notice": COMPONENT_NOTICE,
+           "asset_registry": getattr(sites, "asset_doc", {}),
+           "capabilities": _rows(store, "SELECT * FROM capability_registry ORDER BY site_key, capability"),
+           "battery_status": _rows(store, "SELECT * FROM battery_status ORDER BY site_key")}
+    (out / "assets_capabilities.json").write_text(json.dumps(doc, indent=1, default=str), encoding="utf-8")
+    (out / "mapping_notes.json").write_text(json.dumps(mapping_notes(reg), indent=1, default=str), encoding="utf-8")
+    (out / "quality_summary.json").write_text(json.dumps(quality_summary(store, reg, sites, as_of_ms, engine_version,
+                                                                         side or {}), indent=1, default=str),
+                                              encoding="utf-8")
+    return n

@@ -1,7 +1,8 @@
-// Connected (API-backed) operations pages: Area Radar map + forecast, Incidents with
-// detail and incident log, Teams, Revenue. Data comes from /api/v1/ops/*; the
-// presentational parts are the shared components in map.jsx and ops.jsx.
-import React, { useEffect, useMemo, useRef, useState } from "react";
+// Connected (API-backed) operations pages: Area Radar map + forecast, the original
+// incident detail modal (incidents without a correlated episode), Teams with the Plan
+// teams panel, Revenue. The ranked queue and episode drawer live in opsQueue.jsx.
+// Data comes from /api/v1/ops/*; presentational parts are in map.jsx and ops.jsx.
+import React, { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
   ArrowRight,
@@ -11,10 +12,10 @@ import {
   MessageSquare,
   Truck,
   Users,
-  X,
 } from "lucide-react";
-import { poll } from "../../packages/contracts/client";
-import { BucharestMap, MAP_NOTE } from "./map";
+import { Modal, OpsNotice, Pill, usePolled } from "./opsShared";
+import { OpsStatusMap } from "./opsMapPanel";
+import { PlanTeamsPanel } from "./opsPlan";
 import {
   AssignmentReport,
   CrewSummary,
@@ -22,13 +23,11 @@ import {
   RevenueView,
 } from "./ops";
 import {
-  ageLabel,
   areaName,
   assignmentStatus,
   crewChoices,
   friendlyError,
   incidentStatus,
-  keepIfSame,
   logAction,
   scopeLabel,
   shortId,
@@ -37,116 +36,14 @@ import {
   toAssignmentRows,
   toCrewSummaries,
   toForecastAreas,
-  toMapClusters,
   toMapSites,
   toRevenueReport,
 } from "./opsData";
+import { toStatusMapSites } from "./opsView";
 import { bucharestToday, meetingLabel, meetingWindow } from "./bucharestTime";
 import { when } from "./telemetry";
 
-function Pill({ children, tone = "" }) {
-  return <span className={`pill ${tone}`}>{children}</span>;
-}
-
-/**
- * Polls `load` every 5 s (shared `poll` cadence) while mounted. Unchanged data keeps
- * its reference. `key` restarts polling and clears data (e.g. another filter).
- * 401 goes to `onError` (returns true when handled); poll stops on 401/403/404.
- */
-export function usePolled(load, key, onError) {
-  const [state, setState] = useState({ key, data: null, error: null });
-  const [tick, setTick] = useState(0);
-  useEffect(
-    () =>
-      poll(
-        load,
-        (value) =>
-          setState((previous) => {
-            const data =
-              previous.key === key ? keepIfSame(previous.data, value) : value;
-            return previous.key === key &&
-              data === previous.data &&
-              !previous.error
-              ? previous
-              : { key, data, error: null };
-          }),
-        (error) => {
-          if (!onError(error))
-            setState((previous) => ({
-              key,
-              data: previous.key === key ? previous.data : null,
-              error,
-            }));
-        },
-      ),
-    [key, tick],
-  );
-  const current = state.key === key ? state : { data: null, error: null };
-  return {
-    data: current.data,
-    error: current.error,
-    loading: current.data === null && !current.error,
-    refresh: () => setTick((value) => value + 1),
-  };
-}
-
-export function OpsNotice({ error, onRetry }) {
-  if (!error) return null;
-  return (
-    <div role="alert" className="connected-error">
-      <AlertTriangle size={19} />
-      <div>
-        <b>{friendlyError(error)}</b>
-        {error.detail?.request_id && (
-          <small>Request {error.detail.request_id}</small>
-        )}
-      </div>
-      {onRetry && (
-        <button className="text-btn" onClick={onRetry}>
-          Retry
-        </button>
-      )}
-    </div>
-  );
-}
-
-function Modal({ title, children, onClose }) {
-  useEffect(() => {
-    const previous = document.activeElement;
-    const handler = (event) => {
-      if (event.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", handler);
-    document.querySelector(".modal .icon-btn")?.focus();
-    return () => {
-      document.removeEventListener("keydown", handler);
-      previous?.focus?.();
-    };
-  }, []);
-  return (
-    <div className="overlay" onClick={onClose}>
-      <section
-        role="dialog"
-        aria-modal="true"
-        aria-label={title}
-        className="modal wide ops-modal"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="section-head">
-          <h2>{title}</h2>
-          <button
-            className="icon-btn"
-            aria-label="Close dialog"
-            onClick={onClose}
-          >
-            <X size={20} />
-          </button>
-        </div>
-        {children}
-      </section>
-    </div>
-  );
-}
+export { OpsNotice, usePolled };
 
 /* ----------------------------- Area Radar ----------------------------- */
 
@@ -167,19 +64,19 @@ export function RadarOps({
     onError,
   );
   const sites = useMemo(
-    () => (map.data ? toMapSites(map.data.sites, aliases) : []),
+    () => (map.data ? toStatusMapSites(map.data, aliases, toMapSites) : []),
     [map.data, aliases],
   );
-  const clusters = useMemo(() => toMapClusters(map.data), [map.data]);
-  // The viewer's areas (server-scoped); outside them the map is faded.
-  const scopeAreaIds = useMemo(() => Object.keys(aliases || {}), [aliases]);
   const forecastAreas = useMemo(
     () => toForecastAreas(capacity.data),
     [capacity.data],
   );
   const [focus, setFocus] = useState(null);
-  const missing = Math.max(0, scopeSites - sites.length);
-  const areaList = [...new Set(sites.map((site) => site.area))];
+  const unmapped = map.data?.counts?.unmapped_sites ?? 0;
+  const missing = map.data?.status_sites
+    ? 0
+    : Math.max(0, scopeSites - sites.length);
+  const areaList = [...new Set(sites.map((site) => site.area).filter(Boolean))];
   const openSites = sites.filter((site) => site.status === "incident").length;
   return (
     <>
@@ -189,27 +86,32 @@ export function RadarOps({
             <h3>Installation map · Bucharest and Ilfov</h3>
             <p className="muted">
               {map.data
-                ? `${sites.length} synthetic sites · ${areaList.length === 1 ? areaList[0] : `${areaList.length} areas`} · ${openSites} with open incidents · zoom and pan the street map`
+                ? `${sites.length} synthetic sites · ${areaList.length === 1 ? areaList[0] : `${areaList.length} areas`} · ${openSites} with active issues${unmapped ? ` · ${unmapped} unmapped` : ""} · zoom and pan the street map`
                 : "Loading the map of your scope…"}
             </p>
           </div>
           <Pill>Synthetic demo data</Pill>
         </div>
         <OpsNotice error={map.error} onRetry={map.refresh} />
-        <BucharestMap
-          sites={sites}
-          clusters={clusters}
-          areas={scopeAreaIds.length ? scopeAreaIds : null}
-          selectedId={focus}
-          actionLabel="Open incidents or installation"
-          onSelect={(id) => {
-            setFocus(id);
-            const site = map.data?.sites.find((item) => item.site_id === id);
-            if (site?.open_incidents > 0) onOpenIncidents(id, site.alias);
-            else onOpenSite(id);
-          }}
-          note={map.data?.note || MAP_NOTE}
-        />
+        {map.data && (
+          <OpsStatusMap
+            map={map.data}
+            aliases={aliases}
+            selectedSiteId={focus}
+            onSiteClick={setFocus}
+            actionLabel="Open cases or installation"
+            onAction={(id) => {
+              setFocus(id);
+              const status = [...(map.data.status_sites || []), ...(map.data.unmapped || [])].find(
+                (item) => item.site_id === id,
+              );
+              const site = map.data.sites.find((item) => item.site_id === id);
+              if (status?.episode_ids?.length || site?.open_incidents > 0)
+                onOpenIncidents(id, status?.alias || site?.alias || id);
+              else onOpenSite(id);
+            }}
+          />
+        )}
         {map.data && missing > 0 && (
           <p className="small-note">
             {missing} installation{missing === 1 ? "" : "s"} in your scope{" "}
@@ -219,9 +121,10 @@ export function RadarOps({
           </p>
         )}
         <p className="small-note">
-          A coverage map, not a network model. A site with an open incident
-          opens the Incidents page filtered to that site; other sites open the
-          installation detail. A recent feed is not an equipment health check.
+          A coverage map, not a network model. A site with an active case opens
+          the ranked queue filtered to that site; other sites open the
+          installation detail. A recent feed is not an equipment health check,
+          and missing data is shown as unknown, never as healthy.
         </p>
       </section>
       {capacity.error ? (
@@ -244,7 +147,7 @@ export function RadarOps({
 
 /* ------------------------------ Incidents ----------------------------- */
 
-function AutoDispatch({ api, labels, onDone, onError }) {
+export function AutoDispatch({ api, labels, onDone, onError }) {
   const [busy, setBusy] = useState(false),
     [result, setResult] = useState(null),
     [error, setError] = useState(null);
@@ -312,7 +215,7 @@ const incidentLabels = (list) =>
     ]),
   );
 
-function CrewBanner({ teams, onOpen }) {
+export function CrewBanner({ teams, onOpen }) {
   if (!teams) return null;
   if (!teams.crews.length)
     return (
@@ -360,226 +263,6 @@ function CrewBanner({ teams, onOpen }) {
     );
   });
 }
-
-/**
- * Incidents list (severity order from the server) with filters and the detail modal.
- * siteFilter: { id, alias } | null — set from the map.
- */
-export function IncidentsPage({
-  api,
-  user,
-  aliases,
-  siteFilter,
-  onClearSite,
-  focusIncident,
-  onFocusHandled,
-  onOpenRequest,
-  onError,
-  reload,
-}) {
-  const role = user.role;
-  const [status, setStatus] = useState("open"),
-    [tier, setTier] = useState("All"),
-    [selected, setSelected] = useState(null);
-  const list = usePolled(
-    (signal) => api.opsIncidents(status, signal),
-    `incidents:${status}:${reload}`,
-    onError,
-  );
-  const teams = usePolled(
-    (signal) =>
-      role === "supervisor" ? Promise.resolve(null) : api.opsTeams(signal),
-    `teams:${role}:${reload}`,
-    onError,
-  );
-  useEffect(() => {
-    if (focusIncident) {
-      setSelected(focusIncident);
-      onFocusHandled?.();
-    }
-  }, [focusIncident]);
-  const rows = (list.data || []).filter(
-    (i) =>
-      (tier === "All" || i.tier === tier) &&
-      (!siteFilter || i.site_id === siteFilter.id),
-  );
-  const labels = useMemo(() => incidentLabels(list.data), [list.data]);
-  const refreshAll = () => {
-    list.refresh();
-    teams.refresh();
-  };
-  return (
-    <>
-      {role === "technician" && (
-        <CrewBanner teams={teams.data} onOpen={setSelected} />
-      )}
-      <section className="card">
-        <div className="section-head ops-incidents-head">
-          <div>
-            <h3>Every case in your scope, in the right order</h3>
-            <p className="muted">
-              Safety tier first, then age. Synthetic demo incidents from replay
-              policy rules and customer requests; not an equipment diagnosis.
-            </p>
-          </div>
-          {role === "dispatcher" && (
-            <AutoDispatch
-              api={api}
-              labels={labels}
-              onDone={refreshAll}
-              onError={onError}
-            />
-          )}
-        </div>
-        <div className="filters ops-filters">
-          <select
-            aria-label="Incident status"
-            value={status}
-            onChange={(event) => setStatus(event.target.value)}
-          >
-            <option value="open">Open incidents</option>
-            <option value="all">All incidents, including resolved</option>
-          </select>
-          <select
-            aria-label="Safety tier"
-            value={tier}
-            onChange={(event) => setTier(event.target.value)}
-          >
-            <option value="All">All safety tiers</option>
-            {["P0", "P1", "P2", "P3"].map((t) => (
-              <option key={t}>{t}</option>
-            ))}
-          </select>
-          {siteFilter && (
-            <span className="ops-chip">
-              Site: <b>{siteFilter.alias}</b>
-              <button
-                className="text-btn"
-                onClick={onClearSite}
-                aria-label="Show incidents for every site"
-              >
-                Show all sites <X size={13} />
-              </button>
-            </span>
-          )}
-          <Pill>
-            {list.data ? `${rows.length} case${rows.length === 1 ? "" : "s"}` : "Loading…"}
-          </Pill>
-        </div>
-        <OpsNotice error={list.error} onRetry={list.refresh} />
-        {list.data && rows.length > 0 && (
-          <div className="table-scroll">
-            <table className="ops-incident-table">
-              <thead>
-                <tr>
-                  <th>Priority / case</th>
-                  <th>Installation</th>
-                  <th>Status</th>
-                  <th>Crew / meeting</th>
-                  <th>Age</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((i) => (
-                  <tr
-                    key={i.incident_id}
-                    className="clickable"
-                    onClick={() => setSelected(i.incident_id)}
-                  >
-                    <td>
-                      <div className="case-cell">
-                        <Pill tone={tierTone(i.tier)}>{i.tier}</Pill>
-                        <div>
-                          <b>{i.title}</b>
-                          <small>
-                            {shortId(i.incident_id)} · {i.family} ·{" "}
-                            {i.source === "customer_request"
-                              ? "Customer request"
-                              : "Synthetic replay"}
-                          </small>
-                        </div>
-                      </div>
-                    </td>
-                    <td>
-                      {i.site_alias}
-                      <small>
-                        {[i.zone, areaName(i.area_id, aliases)]
-                          .filter(Boolean)
-                          .join(" · ")}
-                      </small>
-                    </td>
-                    <td>
-                      <Pill tone={i.status === "resolved" ? "green" : ""}>
-                        {incidentStatus(i.status)}
-                      </Pill>
-                    </td>
-                    <td>
-                      {i.assignment ? (
-                        <>
-                          {i.assignment.crew_name}
-                          <small>
-                            {i.assignment.kind === "meeting"
-                              ? `Meeting ${meetingLabel(i.assignment.scheduled_start, i.assignment.scheduled_end)}`
-                              : assignmentStatus(i.assignment.status)}
-                          </small>
-                        </>
-                      ) : (
-                        "—"
-                      )}
-                    </td>
-                    <td>
-                      {ageLabel(i.created_at)}
-                      <small>{when(i.created_at)}</small>
-                    </td>
-                    <td>
-                      <button
-                        className="icon-btn"
-                        aria-label={`Open ${i.title} at ${i.site_alias}`}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          setSelected(i.incident_id);
-                        }}
-                      >
-                        <ArrowUpRight size={17} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-        {list.loading && <div className="empty">Loading incidents…</div>}
-        {list.data && !rows.length && (
-          <div className="empty">
-            <CheckCircle2 size={28} />
-            <p>
-              {status === "open"
-                ? "No open incidents match these filters in your scope."
-                : "No incidents match these filters in your scope."}
-            </p>
-          </div>
-        )}
-      </section>
-      {selected && (
-        <IncidentModal
-          api={api}
-          user={user}
-          incidentId={selected}
-          crews={teams.data?.crews || []}
-          aliases={aliases}
-          onClose={() => setSelected(null)}
-          onChanged={refreshAll}
-          onOpenRequest={onOpenRequest}
-          onError={onError}
-          reload={reload}
-        />
-      )}
-    </>
-  );
-}
-
 
 /** Incident detail: evidence, source, assignment, incident log and role actions. */
 export function IncidentModal({
@@ -978,15 +661,15 @@ export function IncidentModal({
 
 /* -------------------------------- Teams -------------------------------- */
 
-export function TeamsPage({ api, user, aliases, onOpenRequest, onError, reload }) {
+export function TeamsPage({ api, user, aliases, onOpenIncident, onError, reload }) {
   const dispatcher = user.role === "dispatcher";
+  const planner = dispatcher || user.role === "supervisor";
   const teams = usePolled((signal) => api.opsTeams(signal), `teams:${reload}`, onError);
   const incidents = usePolled(
     (signal) => api.opsIncidents("all", signal),
     `teams-incidents:${reload}`,
     onError,
   );
-  const [selected, setSelected] = useState(null);
   const rows = useMemo(
     () =>
       teams.data
@@ -1013,7 +696,17 @@ export function TeamsPage({ api, user, aliases, onOpenRequest, onError, reload }
     return <section className="card empty">Loading crews and assignments…</section>;
   return (
     <>
-      <section className="card">
+      {planner && (
+        <PlanTeamsPanel
+          api={api}
+          user={user}
+          crews={teams.data.crews}
+          onChanged={refreshAll}
+          onError={onError}
+          reload={reload}
+        />
+      )}
+      <section className={`card${planner ? " mt" : ""}`}>
         <div className="section-head">
           <div>
             <h3>Assignment report by incident</h3>
@@ -1031,7 +724,7 @@ export function TeamsPage({ api, user, aliases, onOpenRequest, onError, reload }
             send their team, book customer meetings and resolve their cases.
           </div>
         )}
-        <AssignmentReport rows={rows} onOpen={setSelected} />
+        <AssignmentReport rows={rows} onOpen={onOpenIncident} />
       </section>
       <section className="mt">
         <div className="section-head">
@@ -1044,7 +737,7 @@ export function TeamsPage({ api, user, aliases, onOpenRequest, onError, reload }
           <div className="card empty">No crews work in your areas.</div>
         )}
       </section>
-      {dispatcher && (
+      {dispatcher && !teams.data.crews.some((crew) => crew.profile) && (
         <section className="card mt ops-tools">
           <div className="section-head">
             <div>
@@ -1066,20 +759,6 @@ export function TeamsPage({ api, user, aliases, onOpenRequest, onError, reload }
             onError={onError}
           />
         </section>
-      )}
-      {selected && (
-        <IncidentModal
-          api={api}
-          user={user}
-          incidentId={selected}
-          crews={teams.data.crews}
-          aliases={aliases}
-          onClose={() => setSelected(null)}
-          onChanged={refreshAll}
-          onOpenRequest={onOpenRequest}
-          onError={onError}
-          reload={reload}
-        />
       )}
     </>
   );

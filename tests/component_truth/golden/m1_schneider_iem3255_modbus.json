@@ -1,0 +1,60 @@
+{
+ "evaluation_only": true,
+ "profile_id": "m1_schneider_iem3255_modbus",
+ "asset_id": "F1-M1-PCC",
+ "effective_time_utc": "2026-07-17T09:00:01.221Z",
+ "expected": [
+  {
+   "metric": "grid_net_kw",
+   "channel": null,
+   "value": 8.08761215209961
+  },
+  {
+   "metric": "phase_active_power_kw",
+   "channel": "L1",
+   "value": -1.2914305925369263
+  },
+  {
+   "metric": "phase_active_power_kw",
+   "channel": "L2",
+   "value": 2.539741039276123
+  },
+  {
+   "metric": "phase_active_power_kw",
+   "channel": "L3",
+   "value": 6.839301586151123
+  },
+  {
+   "metric": "phase_voltage_v",
+   "channel": "L1",
+   "value": 231.33763122558594
+  },
+  {
+   "metric": "phase_voltage_v",
+   "channel": "L2",
+   "value": 229.75802612304688
+  },
+  {
+   "metric": "phase_voltage_v",
+   "channel": "L3",
+   "value": 228.27957153320312
+  },
+  {
+   "metric": "grid_frequency_hz",
+   "channel": null,
+   "value": 50.005096435546875
+  },
+  {
+   "metric": "lifetime_grid_import_kwh",
+   "channel": null,
+   "exact": "48250.836"
+  },
+  {
+   "metric": "lifetime_grid_export_kwh",
+   "channel": null,
+   "exact": "3104.944"
+  }
+ ],
+ "tolerance": 1e-06,
+ "note": "Float32 values after IEEE-754 round trip; Int64 Wh -> exact kWh text"
+}
