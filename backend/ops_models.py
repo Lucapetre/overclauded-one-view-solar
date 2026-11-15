@@ -38,6 +38,8 @@ class MapSite(Model):
     site_id: str
     alias: str
     area_id: str | None
+    area_alias: str | None
+    cluster: str | None
     latitude: float
     longitude: float
     zone: str
@@ -50,10 +52,25 @@ class MapSite(Model):
     worst_tier: Tier | None
 
 
+ClusterKind = Literal[
+    "residential", "hospitality", "commercial", "industrial", "logistics"
+]
+
+
+class MapCluster(Model):
+    """A named group of nearby demo installations, drawn as one highlight."""
+
+    id: str
+    name: str
+    area_id: str
+    kind: ClusterKind
+
+
 class OpsMap(Model):
     center: MapCenter
     note: str
     sites: list[MapSite]
+    clusters: list[MapCluster]
 
 
 class AssignmentSummary(Model):

@@ -20,7 +20,7 @@ const byId = (id) => users.find((u) => u.id === id);
 const ceo = byId("u5"),
   manager = byId("u6"),
   dispatcher = byId("u7"),
-  dispatcherCentral = byId("u14"),
+  dispatcherS3 = byId("u14"),
   ioana = byId("u8"),
   mihai = byId("u9");
 const NOW = "2026-11-14T11:30:00Z";
@@ -41,19 +41,19 @@ const incident = (id, site, family, tier, age, status = "New") => ({
 test("auto-assign walks severity order, oldest first within a tier, until no crew is free", () => {
   const db = seed();
   db.incidents = [
-    incident("A", "S01", "Production", "P2", 300),
-    incident("B", "S02", "Temperature", "P1", 10),
-    incident("C", "S03", "Telemetry", "P1", 90),
-    incident("D", "S05", "Local issue", "P0", 1),
+    incident("A", "s6-01", "Production", "P2", 300),
+    incident("B", "s6-02", "Temperature", "P1", 10),
+    incident("C", "s6-03", "Telemetry", "P1", 90),
+    incident("D", "s6-05", "Local issue", "P0", 1),
   ];
-  // A second North crew so that two assignments can happen.
-  db.crews.push({ ...db.crews[0], id: "C9", name: "Solar Care B", members: ["Demo"] });
+  // A second Sector 6 crew so that two assignments can happen.
+  db.crews.push({ ...db.crews.find((c) => c.area === "Sector 6"), id: "C9", name: "Sector 6 Solar Care B", members: ["Demo"] });
   const result = autoAssign(db, dispatcher, NOW);
   assert.deepEqual(
     result.assigned.map((a) => [a.incident, a.crew]),
     [
-      ["D", "Solar Care"],
-      ["C", "Solar Care B"],
+      ["D", "Sector 6 Solar Care"],
+      ["C", "Sector 6 Solar Care B"],
     ],
   );
   assert.deepEqual(
@@ -65,82 +65,82 @@ test("auto-assign walks severity order, oldest first within a tier, until no cre
   assert.ok(
     db.incidents
       .find((i) => i.id === "D")
-      .timeline.some((t) => t.text === "Assigned by severity: Solar Care" && t.actor === dispatcher.name),
+      .timeline.some((t) => t.text === "Assigned by severity: Sector 6 Solar Care" && t.actor === dispatcher.name),
   );
   for (const a of result.assigned) {
     assert.equal(a.kind, "dispatch");
     assert.equal(a.assignedBy, dispatcher.name);
     assert.equal(a.assignedAt, NOW);
-    assert.equal(a.area, "North");
+    assert.equal(a.area, "Sector 6");
   }
 });
 
-test("auto-assign on the seed gives the North crew the P1 incident and explains every skip", () => {
+test("auto-assign on the seed gives the Sector 6 crew the P1 incident and explains every skip", () => {
   const db = seed();
   const { assigned, skipped } = autoAssign(db, dispatcher, NOW);
   assert.deepEqual(assigned.map((a) => a.incident), ["I102"]);
-  // Only North incidents are considered by the North dispatcher.
+  // Only Sector 6 incidents are considered by the Sector 6 dispatcher.
   for (const s of skipped)
-    assert.equal(sites.find((x) => x.id === db.incidents.find((i) => i.id === s.incident).site).area, "North");
+    assert.equal(sites.find((x) => x.id === db.incidents.find((i) => i.id === s.incident).site).area, "Sector 6");
   assert.ok(skipped.every((s) => s.reason));
-  // Central dispatcher: I104 and I105 are both P1; the older one (I105) wins.
-  const central = autoAssign(db, dispatcherCentral, NOW);
-  assert.deepEqual(central.assigned.map((a) => a.incident), ["I105"]);
+  // Sector 3 dispatcher: I104 and I105 are both P1; the older one (I105) wins.
+  const s3 = autoAssign(db, dispatcherS3, NOW);
+  assert.deepEqual(s3.assigned.map((a) => a.incident), ["I105"]);
 });
 
 test("billing questions and unknown families are never given to a crew", () => {
   const db = seed();
   db.incidents = [
-    incident("BILL", "S01", "Billing", "P0", 500),
-    incident("WX", "S02", "Weather", "P1", 400),
-    incident("OK", "S03", "Production", "P3", 1),
+    incident("BILL", "s6-01", "Billing", "P0", 500),
+    incident("WX", "s6-02", "Weather", "P1", 400),
+    incident("OK", "s6-03", "Production", "P3", 1),
   ];
   const { assigned, skipped } = autoAssign(db, dispatcher, NOW);
   assert.deepEqual(assigned.map((a) => a.incident), ["OK"]);
   assert.match(skipped.find((s) => s.incident === "BILL").reason, /Billing/);
-  assert.match(skipped.find((s) => s.incident === "WX").reason, /No North crew covers Weather/);
-  assert.throws(() => assignCrew(db, dispatcher, "BILL", "Solar Care"), /Billing/);
+  assert.match(skipped.find((s) => s.incident === "WX").reason, /No Sector 6 crew covers Weather/);
+  assert.throws(() => assignCrew(db, dispatcher, "BILL", "Sector 6 Solar Care"), /Billing/);
 });
 
 test("eligibility needs the same area and skill; availability needs no active dispatch", () => {
   const db = seed();
   const i101 = db.incidents.find((i) => i.id === "I101");
-  assert.deepEqual(eligibleCrews(db, i101).map((c) => c.name), ["Solar Care"]);
+  assert.deepEqual(eligibleCrews(db, i101).map((c) => c.name), ["Sector 6 Solar Care"]);
   const i104 = db.incidents.find((i) => i.id === "I104");
-  assert.deepEqual(eligibleCrews(db, i104).map((c) => c.name), ["Grid Response"]);
-  assignCrew(db, dispatcher, "I101", "Solar Care", NOW);
-  assert.equal(crewBusy(db, "Solar Care").incident, "I101");
+  assert.deepEqual(eligibleCrews(db, i104).map((c) => c.name), ["Sector 3 Grid Response"]);
+  assignCrew(db, dispatcher, "I101", "Sector 6 Solar Care", NOW);
+  assert.equal(crewBusy(db, "Sector 6 Solar Care").incident, "I101");
   const i102 = db.incidents.find((i) => i.id === "I102");
   assert.deepEqual(eligibleCrews(db, i102), []);
   assert.equal(eligibleCrews(db, i102, { availableOnly: false })[0].busyWith.incident, "I101");
-  assert.match(skipReason(db, i102), /Solar Care is on I101/);
-  assert.throws(() => assignCrew(db, dispatcher, "I102", "Solar Care"), /not available/);
+  assert.match(skipReason(db, i102), /Sector 6 Solar Care is on I101/);
+  assert.throws(() => assignCrew(db, dispatcher, "I102", "Sector 6 Solar Care"), /not available/);
   // Wrong area and wrong role are refused.
-  assert.throws(() => assignCrew(db, dispatcher, "I104", "Grid Response"), /outside your area/);
-  assert.throws(() => assignCrew(db, manager, "I102", "Solar Care"), /Only the PPC dispatcher/);
-  assert.throws(() => assignCrew(db, ceo, "I102", "Solar Care"), /Only the PPC dispatcher/);
+  assert.throws(() => assignCrew(db, dispatcher, "I104", "Sector 3 Grid Response"), /outside your area/);
+  assert.throws(() => assignCrew(db, manager, "I102", "Sector 6 Solar Care"), /Only the PPC dispatcher/);
+  assert.throws(() => assignCrew(db, ceo, "I102", "Sector 6 Solar Care"), /Only the PPC dispatcher/);
   assert.throws(() => autoAssign(db, manager), /Only the PPC dispatcher/);
   // Cancelling frees the crew again.
-  const active = crewBusy(db, "Solar Care");
+  const active = crewBusy(db, "Sector 6 Solar Care");
   cancelAssignment(db, dispatcher, active.id, NOW);
-  assert.equal(crewBusy(db, "Solar Care"), null);
+  assert.equal(crewBusy(db, "Sector 6 Solar Care"), null);
 });
 
 test("send the team marks the crew busy and writes the incident log", () => {
   const db = seed();
   const a = sendTeam(db, ioana, "I101", NOW);
   assert.equal(a.status, "Team sent");
-  assert.equal(a.crew, "Solar Care");
+  assert.equal(a.crew, "Sector 6 Solar Care");
   const i101 = db.incidents.find((i) => i.id === "I101");
   assert.equal(i101.status, "Team sent");
-  assert.equal(i101.timeline.at(-1).text, "Team sent on site: Solar Care");
+  assert.equal(i101.timeline.at(-1).text, "Team sent on site: Sector 6 Solar Care");
   assert.equal(i101.timeline.at(-1).actor, ioana.name);
-  assert.equal(crewBusy(db, "Solar Care").id, a.id);
+  assert.equal(crewBusy(db, "Sector 6 Solar Care").id, a.id);
   // Busy on I101: cannot be sent elsewhere until resolved.
   assert.throws(() => sendTeam(db, ioana, "I102", NOW), /already on I101/);
   // An assigned dispatch advances instead of a duplicate being created.
   const db2 = seed();
-  const assigned = assignCrew(db2, dispatcher, "I102", "Solar Care", NOW);
+  const assigned = assignCrew(db2, dispatcher, "I102", "Sector 6 Solar Care", NOW);
   sendTeam(db2, ioana, "I102", NOW);
   assert.equal(db2.assignments.length, 1);
   assert.equal(assigned.status, "Team sent");
@@ -151,7 +151,7 @@ test("send the team marks the crew busy and writes the incident log", () => {
 
 test("meetings are booked for the crew and overlapping meetings are rejected", () => {
   const db = seed();
-  db.visits.push({ id: "V1", incident: "I101", site: "S01", status: "Awaiting review", replies: [] });
+  db.visits.push({ id: "V1", incident: "I101", site: "s6-01", status: "Awaiting review", replies: [] });
   const m = scheduleMeeting(db, ioana, "I101", { date: "2026-11-16", start: "10:00", end: "11:00" }, NOW);
   assert.equal(m.kind, "meeting");
   assert.equal(m.status, "Scheduled");
@@ -165,7 +165,7 @@ test("meetings are booked for the crew and overlapping meetings are rejected", (
   // Back-to-back and other days are fine; meetings do not block dispatch availability.
   scheduleMeeting(db, ioana, "I102", { date: "2026-11-16", start: "11:00", end: "12:00" }, NOW);
   scheduleMeeting(db, ioana, "I102", { date: "2026-11-17", start: "10:30", end: "11:30" }, NOW);
-  assert.equal(crewBusy(db, "Solar Care"), null);
+  assert.equal(crewBusy(db, "Sector 6 Solar Care"), null);
   // Another crew may meet at the same time.
   scheduleMeeting(db, mihai, "I104", { date: "2026-11-16", start: "10:00", end: "11:00" }, NOW);
   assert.throws(
@@ -182,11 +182,11 @@ test("resolving frees the crew and only the working crew can resolve", () => {
   const done = resolveIncident(db, ioana, "I101", "Panels cleaned (synthetic)", NOW);
   assert.equal(done.status, "Completed");
   assert.equal(db.incidents.find((i) => i.id === "I101").status, "Resolved");
-  assert.equal(crewBusy(db, "Solar Care"), null);
-  assert.match(db.incidents.find((i) => i.id === "I101").timeline.at(-1).text, /Resolved by Solar Care: Panels cleaned/);
+  assert.equal(crewBusy(db, "Sector 6 Solar Care"), null);
+  assert.match(db.incidents.find((i) => i.id === "I101").timeline.at(-1).text, /Resolved by Sector 6 Solar Care: Panels cleaned/);
   // The freed crew can be sent to the next case.
   sendTeam(db, ioana, "I102", NOW);
-  const report = teamsReport(db, ceo).crews.find((c) => c.name === "Solar Care");
+  const report = teamsReport(db, ceo).crews.find((c) => c.name === "Sector 6 Solar Care");
   assert.equal(report.completed.P2, 1);
   assert.equal(report.open.P1, 1);
   assert.equal(report.available, false);
@@ -203,25 +203,25 @@ test("technicians see every incident in their crew's area", () => {
 
 test("area manager sees only his area and the same team data as the overall manager", () => {
   const db = seed();
-  assignCrew(db, dispatcher, "I102", "Solar Care", NOW);
-  assignCrew(db, dispatcherCentral, "I104", "Grid Response", NOW);
+  assignCrew(db, dispatcher, "I102", "Sector 6 Solar Care", NOW);
+  assignCrew(db, dispatcherS3, "I104", "Sector 3 Grid Response", NOW);
   scheduleMeeting(db, ioana, "I101", { date: "2026-11-16", start: "09:00", end: "10:00" }, NOW);
   const all = teamsReport(db, ceo),
-    north = teamsReport(db, manager);
-  assert.deepEqual(north.areas, ["North"]);
+    s6 = teamsReport(db, manager);
+  assert.deepEqual(s6.areas, ["Sector 6"]);
   assert.deepEqual(
-    north.rows,
-    all.rows.filter((r) => r.area === "North"),
+    s6.rows,
+    all.rows.filter((r) => r.area === "Sector 6"),
   );
   assert.deepEqual(
-    north.crews,
-    all.crews.filter((c) => c.area === "North"),
+    s6.crews,
+    all.crews.filter((c) => c.area === "Sector 6"),
   );
-  assert.equal(north.crews.length, 1);
-  assert.deepEqual(north.crews[0].members, db.crews[0].members);
-  assert.ok(north.rows.some((r) => r.kind === "meeting" && r.slot === "2026-11-16 09:00–10:00"));
-  assert.ok(north.rows.some((r) => r.status === "Not assigned"));
-  assert.ok(!north.rows.some((r) => r.area !== "North"));
+  assert.equal(s6.crews.length, 1);
+  assert.deepEqual(s6.crews[0].members, db.crews.find((c) => c.area === "Sector 6").members);
+  assert.ok(s6.rows.some((r) => r.kind === "meeting" && r.slot === "2026-11-16 09:00–10:00"));
+  assert.ok(s6.rows.some((r) => r.status === "Not assigned"));
+  assert.ok(!s6.rows.some((r) => r.area !== "Sector 6"));
   assert.deepEqual(
     visibleIncidents(db, manager).map((i) => i.id).sort(),
     ["I101", "I102", "I103", "I108"],
@@ -230,9 +230,9 @@ test("area manager sees only his area and the same team data as the overall mana
 
 test("request types that name a crew go to the crew of the customer's area", () => {
   const db = seed();
-  assert.equal(routeVisit("solar", "S01", db.crews), "Solar Care");
-  assert.equal(routeVisit("solar", "S17", db.crews), "Field Service");
-  assert.equal(routeVisit("grid", "S09", db.crews), "Grid Response");
-  assert.equal(routeVisit("billing", "S04", db.crews), "PPC Triage");
-  assert.equal(routeVisit("other", "S04", db.crews), "PPC Triage");
+  assert.equal(routeVisit("solar", "s6-01", db.crews), "Sector 6 Solar Care");
+  assert.equal(routeVisit("solar", "ilfov-01", db.crews), "Ilfov Field Service");
+  assert.equal(routeVisit("grid", "s3-06", db.crews), "Sector 3 Grid Response");
+  assert.equal(routeVisit("billing", "s1-05", db.crews), "PPC Triage");
+  assert.equal(routeVisit("other", "s1-05", db.crews), "PPC Triage");
 });

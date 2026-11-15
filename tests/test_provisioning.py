@@ -55,7 +55,7 @@ def test_registry_changes_cannot_reinterpret_existing_telemetry(database, regist
 
 def test_customers_cannot_be_granted_area_access(database):
     with pytest.raises(ApiError) as error:
-        grant_access(database, "customer", "north", "area")
+        grant_access(database, "customer", "sector-6", "area")
     assert error.value.status == 403
 
 

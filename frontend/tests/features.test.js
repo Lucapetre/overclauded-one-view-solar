@@ -117,21 +117,24 @@ test("period ranges start at local midnight", () => {
 test("saved contract prices drive the task saving", () => {
   const task = { energy: 6, power: 3, from: 12, to: 18, deadline: 18, normal: 19 };
   assert.equal(recommend(task)[0].saving, 4.5);
-  const custom = recommend(task, [], "S01", { importPrice: 1, exportPrice: 0.5 })[0];
+  const custom = recommend(task, [], "s6-01", { importPrice: 1, exportPrice: 0.5 })[0];
   assert.equal(custom.saving, 3);
   assert.equal(custom.baseline - custom.cost, custom.saving);
-  assert.deepEqual(recommend(task, [], "S01", { importPrice: 0.5, exportPrice: 0.5 }), []);
+  assert.deepEqual(recommend(task, [], "s6-01", { importPrice: 0.5, exportPrice: 0.5 }), []);
 });
 
 test("request types are extended and the business account is separate", () => {
   assert.equal(requestTypes.length, 13);
-  assert.equal(routeRequest("battery").routeTo, "Solar Care");
+  assert.equal(routeRequest("battery").routeTo, "Area crew");
   assert.equal(routeRequest("unknown").id, "other");
   const business = users.filter((user) => user.business);
-  assert.deepEqual(business.map((user) => user.sites), [["S04"]]);
-  assert.ok(sites.find((site) => site.id === "S04").business);
-  // Seven business sites from the shared fixture; only Bistro Soare has a demo login.
-  assert.equal(sites.filter((site) => site.business).length, 7);
+  assert.deepEqual(business.map((user) => user.sites), [["s1-05"]]);
+  const bistro = sites.find((site) => site.id === "s1-05");
+  assert.ok(bistro.business);
+  assert.equal(bistro.name, "Bistro Soare");
+  assert.equal(bistro.cluster, "dorobanti-floreasca-hospitality");
+  // 25 business sites from the shared fixture; only Bistro Soare has a demo login.
+  assert.equal(sites.filter((site) => site.business).length, 25);
 });
 
 test("backend and demo request types and lessons stay aligned", () => {

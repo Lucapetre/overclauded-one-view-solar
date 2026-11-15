@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { sites, defaultTariff, inverters, BUCHAREST_BOUNDS, profileFor } from "../src/domain.js";
+import { AREAS, sites, defaultTariff, inverters, DEMO_BOUNDS, profileFor } from "../src/domain.js";
 import { DEFAULT_TARIFF, pricesFor, revenueReport, siteRevenue } from "../src/revenue.js";
 
 const fixture = JSON.parse(
@@ -28,15 +28,15 @@ test("contract prices replace the fixture tariff only when present", () => {
   const base = revenueReport(sites, {}, null, defaultTariff);
   const withContract = revenueReport(
     sites,
-    { S04: { import_price_ron_kwh: 1, export_price_ron_kwh: 0.5 } },
+    { "s1-05": { import_price_ron_kwh: 1, export_price_ron_kwh: 0.5 } },
     null,
     defaultTariff,
   );
-  const bistro = withContract.businessAccounts.find((b) => b.id === "S04");
+  const bistro = withContract.businessAccounts.find((b) => b.id === "s1-05");
   assert.equal(bistro.priceSource, "contract");
   assert.equal(bistro.net, 3200 * 1 + 180 - 260 * 0.5);
   assert.equal(withContract.contractSites, 1);
-  assert.equal(base.businessAccounts.find((b) => b.id === "S04").priceSource, "default");
+  assert.equal(base.businessAccounts.find((b) => b.id === "s1-05").priceSource, "default");
 });
 
 test("revenue report totals, segments, areas and ranked business accounts", () => {
@@ -45,43 +45,47 @@ test("revenue report totals, segments, areas and ranked business accounts", () =
   for (const p of fixture.profiles)
     net += p.monthly_import_kwh * 1.3 + p.service_fee_ron - p.monthly_export_kwh * 0.55;
   assert.ok(Math.abs(report.totals.net - net) < 0.01);
-  assert.equal(report.totals.sites, 24);
+  assert.equal(report.totals.sites, 60);
   assert.ok(Math.abs(report.annualNet - report.totals.net * 12) < 0.01);
   const { business, home } = report.bySegment;
-  assert.equal(business.sites, 7);
-  assert.equal(home.sites, 17);
+  assert.equal(business.sites, 25);
+  assert.equal(home.sites, 35);
   assert.ok(Math.abs(business.share + home.share - 1) < 1e-9);
   assert.ok(business.share > 0.9, "business accounts dominate synthetic revenue");
-  assert.equal(report.byArea.length, 3);
+  assert.deepEqual(report.byArea.map((a) => a.area), AREAS);
   assert.ok(
     Math.abs(report.byArea.reduce((s, a) => s + a.net, 0) - report.totals.net) < 0.05,
   );
   const nets = report.businessAccounts.map((b) => b.net);
   assert.deepEqual(nets, [...nets].sort((a, b) => b - a));
-  assert.equal(report.businessAccounts[0].name, "Militari Factory");
+  assert.equal(report.businessAccounts[0].name, "Popești-Leordeni Factory");
 });
 
-test("area scope keeps only that area", () => {
-  const north = revenueReport(sites, {}, ["North"], defaultTariff);
-  assert.equal(north.totals.sites, 8);
-  assert.deepEqual(north.byArea.map((a) => a.area), ["North"]);
+test("area scope keeps only that sector", () => {
+  const s6 = revenueReport(sites, {}, ["Sector 6"], defaultTariff);
+  assert.equal(s6.totals.sites, 14);
+  assert.deepEqual(s6.byArea.map((a) => a.area), ["Sector 6"]);
   assert.deepEqual(
-    north.businessAccounts.map((b) => b.id).sort(),
-    ["S04", "S06", "S08"],
+    s6.businessAccounts.map((b) => b.id).sort(),
+    ["s6-13", "s6-14"],
   );
   const all = revenueReport(sites, {}, null, defaultTariff);
-  assert.equal(north.totals.net, all.byArea.find((a) => a.area === "North").net);
+  assert.equal(s6.totals.net, all.byArea.find((a) => a.area === "Sector 6").net);
+  const ilfov = revenueReport(sites, {}, ["Ilfov"], defaultTariff);
+  assert.equal(ilfov.totals.sites, 10);
+  assert.equal(ilfov.bySegment.home.sites, 0);
 });
 
-test("demo sites map to the shared fixture inside Bucharest", () => {
-  assert.equal(sites.length, 24);
-  assert.equal(sites.filter((s) => s.business).length, 7);
-  const area = { north: "North", central: "Central", south: "South" };
+test("demo sites are the shared fixture's profiles, ids and names", () => {
+  assert.equal(sites.length, 60);
+  assert.equal(sites.filter((s) => s.business).length, 25);
   for (const p of fixture.profiles) {
-    const id = `S${String(["north", "central", "south"].indexOf(p.area) * 8 + p.number).padStart(2, "0")}`;
-    const site = sites.find((s) => s.id === id);
-    assert.equal(profileFor(id), site.profile);
-    assert.equal(site.area, area[p.area]);
+    const site = sites.find((s) => s.id === p.site_id);
+    assert.ok(site, p.site_id);
+    assert.equal(profileFor(p.site_id), site.profile);
+    assert.equal(site.area, fixture.areas[p.area_id].label);
+    assert.equal(site.areaId, p.area_id);
+    assert.equal(site.cluster, p.cluster || null);
     assert.equal(site.latitude, p.latitude);
     assert.equal(site.longitude, p.longitude);
     assert.equal(site.zone, p.zone);
@@ -89,20 +93,22 @@ test("demo sites map to the shared fixture inside Bucharest", () => {
     assert.equal(site.capacity, p.installed_kwp);
     assert.equal(site.business, p.segment === "business");
     assert.equal(site.businessType, p.business_type || null);
+    if (p.site_id !== "s6-01") assert.equal(site.name, p.name);
   }
   for (const s of sites) {
-    assert.ok(s.latitude > 44.33 && s.latitude < 44.54, s.id);
-    assert.ok(s.longitude > 25.94 && s.longitude < 26.25, s.id);
-    if (!s.business && s.id !== "S01") assert.match(s.name, /^Solar home \d\d$/);
+    assert.ok(s.latitude > DEMO_BOUNDS.minLat && s.latitude < DEMO_BOUNDS.maxLat, s.id);
+    assert.ok(s.longitude > DEMO_BOUNDS.minLon && s.longitude < DEMO_BOUNDS.maxLon, s.id);
   }
-  assert.equal(sites[0].name, "The Green House");
-  assert.equal(sites[3].name, "Bistro Soare");
-  assert.ok(sites.find((s) => s.id === "S15").name.includes("Militari"));
+  // Alex's Militari home keeps its story name.
+  const green = sites.find((s) => s.id === "s6-01");
+  assert.equal(green.name, "The Green House");
+  assert.equal(green.cluster, "militari-homes");
+  assert.equal(sites.find((s) => s.id === "s1-05").name, "Bistro Soare");
   // Inverter ratings and model strings follow the site's capacity.
   for (const inv of inverters) {
     const site = sites.find((s) => s.id === inv.site);
     assert.equal(inv.ratedKw, site.capacity);
     assert.ok(inv.model.includes(String(site.capacity)), inv.model);
+    assert.ok(inv.mapX > 0 && inv.mapX < 1 && inv.mapY > 0 && inv.mapY < 1, inv.id);
   }
-  assert.ok(BUCHAREST_BOUNDS.south < BUCHAREST_BOUNDS.north);
 });

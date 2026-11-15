@@ -1,4 +1,5 @@
 import siteProfiles from "../../backend/fixtures/site_profiles.json" with { type: "json" };
+import { AREA_LABELS, AREA_NAMES } from "./geography.js";
 export const roles = {
   client: "Client",
   ceo: "Overall manager",
@@ -6,38 +7,40 @@ export const roles = {
   dispatcher: "PPC dispatcher",
   technician: "O&M technician",
 };
+// Areas are the real Bucharest Sectors 1–6 and Ilfov County; every account, site,
+// crew and incident below is fictional.
 export const users = [
   {
     id: "u1",
     name: "Alex Morgan",
     email: "alex@solarlenes.demo",
     role: "client",
-    sites: ["S01"],
-    area: "North",
+    sites: ["s6-01"],
+    area: "Sector 6",
   },
   {
     id: "u2",
     name: "Elena Popescu",
     email: "elena@solarlenes.demo",
     role: "client",
-    sites: ["S02"],
-    area: "North",
+    sites: ["s3-01"],
+    area: "Sector 3",
   },
   {
     id: "u3",
     name: "David Ionescu",
     email: "david@solarlenes.demo",
     role: "client",
-    sites: ["S09"],
-    area: "Central",
+    sites: ["s1-01"],
+    area: "Sector 1",
   },
   {
     id: "u4",
     name: "Sofia Marin",
     email: "sofia@solarlenes.demo",
     role: "client",
-    sites: ["S17"],
-    area: "South",
+    sites: ["s4-01"],
+    area: "Sector 4",
   },
   {
     id: "u5",
@@ -53,7 +56,7 @@ export const users = [
     email: "manager@solarlenes.demo",
     role: "manager",
     sites: [],
-    area: "North",
+    area: "Sector 6",
   },
   {
     id: "u7",
@@ -61,7 +64,7 @@ export const users = [
     email: "dispatch@solarlenes.demo",
     role: "dispatcher",
     sites: [],
-    area: "North",
+    area: "Sector 6",
   },
   {
     id: "u8",
@@ -69,8 +72,8 @@ export const users = [
     email: "ioana@solarlenes.demo",
     role: "technician",
     sites: [],
-    area: "North",
-    crew: "Solar Care",
+    area: "Sector 6",
+    crew: "Sector 6 Solar Care",
   },
   {
     id: "u9",
@@ -78,8 +81,8 @@ export const users = [
     email: "mihai@solarlenes.demo",
     role: "technician",
     sites: [],
-    area: "Central",
-    crew: "Grid Response",
+    area: "Sector 3",
+    crew: "Sector 3 Grid Response",
   },
   {
     id: "u10",
@@ -87,79 +90,68 @@ export const users = [
     email: "ana@solarlenes.demo",
     role: "technician",
     sites: [],
-    area: "South",
-    crew: "Field Service",
+    area: "Ilfov",
+    crew: "Ilfov Field Service",
   },
   {
     id: "u14",
     name: "Carmen Voicu",
-    email: "dispatch.central@solarlenes.demo",
+    email: "dispatch.s3@solarlenes.demo",
     role: "dispatcher",
     sites: [],
-    area: "Central",
+    area: "Sector 3",
   },
   {
     id: "u15",
     name: "Dorin Ilie",
-    email: "dispatch.south@solarlenes.demo",
+    email: "dispatch.ilfov@solarlenes.demo",
     role: "dispatcher",
     sites: [],
-    area: "South",
+    area: "Ilfov",
   },
   {
     id: "u16",
     name: "Ilinca Barbu",
     email: "bistro@solarlenes.demo",
     role: "client",
-    sites: ["S04"],
-    area: "North",
+    sites: ["s1-05"],
+    area: "Sector 1",
     business: true,
   },
 ];
-// Site placement, capacity and billing profiles come from the shared synthetic fixture.
-// Profile area north/central/south + number 1–8 maps to demo sites S01–S08 / S09–S16 / S17–S24.
-export const AREAS = ["North", "Central", "South"];
+// Site placement, capacity, cluster and billing profiles come from the shared synthetic
+// fixture; the demo uses the fixture's site ids (s1-01 … s6-14, ilfov-01 … ilfov-10).
+/** Area labels in display order: Sector 1 … Sector 6, Ilfov. */
+export const AREAS = AREA_NAMES;
 export const siteFixture = siteProfiles;
 export const defaultTariff = siteProfiles.default_tariff;
-const businessNames = {
-  S04: "Bistro Soare",
-  S06: "Pipera Office Park",
-  S08: "Bucureștii Noi Warehouse",
-  S11: "Old Town Bistro",
-  S15: "Militari Factory",
-  S21: "Berceni Factory",
-  S24: "Progresul Supermarket",
-};
+/** The site a visitor sees before logging in (Alex's Militari home). */
+export const DEFAULT_SITE = "s6-01";
+const nameOverrides = { "s6-01": "The Green House" };
+// Synthetic replay: these feeds have no recent reading at 13:00.
+const STALE = new Set(["s1-04", "s2-01", "s4-05", "s5-04", "s6-13", "ilfov-05"]);
 export function profileFor(siteId) {
-  const index = Number(siteId.slice(1)) - 1;
-  const area = AREAS[Math.floor(index / 8)]?.toLowerCase();
-  return siteProfiles.profiles.find(
-    (p) => p.area === area && p.number === (index % 8) + 1,
-  );
+  return siteProfiles.profiles.find((p) => p.site_id === siteId) || null;
 }
-export const sites = Array.from({ length: 24 }, (_, i) => {
-  const id = `S${String(i + 1).padStart(2, "0")}`;
-  const profile = profileFor(id);
+export const sites = siteProfiles.profiles.map((profile, i) => {
+  const id = profile.site_id;
   const business = profile.segment === "business";
   return {
     id,
-    name:
-      i === 0
-        ? "The Green House"
-        : business
-          ? businessNames[id] || `${profile.zone} ${profile.business_type}`
-          : `Solar home ${String(i + 1).padStart(2, "0")}`,
+    name: nameOverrides[id] || profile.name,
     business,
     segment: profile.segment,
     businessType: profile.business_type || null,
     zone: profile.zone,
     latitude: profile.latitude,
     longitude: profile.longitude,
-    area: AREAS[Math.floor(i / 8)],
-    feeder: `DEMO-F${Math.floor(i / 8) + 1}`,
+    area: AREA_LABELS[profile.area_id],
+    areaId: profile.area_id,
+    cluster: profile.cluster || null,
+    feeder: `DEMO-F-${profile.cluster || id}`,
     capacity: profile.installed_kwp,
     battery: i % 4 === 1,
-    stale: [5, 7, 14, 22].includes(i),
+    stale: STALE.has(id),
     pv: 3.6 + (i % 5) * 0.3,
     profile,
   };
@@ -170,35 +162,35 @@ export const requestTypes = [
     label: "Solar production looks low",
     family: "Production",
     owner: "Solar O&M",
-    routeTo: "Solar Care",
+    routeTo: "Area crew",
   },
   {
     id: "device-warning",
     label: "Inverter warning, error code or overheating",
     family: "Temperature",
     owner: "Solar O&M",
-    routeTo: "Solar Care",
+    routeTo: "Area crew",
   },
   {
     id: "inverter-offline",
     label: "Inverter is off or not starting",
     family: "Production",
     owner: "Solar O&M",
-    routeTo: "Solar Care",
+    routeTo: "Area crew",
   },
   {
     id: "battery",
     label: "Battery or storage issue",
     family: "Local issue",
     owner: "Solar O&M",
-    routeTo: "Solar Care",
+    routeTo: "Area crew",
   },
   {
     id: "panel-damage",
     label: "Panel damage, dirt or shading",
     family: "Production",
     owner: "Solar O&M",
-    routeTo: "Solar Care",
+    routeTo: "Area crew",
   },
   {
     id: "monitoring",
@@ -212,21 +204,21 @@ export const requestTypes = [
     label: "Grid connection or voltage",
     family: "Voltage",
     owner: "Grid operator",
-    routeTo: "Grid Response",
+    routeTo: "Area crew",
   },
   {
     id: "outage",
     label: "Power cut or frequent disconnections",
     family: "Area event",
     owner: "Grid operator",
-    routeTo: "Grid Response",
+    routeTo: "Area crew",
   },
   {
     id: "electrical",
     label: "Electrical issue inside the building",
     family: "Local issue",
     owner: "Customer electrician",
-    routeTo: "Field Service",
+    routeTo: "Area crew",
   },
   {
     id: "meter",
@@ -260,12 +252,12 @@ export const requestTypes = [
 export function routeRequest(id) {
   return requestTypes.find((request) => request.id === id) || requestTypes.at(-1);
 }
-// Schematic 0–1 position inside a Bucharest bounding box (kept for the SQLite handoff).
-export const BUCHAREST_BOUNDS = {
-  south: 44.33,
-  north: 44.54,
-  west: 25.94,
-  east: 26.25,
+// Schematic 0–1 position inside a box around Bucharest and Ilfov (kept for the SQLite handoff).
+export const DEMO_BOUNDS = {
+  minLat: 44.2,
+  maxLat: 44.8,
+  minLon: 25.8,
+  maxLon: 26.5,
 };
 export function inverterModel(manufacturer, kw) {
   if (manufacturer === "Huawei") return `SUN2000-${kw}KTL-M1`;
@@ -275,7 +267,7 @@ export function inverterModel(manufacturer, kw) {
 }
 export const inverters = sites.map((site, i) => {
   const manufacturer = ["Huawei", "Fronius", "SolarEdge"][i % 3];
-  const b = BUCHAREST_BOUNDS;
+  const b = DEMO_BOUNDS;
   return {
     id: `INV-${site.id}`,
     site: site.id,
@@ -283,11 +275,11 @@ export const inverters = sites.map((site, i) => {
     model: inverterModel(manufacturer, site.capacity),
     serial: `DEMO-${site.id}-2024`,
     ratedKw: site.capacity,
-    mapX: (site.longitude - b.west) / (b.east - b.west),
-    mapY: (b.north - site.latitude) / (b.north - b.south),
+    mapX: (site.longitude - b.minLon) / (b.maxLon - b.minLon),
+    mapY: (b.maxLat - site.latitude) / (b.maxLat - b.minLat),
   };
 });
-// Each area has one crew that covers that area's technical incident families.
+// One crew per area covers that area's technical incident families.
 // Billing questions are answered by the PPC dispatcher, never by a crew.
 export const TECHNICAL_FAMILIES = [
   "Production",
@@ -299,42 +291,63 @@ export const TECHNICAL_FAMILIES = [
   "Unknown code",
   "Other",
 ];
+const crew = (id, name, area, lead, members, owner = "Solar O&M") => ({
+  id,
+  name,
+  area,
+  owner,
+  skills: [...TECHNICAL_FAMILIES],
+  shift: "08:00–18:00",
+  lead,
+  members,
+});
 export const crews = [
-  {
-    id: "C1",
-    name: "Solar Care",
-    area: "North",
-    owner: "Solar O&M",
-    skills: [...TECHNICAL_FAMILIES],
-    shift: "08:00–18:00",
-    lead: "u8",
-    members: ["Ioana Dima", "Tudor Lazăr", "Bianca Neagu"],
-  },
-  {
-    id: "C2",
-    name: "Grid Response",
-    area: "Central",
-    owner: "Grid operator",
-    skills: [...TECHNICAL_FAMILIES],
-    shift: "08:00–18:00",
-    lead: "u9",
-    members: ["Mihai Petrescu", "Cristian Pop", "Raluca Stoica", "Emil Badea"],
-  },
-  {
-    id: "C3",
-    name: "Field Service",
-    area: "South",
-    owner: "Customer electrician",
-    skills: [...TECHNICAL_FAMILIES],
-    shift: "08:00–18:00",
-    lead: "u10",
-    members: ["Ana Tudor", "Sorin Vasile", "Diana Cazacu"],
-  },
+  crew("C1", "Sector 1 Rooftop Care", "Sector 1", null, [
+    "Victor Enache",
+    "Oana Mitrea",
+    "Paul Sandu",
+  ]),
+  crew("C2", "Sector 2 Solar Service", "Sector 2", null, [
+    "Gabriel Toma",
+    "Irina Lupu",
+    "Marius Neagoe",
+  ]),
+  crew(
+    "C3",
+    "Sector 3 Grid Response",
+    "Sector 3",
+    "u9",
+    ["Mihai Petrescu", "Cristian Pop", "Raluca Stoica", "Emil Badea"],
+    "Grid operator",
+  ),
+  crew("C4", "Sector 4 PV Care", "Sector 4", null, [
+    "Lavinia Preda",
+    "Sergiu Matei",
+    "Adela Rusu",
+  ]),
+  crew("C5", "Sector 5 Solar Response", "Sector 5", null, [
+    "Ovidiu Stan",
+    "Teodora Ilie",
+    "Rareș Dumitru",
+  ]),
+  crew("C6", "Sector 6 Solar Care", "Sector 6", "u8", [
+    "Ioana Dima",
+    "Tudor Lazăr",
+    "Bianca Neagu",
+  ]),
+  crew("C7", "Ilfov Field Service", "Ilfov", "u10", [
+    "Ana Tudor",
+    "Sorin Vasile",
+    "Diana Cazacu",
+    "Florin Ghiță",
+  ]),
 ];
+// Incidents follow a synthetic demo policy (P0 safety first); no real equipment
+// threshold, customer or event is represented.
 const base = [
   [
     "I101",
-    "S01",
+    "s6-01",
     "Production below expected",
     "Production",
     "P2",
@@ -345,7 +358,7 @@ const base = [
   ],
   [
     "I102",
-    "S02",
+    "s6-03",
     "Device temperature warning",
     "Temperature",
     "P1",
@@ -356,7 +369,7 @@ const base = [
   ],
   [
     "I103",
-    "S06",
+    "s6-13",
     "Telemetry connection interrupted",
     "Telemetry",
     "P3",
@@ -367,7 +380,7 @@ const base = [
   ],
   [
     "I104",
-    "S09",
+    "s3-06",
     "Voltage outside demo policy",
     "Voltage",
     "P1",
@@ -378,18 +391,18 @@ const base = [
   ],
   [
     "I105",
-    "S10",
+    "s3-07",
     "Related feeder voltage reports",
     "Area event",
     "P1",
     "Grid operator",
-    "Sites S09 and S10 share simulated feeder DEMO-F2 and event timing. Parent event; child financial impact is not added twice.",
+    "Old Town sites s3-06 and s3-07 share simulated feeder DEMO-F-old-town-hospitality and event timing. Parent event; child financial impact is not added twice.",
     "Known simulated topology",
     null,
   ],
   [
     "I106",
-    "S17",
+    "s4-01",
     "Customer reports a local issue",
     "Local issue",
     "P2",
@@ -400,7 +413,7 @@ const base = [
   ],
   [
     "I107",
-    "S18",
+    "s5-01",
     "Weather-related output change",
     "Weather",
     "P3",
@@ -411,13 +424,57 @@ const base = [
   ],
   [
     "I108",
-    "S03",
+    "s6-02",
     "Unrecognised device code",
     "Unknown code",
     "P3",
     "Solar O&M",
     "Vendor code X-704 is not mapped. Preserve the code and request technical review; do not infer a component diagnosis.",
     "Unmapped code X-704",
+    null,
+  ],
+  [
+    "I109",
+    "ilfov-04",
+    "Simulated insulation fault alarm",
+    "Local issue",
+    "P0",
+    "Solar O&M",
+    "DEMO_ISO_ALARM from the synthetic replay. The demo safety policy ranks it P0: keep people away from the array and send a qualified crew. Not a real equipment threshold.",
+    "Simulated device alarm",
+    null,
+  ],
+  [
+    "I110",
+    "ilfov-06",
+    "Production below expected",
+    "Production",
+    "P2",
+    "Solar O&M",
+    "Observed 96 kW against a 168 kW synthetic baseline for 50 minutes on the depot roof. Shading or soiling remain possible.",
+    "Fresh PV + synthetic baseline",
+    61.2,
+  ],
+  [
+    "I111",
+    "s1-05",
+    "Inverter restarts during service hours",
+    "Production",
+    "P2",
+    "Solar O&M",
+    "Three synthetic restart events between 11:00 and 13:00. Output recovers each time; no fault is established.",
+    "Simulated device events",
+    7.8,
+  ],
+  [
+    "I112",
+    "s2-01",
+    "Telemetry connection interrupted",
+    "Telemetry",
+    "P3",
+    "Unassigned review",
+    "Last reading at 09:30; replay time 13:00. Production is unavailable, not zero.",
+    "Missing telemetry",
     null,
   ],
 ];
@@ -462,7 +519,7 @@ export function seed() {
   };
 }
 export function canSee(user, siteId) {
-  if (!user) return siteId === "S01";
+  if (!user) return siteId === DEFAULT_SITE;
   const site = sites.find((x) => x.id === siteId);
   return (
     user.role === "ceo" ||
@@ -493,7 +550,7 @@ export const defaultPrices = { importPrice: 1.3, exportPrice: 0.55 };
 export function recommend(
   task,
   plans = [],
-  siteId = "S01",
+  siteId = DEFAULT_SITE,
   prices = defaultPrices,
 ) {
   const margin = prices.importPrice - prices.exportPrice;

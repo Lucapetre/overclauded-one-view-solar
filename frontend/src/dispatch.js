@@ -4,6 +4,7 @@
 // plain message when they are not allowed; nothing is saved in that case.
 import {
   ACTIVE_DISPATCH,
+  AREAS,
   canSee,
   rank,
   routeRequest,
@@ -42,7 +43,7 @@ export function visibleIncidents(db, user) {
 /** The areas a staff user works in. */
 export function scopeAreas(db, user) {
   if (!user) return [];
-  if (user.role === "ceo") return ["North", "Central", "South"];
+  if (user.role === "ceo") return [...AREAS];
   if (user.role === "technician") return [technicianArea(db, user)];
   return [user.area];
 }

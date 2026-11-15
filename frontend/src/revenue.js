@@ -79,7 +79,7 @@ const share = (part, whole) => (whole ? part / whole : 0);
 /**
  * sites: [{ id, name, area, zone, segment, businessType, capacity, profile }]
  * contracts: { [siteId]: { import_price_ron_kwh, export_price_ron_kwh } }
- * scopeAreas: area names to include (e.g. ["North"]); null or omitted means all.
+ * scopeAreas: area names to include (e.g. ["Sector 6"]); null or omitted means all.
  */
 export function revenueReport(
   sites,

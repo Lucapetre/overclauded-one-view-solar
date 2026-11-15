@@ -16,6 +16,7 @@ import {
   toAssignmentRows,
   toCrewSummaries,
   toForecastAreas,
+  toMapClusters,
   toMapSites,
   toRevenueReport,
 } from "../src/opsData.js";
@@ -82,12 +83,12 @@ test("bottom navigation caps long menus with a More entry", () => {
 });
 
 const mapSite = (extra) => ({
-  site_id: "north-05",
-  alias: "Demo home north-05",
-  area_id: "north",
-  latitude: 44.48,
-  longitude: 26.1,
-  zone: "Pipera",
+  site_id: "s6-05",
+  alias: "Home · Militari 5",
+  area_id: "sector-6",
+  latitude: 44.4345,
+  longitude: 26.018,
+  zone: "Militari",
   character: "residential",
   segment: "home",
   business_type: null,
@@ -114,36 +115,64 @@ test("map status: open incident first, then a recent feed, else stale", () => {
 test("map sites adapt to BucharestMap props with area aliases", () => {
   const [site] = toMapSites(
     [mapSite({ open_incidents: 1, worst_tier: "P1", segment: "business", business_type: "Bakery" })],
-    { north: "Demo North" },
+    { "sector-6": "Sector 6" },
   );
   assert.deepEqual(
     { ...site, detail: undefined },
     {
-      id: "north-05",
-      name: "Demo home north-05",
-      latitude: 44.48,
-      longitude: 26.1,
-      zone: "Pipera",
+      id: "s6-05",
+      name: "Home · Militari 5",
+      latitude: 44.4345,
+      longitude: 26.018,
+      zone: "Militari",
       segment: "business",
       businessType: "Bakery",
       kwp: 6.5,
       status: "incident",
       tier: "P1",
-      area: "Demo North",
+      area: "Sector 6",
+      // No `cluster` from the API yet: the shared fixture's cluster for the site id.
+      cluster: "militari-homes",
       detail: undefined,
     },
   );
   assert.match(site.detail, /1 open synthetic incident \(worst P1\)/);
-  assert.equal(toMapSites([mapSite({ area_id: "east" })])[0].area, "east");
+  assert.equal(toMapSites([mapSite({ area_id: "unknown-area" })])[0].area, "unknown-area");
+});
+
+test("map sites take the server's area alias and cluster when present", () => {
+  const [after] = toMapSites(
+    [mapSite({ area_alias: "Sector 6", cluster: "drumul-taberei-homes" })],
+    {},
+  );
+  assert.equal(after.area, "Sector 6");
+  assert.equal(after.cluster, "drumul-taberei-homes");
+  // An explicit null from the server means a standalone site.
+  assert.equal(toMapSites([mapSite({ cluster: null })])[0].cluster, null);
+  // Unknown site ids without a server cluster are standalone too.
+  assert.equal(toMapSites([mapSite({ site_id: "imported-1" })])[0].cluster, null);
+});
+
+test("map clusters come from the server, else from the shared fixture", () => {
+  const fallback = toMapClusters({ sites: [] });
+  assert.equal(fallback.length, 15);
+  assert.ok(fallback.some((c) => c.id === "militari-homes" && c.kind === "residential"));
+  assert.deepEqual(
+    toMapClusters({
+      clusters: [{ id: "x", name: "Old Town (Lipscani)", area_id: "sector-3", kind: "hospitality" }],
+    }),
+    [{ id: "x", name: "Old Town (Lipscani)", area_id: "sector-3", kind: "hospitality" }],
+  );
+  assert.equal(toMapClusters(null).length, 15);
 });
 
 test("capacity becomes forecast areas", () => {
   assert.deepEqual(
     toForecastAreas({
-      areas: [{ area_id: "north", alias: "Demo North", sites: 8, installed_kwp: 61.5 }],
+      areas: [{ area_id: "sector-6", alias: "Sector 6", sites: 8, installed_kwp: 61.5 }],
       total_installed_kwp: 61.5,
     }),
-    [{ name: "Demo North", kwp: 61.5, sites: 8 }],
+    [{ name: "Sector 6", kwp: 61.5, sites: 8 }],
   );
   assert.deepEqual(toForecastAreas(null), []);
 });
@@ -168,17 +197,17 @@ const revenueView = {
   by_area: [
     {
       ...money(1000, { sites: 3 }),
-      area_id: "north",
-      alias: "Demo North",
+      area_id: "sector-6",
+      alias: "Sector 6",
       business_sites: 1,
       business_net_revenue_ron: 600.1,
     },
   ],
   business_accounts: [
     {
-      site_id: "north-07",
+      site_id: "s6-13",
       alias: "Demo bakery",
-      area_id: "north",
+      area_id: "sector-6",
       zone: "Floreasca",
       business_type: "Bakery",
       installed_kwp: 30,
@@ -209,7 +238,7 @@ test("revenue adapter keeps the server's numbers in RevenueView's shape", () => 
   assert.equal(report.bySegment.business.share, 0.6);
   assert.equal(report.bySegment.home.net, 400);
   assert.deepEqual(report.byArea[0], {
-    area: "Demo North",
+    area: "Sector 6",
     sites: 3,
     energySales: 1100,
     exportPayments: 150,
@@ -220,9 +249,9 @@ test("revenue adapter keeps the server's numbers in RevenueView's shape", () => 
     homeNet: 399.9,
   });
   assert.deepEqual(report.businessAccounts[0], {
-    id: "north-07",
+    id: "s6-13",
     name: "Demo bakery",
-    area: "Demo North",
+    area: "Sector 6",
     zone: "Floreasca",
     businessType: "Bakery",
     kwp: 30,
@@ -243,10 +272,10 @@ test("revenue adapter keeps the server's numbers in RevenueView's shape", () => 
 });
 
 test("scope labels name the areas in scope", () => {
-  assert.equal(scopeLabel(["Demo North"]), "Demo North area");
+  assert.equal(scopeLabel(["Sector 6"]), "Sector 6");
   assert.equal(
-    scopeLabel(["Demo North", "Demo Central", "Demo South"]),
-    "3 areas · Demo North, Demo Central, Demo South",
+    scopeLabel(["Sector 3", "Sector 6", "Ilfov"]),
+    "3 areas · Sector 3, Sector 6, Ilfov",
   );
   assert.equal(scopeLabel([]), "Your scope");
 });
@@ -255,8 +284,8 @@ const incident = (id, tier, created_at, extra = {}) => ({
   incident_id: id,
   site_id: `site-${id}`,
   site_alias: `Site ${id}`,
-  area_id: "north",
-  zone: "Pipera",
+  area_id: "sector-6",
+  zone: "Militari",
   segment: "home",
   title: `Title ${id}`,
   family: "Production",
@@ -287,7 +316,7 @@ test("assignment report rows: assignments plus open unassigned incidents, by sev
       incident_title: "Title a",
       tier: "P1",
       site_alias: "Site a",
-      area_id: "north",
+      area_id: "sector-6",
       crew_name: "Solar Care",
       kind: "meeting",
       status: "meeting_scheduled",
@@ -303,7 +332,7 @@ test("assignment report rows: assignments plus open unassigned incidents, by sev
       incident_title: "Title a",
       tier: "P1",
       site_alias: "Site a",
-      area_id: "north",
+      area_id: "sector-6",
       crew_name: "Solar Care",
       kind: "dispatch",
       status: "completed",
@@ -314,7 +343,7 @@ test("assignment report rows: assignments plus open unassigned incidents, by sev
       completed_at: "2026-07-15T12:20:00Z",
     },
   ];
-  const rows = toAssignmentRows(assignments, incidents, { north: "Demo North" });
+  const rows = toAssignmentRows(assignments, incidents, { "sector-6": "Sector 6" });
   assert.deepEqual(
     rows.map((r) => [r.id, r.status]),
     [
@@ -324,7 +353,7 @@ test("assignment report rows: assignments plus open unassigned incidents, by sev
     ],
   );
   assert.equal(rows[2].slot, "2026-11-16 10:00–11:00");
-  assert.equal(rows[2].area, "Demo North");
+  assert.equal(rows[2].area, "Sector 6");
   assert.equal(rows[2].site, "site-a");
   assert.equal(rows[0].crew, null);
   assert.equal(rows[1].assignedBy, "dispatcher");
@@ -334,8 +363,8 @@ test("assignment report rows: assignments plus open unassigned incidents, by sev
 const crew = (extra) => ({
   crew_id: "solar-care",
   name: "Solar Care",
-  area_id: "north",
-  area_alias: "Demo North",
+  area_id: "sector-6",
+  area_alias: "Sector 6",
   skills: ["Production", "Telemetry"],
   shift: "08:00-18:00",
   members: ["technician"],
@@ -358,8 +387,8 @@ test("crew summaries: availability, busy work, meetings and tier counts", () => 
       incident_id: "i",
       incident_title: "T",
       tier: "P1",
-      site_id: "north-05",
-      site_alias: "Demo home north-05",
+      site_id: "s6-05",
+      site_alias: "Home · Militari 5",
       kind: "dispatch",
       status: "team_sent",
       scheduled_start: null,
@@ -372,11 +401,11 @@ test("crew summaries: availability, busy work, meetings and tier counts", () => 
     { crew_name: "Other", kind: "meeting", status: "meeting_scheduled" },
   ]);
   assert.equal(summary.name, "Solar Care");
-  assert.equal(summary.area, "Demo North");
+  assert.equal(summary.area, "Sector 6");
   assert.equal(summary.owner, null);
   assert.equal(summary.available, false);
   assert.deepEqual(summary.busyWith, {
-    incident: "P1 Demo home north-05",
+    incident: "P1 Home · Militari 5",
     status: "Team sent",
   });
   assert.equal(summary.meetings, 1);
@@ -389,7 +418,7 @@ test("crew choices: same area and family, busy crews kept but flagged", () => {
   const crews = [
     crew({}),
     crew({ crew_id: "busy", name: "Busy", available: false }),
-    crew({ crew_id: "south", name: "South", area_id: "south" }),
+    crew({ crew_id: "ilfov", name: "Ilfov Field Service", area_id: "ilfov" }),
     crew({ crew_id: "volt", name: "Volt", skills: ["Voltage"] }),
   ];
   assert.deepEqual(crewChoices(crews, incident("a", "P1", "")), [
@@ -416,7 +445,7 @@ test("friendly error text for known codes, server message otherwise", () => {
 
 test("small labels: ids, log actions, ages and stable references", () => {
   assert.equal(shortId("0123456789abcdef0123456789abcdef"), "#01234567");
-  assert.equal(shortId("demo-inc-north-05-production"), "demo-inc-north-05-production");
+  assert.equal(shortId("demo-inc-s6-05-production"), "demo-inc-s6-05-production");
   assert.equal(logAction("auto_assigned"), "Assigned by severity");
   assert.equal(logAction("brand_new_action"), "Brand new action");
   const now = Date.parse("2026-07-15T12:00:00Z");

@@ -32,6 +32,7 @@ from backend.ops_models import (
     IncidentDetail,
     IncidentLogEntry,
     MapCenter,
+    MapCluster,
     MapSite,
     OpsMap,
     RevenueBySegment,
@@ -614,9 +615,11 @@ def request_meeting(connection, incident_id: str):
 def ops_map(connection, user: User) -> OpsMap:
     clause, ids = _scope(connection, user)
     rows = connection.execute(
-        "SELECT s.*, p.latitude, p.longitude, p.zone, p.character, p.segment, "
-        "p.business_type, p.installed_kwp FROM sites s "
-        f"JOIN site_profiles p ON p.site_id=s.site_id WHERE s.site_id {clause} "
+        "SELECT s.*, ar.alias AS area_alias, p.latitude, p.longitude, p.zone, "
+        "p.character, p.segment, p.business_type, p.installed_kwp, p.cluster "
+        "FROM sites s JOIN site_profiles p ON p.site_id=s.site_id "
+        "LEFT JOIN areas ar ON ar.area_id=s.area_id "
+        f"WHERE s.site_id {clause} "
         "ORDER BY s.site_id",
         ids,
     ).fetchall()
@@ -630,9 +633,15 @@ def ops_map(connection, user: User) -> OpsMap:
         )
     }
     source = profile_source()
+    in_scope = {row["cluster"] for row in rows}
     return OpsMap(
         center=MapCenter(**source["center"]),
         note=source["note"],
+        clusters=[
+            MapCluster(**cluster)
+            for cluster in source["clusters"]
+            if cluster["id"] in in_scope
+        ],
         sites=[
             MapSite(
                 **{
@@ -641,6 +650,8 @@ def ops_map(connection, user: User) -> OpsMap:
                         "site_id",
                         "alias",
                         "area_id",
+                        "area_alias",
+                        "cluster",
                         "latitude",
                         "longitude",
                         "zone",

@@ -30,9 +30,9 @@ def test_account_type_is_served_and_locally_managed(client, signed_in, database)
 
 def test_contract_is_scoped_validated_and_csrf_protected(client, signed_in):
     session = signed_in()
-    path = "/api/v1/sites/north-01/contract"
+    path = "/api/v1/sites/s6-01/contract"
     assert client.get(path).json() == {
-        "site_id": "north-01",
+        "site_id": "s6-01",
         "contract": None,
         "updated_at": None,
     }
@@ -44,7 +44,7 @@ def test_contract_is_scoped_validated_and_csrf_protected(client, signed_in):
     assert changed.json()["contract"]["import_price_ron_kwh"] == 1.1
     invalid = post(client, session, path, {**CONTRACT, "import_price_ron_kwh": 0})
     assert invalid.status_code == 422
-    other = "/api/v1/sites/south-01/contract"
+    other = "/api/v1/sites/s4-01/contract"
     assert client.get(other).status_code == 404
     assert post(client, session, other, CONTRACT).status_code == 404
     staff = signed_in("technician")
@@ -60,7 +60,7 @@ def test_support_request_conversation_and_scope(client, signed_in):
     assert teams["billing"] == teams["meter"] == "Dispatch desk"
     assert "Supplier support" not in teams.values()
     body = {
-        "site_id": "north-01",
+        "site_id": "s6-01",
         "request_type": "battery",
         "description": "The battery has not charged since yesterday.",
     }
@@ -79,7 +79,7 @@ def test_support_request_conversation_and_scope(client, signed_in):
     danger = post(client, session, REQUESTS, {**body, "immediate_danger": True}).json()
     assert (danger["priority"], danger["routed_to"]) == ("immediate_danger", "Triage")
     for wrong in (
-        {**body, "site_id": "south-01"},
+        {**body, "site_id": "s4-01"},
         {**body, "request_type": "nope"},
         {**body, "description": "   "},
         {**body, "urgent": True},
@@ -91,7 +91,7 @@ def test_support_request_conversation_and_scope(client, signed_in):
     assert client.get(REQUESTS).json() == []
     assert post(client, other, replies, {"text": "hello"}).status_code == 404
 
-    # The supervisor's areas include north; south-only staff would not see it.
+    # The technician's crew covers Sector 6; staff of other areas would not see it.
     staff = signed_in("technician")
     assert len(client.get(REQUESTS).json()) == 2
     assert post(client, staff, REQUESTS, body).status_code == 403

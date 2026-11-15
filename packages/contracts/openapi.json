@@ -2695,12 +2695,60 @@
         "title": "MapCenter",
         "type": "object"
       },
+      "MapCluster": {
+        "additionalProperties": false,
+        "description": "A named group of nearby demo installations, drawn as one highlight.",
+        "properties": {
+          "area_id": {
+            "title": "Area Id",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "residential",
+              "hospitality",
+              "commercial",
+              "industrial",
+              "logistics"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "area_id",
+          "kind"
+        ],
+        "title": "MapCluster",
+        "type": "object"
+      },
       "MapSite": {
         "additionalProperties": false,
         "properties": {
           "alias": {
             "title": "Alias",
             "type": "string"
+          },
+          "area_alias": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Area Alias"
           },
           "area_id": {
             "anyOf": [
@@ -2727,6 +2775,17 @@
           "character": {
             "title": "Character",
             "type": "string"
+          },
+          "cluster": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cluster"
           },
           "freshness_status": {
             "enum": [
@@ -2793,6 +2852,8 @@
           "site_id",
           "alias",
           "area_id",
+          "area_alias",
+          "cluster",
           "latitude",
           "longitude",
           "zone",
@@ -3426,6 +3487,13 @@
           "center": {
             "$ref": "#/components/schemas/MapCenter"
           },
+          "clusters": {
+            "items": {
+              "$ref": "#/components/schemas/MapCluster"
+            },
+            "title": "Clusters",
+            "type": "array"
+          },
           "note": {
             "title": "Note",
             "type": "string"
@@ -3441,7 +3509,8 @@
         "required": [
           "center",
           "note",
-          "sites"
+          "sites",
+          "clusters"
         ],
         "title": "OpsMap",
         "type": "object"

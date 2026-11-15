@@ -34,7 +34,8 @@ def main(argv=None):
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("migrate", help="Apply pending migrations")
     commands.add_parser(
-        "seed-demo", help="Seed 24 simulated sites and scoped demo accounts"
+        "seed-demo",
+        help="Seed 60 simulated sites in Bucharest Sectors 1-6 and Ilfov, with scoped demo accounts",
     )
     importer = commands.add_parser(
         "import", help="Import a JSON record or JSON array from phase 1"

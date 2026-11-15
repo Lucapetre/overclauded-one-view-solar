@@ -35,7 +35,7 @@ def test_roundtrip_and_duplicate(database, record):
         lambda r: r.update(interval_start=r["interval_end"]),
         lambda r: r.update(received_at="2026-07-15T12:00:00Z"),
         lambda r: r.update(site_id="unknown"),
-        lambda r: r.update(device_id="meter-south-01"),
+        lambda r: r.update(device_id="meter-s4-01"),
         lambda r: r.update(source_id="unregistered"),
         lambda r: r["measurements"]["pv_power"].update(unit="W"),
         lambda r: r["measurements"]["pv_power"].update(value=-1),
@@ -120,7 +120,7 @@ def test_migrations_and_demo_seed_are_repeatable(database):
     database.migrate()
     assert seed_demo(database, "must-not-reset-passwords") == {}
     with database.connect() as connection:
-        assert connection.execute("SELECT COUNT(*) FROM sites").fetchone()[0] == 24
-        assert connection.execute("SELECT COUNT(*) FROM telemetry").fetchone()[0] == 23
+        assert connection.execute("SELECT COUNT(*) FROM sites").fetchone()[0] == 60
+        assert connection.execute("SELECT COUNT(*) FROM telemetry").fetchone()[0] == 59
         assert connection.execute("PRAGMA journal_mode").fetchone()[0] == "wal"
         assert connection.execute("PRAGMA foreign_key_check").fetchall() == []

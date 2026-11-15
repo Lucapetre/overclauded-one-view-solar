@@ -1,7 +1,8 @@
 import { seed } from "./domain";
-// v2: crews live in the db, assignments carry kind/area/assignedBy, no supplier-support
-// role and no audit page. Older v1 state is ignored so it cannot break the new screens.
-const KEY = "solarlenes-demo-v2";
+// v3: Bucharest Sectors 1–6 and Ilfov (fixture site ids, one crew per area). v2 crews
+// live in the db, assignments carry kind/area/assignedBy, no supplier-support role and
+// no audit page. Older v1/v2 state is ignored so it cannot break the new screens.
+const KEY = "solarlenes-demo-v3";
 const list = (value, fallback) => (Array.isArray(value) ? value : fallback);
 export function readDB() {
   let stored;

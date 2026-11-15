@@ -2713,3 +2713,34 @@ main > section {
     color: #7e8a70;
   }
 }
+/* Seven areas (Sectors 1–6 and Ilfov): compact coverage cards. */
+.area-cards.compact .area-card {
+  padding: 12px 15px;
+  margin-bottom: 10px;
+}
+.area-cards.compact .area-card .section-head {
+  margin-bottom: 6px;
+}
+.area-cards.compact .area-card strong {
+  font-size: 19px;
+}
+.area-cards.compact .coverage {
+  margin: 8px 0;
+}
+.area-cards.compact .area-card .text-btn {
+  margin-top: 2px;
+}
+@media (max-width: 1000px) {
+  .radar-layout > .area-cards.compact {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .area-cards.compact .area-card {
+    margin: 0;
+  }
+}
+@media (max-width: 760px) {
+  .radar-layout > .area-cards.compact {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+}

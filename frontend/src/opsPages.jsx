@@ -37,6 +37,7 @@ import {
   toAssignmentRows,
   toCrewSummaries,
   toForecastAreas,
+  toMapClusters,
   toMapSites,
   toRevenueReport,
 } from "./opsData";
@@ -169,6 +170,9 @@ export function RadarOps({
     () => (map.data ? toMapSites(map.data.sites, aliases) : []),
     [map.data, aliases],
   );
+  const clusters = useMemo(() => toMapClusters(map.data), [map.data]);
+  // The viewer's areas (server-scoped); outside them the map is faded.
+  const scopeAreaIds = useMemo(() => Object.keys(aliases || {}), [aliases]);
   const forecastAreas = useMemo(
     () => toForecastAreas(capacity.data),
     [capacity.data],
@@ -182,10 +186,10 @@ export function RadarOps({
       <section className="card ops-map-card">
         <div className="section-head">
           <div>
-            <h3>Installation map · Bucharest</h3>
+            <h3>Installation map · Bucharest and Ilfov</h3>
             <p className="muted">
               {map.data
-                ? `${sites.length} synthetic sites · ${areaList.length === 1 ? `${areaList[0]} area` : `${areaList.length} areas`} · ${openSites} with open incidents · zoom and pan the street map`
+                ? `${sites.length} synthetic sites · ${areaList.length === 1 ? areaList[0] : `${areaList.length} areas`} · ${openSites} with open incidents · zoom and pan the street map`
                 : "Loading the map of your scope…"}
             </p>
           </div>
@@ -194,6 +198,8 @@ export function RadarOps({
         <OpsNotice error={map.error} onRetry={map.refresh} />
         <BucharestMap
           sites={sites}
+          clusters={clusters}
+          areas={scopeAreaIds.length ? scopeAreaIds : null}
           selectedId={focus}
           actionLabel="Open incidents or installation"
           onSelect={(id) => {
@@ -329,7 +335,7 @@ function CrewBanner({ teams, onOpen }) {
           <Users size={20} />
         </span>
         <span>
-          <b>{crew.name}</b> · {crew.area_alias} area · {crew.members.length}{" "}
+          <b>{crew.name}</b> · {crew.area_alias} · {crew.members.length}{" "}
           member{crew.members.length === 1 ? "" : "s"} · {crew.shift} EET
         </span>
         <Pill tone={crew.available ? "green" : "orange"}>
@@ -498,7 +504,7 @@ export function IncidentsPage({
                     <td>
                       {i.site_alias}
                       <small>
-                        {[i.zone, `${areaName(i.area_id, aliases)} area`]
+                        {[i.zone, areaName(i.area_id, aliases)]
                           .filter(Boolean)
                           .join(" · ")}
                       </small>
@@ -651,7 +657,7 @@ export function IncidentModal({
         <Pill tone={open ? "" : "green"}>{incidentStatus(i.status)}</Pill>
         <span>
           {i.site_alias} ·{" "}
-          {[i.zone, `${areaName(i.area_id, aliases)} area`]
+          {[i.zone, areaName(i.area_id, aliases)]
             .filter(Boolean)
             .join(" · ")}{" "}
           · {shortId(i.incident_id)}

@@ -77,7 +77,7 @@ export function FleetForecast({ areas, title = "Fleet production forecast" }) {
     <section className="card ops-forecast">
       <div className="section-head">
         <div>
-          <div className="eyebrow">STAFF · {areas.length > 1 ? "ALL AREAS IN YOUR SCOPE" : `${areas[0]?.name?.toUpperCase() || ""} AREA`}</div>
+          <div className="eyebrow">STAFF · {areas.length > 1 ? "ALL AREAS IN YOUR SCOPE" : areas[0]?.name?.toUpperCase() || "YOUR AREA"}</div>
           <h3>{title}</h3>
           <p>
             {siteCount} sites · {num(kwp, 1)} kWp installed · live weather for{" "}
@@ -535,7 +535,7 @@ export function CrewSummary({ crews }) {
           </div>
           <h2>{c.name}</h2>
           <p>
-            {c.area} area{c.owner ? ` · ${c.owner}` : ""} · {c.shift} EET
+            {c.area}{c.owner ? ` · ${c.owner}` : ""} · {c.shift} EET
           </p>
           <div className="ops-members">
             {c.members.map((m) => (

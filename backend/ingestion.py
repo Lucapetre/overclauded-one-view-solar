@@ -1,6 +1,7 @@
 import hashlib
 import json
 import sqlite3
+from contextlib import nullcontext
 from typing import Any
 
 from pydantic import ValidationError
@@ -10,18 +11,30 @@ from backend.errors import ApiError
 from backend.models import IngestResult, Metric, TelemetryRecord
 
 
+def _connection(database: Database, connection: sqlite3.Connection | None):
+    return nullcontext(connection) if connection else database.connect()
+
+
 def ingest(
-    database: Database, payload: Any, request_id: str = "local-import"
+    database: Database,
+    payload: Any,
+    request_id: str = "local-import",
+    within: sqlite3.Connection | None = None,
 ) -> IngestResult:
-    """Single handoff for a local worker, CLI import, or authenticated HTTP pipeline."""
+    """Single handoff for a local worker, CLI import, or authenticated HTTP pipeline.
+
+    `within` runs the ingestion inside a caller's open write transaction (bulk seeding);
+    a rejection is then quarantined in that same transaction.
+    """
     try:
         record = TelemetryRecord.model_validate(payload)
         canonical = json.dumps(
             record.model_dump(mode="json"), sort_keys=True, separators=(",", ":")
         )
         fingerprint = hashlib.sha256(canonical.encode()).hexdigest()
-        with database.connect() as connection:
-            connection.execute("BEGIN IMMEDIATE")
+        with _connection(database, within) as connection:
+            if within is None:
+                connection.execute("BEGIN IMMEDIATE")
             row = connection.execute(
                 "SELECT * FROM sites WHERE site_id=?", (record.site_id,)
             ).fetchone()
@@ -127,7 +140,7 @@ def ingest(
             quality_flags=record.quality_flags,
         )
     except (ValidationError, ValueError, ApiError, sqlite3.IntegrityError) as exc:
-        with database.connect() as connection:
+        with _connection(database, within) as connection:
             connection.execute(
                 "INSERT INTO quarantine(received_at,request_id,payload,reason) VALUES (?,?,?,?)",
                 (stamp(), request_id, json.dumps(payload, default=str), str(exc)),

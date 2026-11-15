@@ -4,6 +4,10 @@ The frontend is integrated with the existing FastAPI backend. `src/connected.jsx
 
 The original `src/store.js` and `src/demo.jsx` remain a clearly labeled browser-only workflow simulation at `/demo/`. Its local planning/support/dispatch mutations are not connected to the backend. The remaining sections describe future mutation services and the original workflow handoff. Never expose SQLite files, seed passwords or media keys through static hosting.
 
+## Geography
+
+Areas are the real Bucharest Sectors 1–6 and Ilfov County (`sector-1` … `sector-6`, `ilfov`; aliases "Sector 1" … "Ilfov"), with real boundaries in `../backend/fixtures/bucharest_areas.geojson` (© OpenStreetMap contributors, ODbL 1.0 — the map shows this attribution). The 60 synthetic installations, their clusters (`clusters` in `site_profiles.json`: residential, hospitality, commercial, industrial, logistics) and billing profiles are fictional. The map reads `OpsMap.sites[].area_alias` and `.cluster` and `OpsMap.clusters`; when a server omits them, `src/opsData.js` falls back to the shared fixture by `site_id`. The browser demo has one crew per area (seven crews) and stores `site.area` as the area label.
+
 ## Auth and authorization
 
 Seed hashes use `scrypt$16384$8$1$saltHex$digestHex`. `database/seed.py` generates independent random salts; verify using constant-time comparison. These development passwords are public and must be replaced. Issue opaque, hashed, expiring sessions using HttpOnly Secure SameSite cookies. Include CSRF protection and rate limits; do not use the frontend's sessionStorage user ID as identity.

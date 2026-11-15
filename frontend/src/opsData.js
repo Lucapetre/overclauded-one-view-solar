@@ -2,6 +2,7 @@
 // shared presentational components (map.jsx, ops.jsx), plus menu and wording rules.
 // No money is recomputed here: revenue figures are the server's numbers.
 import { slotLabel } from "./bucharestTime.js";
+import { CLUSTERS, clusterOf } from "./geography.js";
 
 export const TIERS = ["P0", "P1", "P2", "P3"];
 
@@ -77,7 +78,11 @@ export function mapStatus(site) {
   };
 }
 
-/** OpsMap.sites → BucharestMap sites. */
+/**
+ * OpsMap.sites → BucharestMap sites. The area name is the API's `area_alias`
+ * (e.g. "Sector 6") or the alias from /areas; the cluster is the API's `cluster`
+ * when the server sends it, else the shared fixture's cluster for that site id.
+ */
 export function toMapSites(sites = [], aliases = {}) {
   return sites.map((site) => {
     const { status, tier } = mapStatus(site);
@@ -95,11 +100,23 @@ export function toMapSites(sites = [], aliases = {}) {
       kwp: site.installed_kwp,
       status,
       tier,
-      area: areaName(site.area_id, aliases),
+      area: site.area_alias || areaName(site.area_id, aliases),
+      cluster: "cluster" in site ? site.cluster || null : clusterOf(site.site_id),
       detail: `${incidents} · ${FRESHNESS[site.freshness_status] || site.freshness_status}`,
     };
   });
 }
+
+/** OpsMap.clusters → BucharestMap clusters; the shared fixture's list when absent. */
+export const toMapClusters = (map) =>
+  Array.isArray(map?.clusters) && map.clusters.length
+    ? map.clusters.map((c) => ({
+        id: c.id ?? c.cluster_id,
+        name: c.name,
+        area_id: c.area_id,
+        kind: c.kind,
+      }))
+    : CLUSTERS;
 
 /** CapacityView → FleetForecast areas. */
 export const toForecastAreas = (capacity) =>
@@ -162,11 +179,11 @@ export function toRevenueReport(view) {
   };
 }
 
-/** "Demo North area" or "3 areas · Demo North, Demo Central, Demo South". */
+/** "Sector 6" or "3 areas · Sector 3, Sector 6, Ilfov". */
 export function scopeLabel(aliases) {
   const list = aliases.filter(Boolean);
   if (!list.length) return "Your scope";
-  if (list.length === 1) return `${list[0]} area`;
+  if (list.length === 1) return list[0];
   return `${list.length} areas · ${list.join(", ")}`;
 }
 

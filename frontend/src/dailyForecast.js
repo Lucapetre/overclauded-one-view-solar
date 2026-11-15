@@ -25,8 +25,13 @@ const SHAPES = {
 export function consumptionShape(segment, businessType = "") {
   if (segment !== "business") return SHAPES.home;
   const type = (businessType || "").toLowerCase();
-  if (/restaurant|bistro|cafe|hotel/.test(type)) return SHAPES.hospitality;
-  if (/factory|warehouse|supermarket|plant/.test(type)) return SHAPES.industrial;
+  if (/restaurant|bistro|caf[eé]|hotel|\bbar\b/.test(type)) return SHAPES.hospitality;
+  if (
+    /factory|warehouse|supermarket|plant|storage|logistics|depot|data cent|works/.test(
+      type,
+    )
+  )
+    return SHAPES.industrial;
   return SHAPES.office;
 }
 

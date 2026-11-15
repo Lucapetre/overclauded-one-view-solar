@@ -50,7 +50,7 @@ def test_invalid_password_has_actionable_error(
 
 def test_missing_grant_user_has_a_clean_error(cli_database, capsys):
     with pytest.raises(SystemExit) as error:
-        main(["grant-site", "unknown-user", "north-01"])
+        main(["grant-site", "unknown-user", "s6-01"])
     assert error.value.code == 2
     output = capsys.readouterr().err
     assert "User not found" in output
@@ -59,8 +59,8 @@ def test_missing_grant_user_has_a_clean_error(cli_database, capsys):
 
 
 def test_repeating_a_grant_succeeds(cli_database, capsys):
-    main(["grant-site", "customer", "north-01"])
-    main(["grant-site", "customer", "north-01"])
+    main(["grant-site", "customer", "s6-01"])
+    main(["grant-site", "customer", "s6-01"])
     assert capsys.readouterr().out.count("Access grant recorded") == 2
 
 
@@ -101,7 +101,7 @@ def test_password_change_revokes_sessions_and_keeps_grants(
             == 0
         )
         assert connection.execute(
-            "SELECT 1 FROM user_sites WHERE user_id='customer' AND site_id='north-01'"
+            "SELECT 1 FROM user_sites WHERE user_id='customer' AND site_id='s6-01'"
         ).fetchone()
     assert "existing sessions revoked" in capsys.readouterr().out
 
@@ -137,3 +137,27 @@ def test_missing_reset_user_does_not_prompt(cli_database, monkeypatch, capsys):
     with pytest.raises(SystemExit):
         main(["set-password", "unknown-user"])
     assert "User not found" in capsys.readouterr().err
+
+
+def test_seed_refuses_a_database_with_the_retired_geography(
+    tmp_path, monkeypatch, capsys
+):
+    from backend.db import Database
+    from backend.seed import LEGACY_AREAS
+
+    legacy = Database(tmp_path / "legacy.sqlite3")
+    legacy.migrate()
+    with legacy.connect() as connection:
+        connection.execute(
+            "INSERT INTO areas VALUES (?,?,'simulated')", (LEGACY_AREAS[0], "Old demo")
+        )
+    monkeypatch.setenv("SOLAR_DATABASE", str(legacy.path))
+    with pytest.raises(SystemExit) as error:
+        main(["seed-demo"])
+    assert error.value.code == 2
+    output = capsys.readouterr().err
+    assert "legacy_demo_geography" in output and "delete" in output
+    assert str(legacy.path) in output and "Traceback" not in output
+    with legacy.connect() as connection:
+        assert connection.execute("SELECT COUNT(*) FROM sites").fetchone()[0] == 0
+        assert connection.execute("SELECT COUNT(*) FROM users").fetchone()[0] == 0

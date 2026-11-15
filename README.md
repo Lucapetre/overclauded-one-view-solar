@@ -68,7 +68,7 @@ History endpoints accept optional `metric`, `endpoint`, `device` and `channel` f
 
 Use these provider endpoints for the scraper dataset. They retain `integration_required`, `vendor_response_required` and `optional` exactly, and keep the separate native AC/DC/phase/unspecified boundaries. Missing measurements remain null, conflicted observations remain visibly conflicted, and access-denied/stale frames are not fabricated zero readings. Regulatory reference information remains distinct from telemetry requirements. Frames retain their original aggregation: for example temperature maxima are not relabeled as temperature means.
 
-The older `/energy` endpoints below continue to serve the compact, normalized interval contract and its separate 24-site demo. They do not flatten imported provider observations into that narrower schema. Imported sites have unknown topology and receive no inferred area grouping.
+The older `/energy` endpoints below continue to serve the compact, normalized interval contract and its separate 60-site demo. They do not flatten imported provider observations into that narrower schema. Imported sites have unknown topology and receive no inferred area grouping.
 
 Frontend example after login:
 
@@ -93,27 +93,30 @@ python3 -m venv .venv
 .venv/bin/python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000
 ```
 
-Open [interactive API documentation](http://127.0.0.1:8000/docs). Startup applies pending migrations; seeding is a separate, explicit action. The demo creates 24 sites across three simulated areas and 23 synthetic telemetry records for 15 July 2026. Its analytical clock starts at 12:15 UTC on that date. These are demonstration values, not PPC measurements.
+Open [interactive API documentation](http://127.0.0.1:8000/docs). Startup applies pending migrations; seeding is a separate, explicit action. The demo creates 60 fictional sites in the seven real administrative areas of Bucharest Sector 1 to Sector 6 and Ilfov County (area ids `sector-1` … `sector-6`, `ilfov`; topology `simulated`) and 59 synthetic telemetry records for 15 July 2026. Its analytical clock starts at 12:15 UTC on that date. These are demonstration values, not PPC measurements.
+
+Sites are listed in `backend/fixtures/site_profiles.json`: ids `s1-01` … `s6-NN` for the sectors and `ilfov-NN` for Ilfov, a fictional display name, the real neighbourhood or locality (`zone`), and an optional `cluster` of nearby installations drawn as one map highlight (for example 8 homes in Militari, 4 hospitality venues in the Old Town, logistics on the A1 at Chiajna). About 35 are homes in residential clusters, 10 are restaurants, cafés, bars, a hotel and a supermarket in the centre, and 15 are factories, warehouses, cold storage, a data centre and office parks, mostly in Ilfov and on the city's industrial platforms. Every name, coordinate, capacity and billing figure is invented; no real customer, business or address is represented. The area outlines in `backend/fixtures/bucharest_areas.geojson` are simplified OpenStreetMap administrative boundaries, © OpenStreetMap contributors, available under the [Open Database License 1.0](https://www.openstreetmap.org/copyright). `tests/test_geography.py` checks that every site lies inside its area polygon.
+
+**Databases seeded before this geography.** Earlier versions seeded three fictional areas (`north`, `central`, `south`) with 24 sites. `seed-demo` refuses to mix the two: on such a database it stops with `legacy_demo_geography` and names the file. The content is synthetic demo data, so stop the server, delete the database file (by default `.local/solar.sqlite3` with its `-wal` and `-shm` files) and run `seed-demo` again; there is no data migration.
 
 The seed command generates passwords and writes them to the ignored, mode-0600 file `.local/demo-credentials.json`. Repeating the command does not reset passwords or duplicate readings. The accounts are:
 
 | Username | Access |
 | --- | --- |
-| `customer` | Own site `north-01` |
-| `other-customer` | Own site `south-01` |
-| `dispatcher` | Eight north-area sites and the north area summary |
-| `technician` | Assigned sites `north-01` and `north-02`; member of crew Solar Care (north incidents) |
-| `supervisor` | All three explicitly granted demo areas (overall manager) |
-| `business-customer` | Own business site `central-03` |
-| `technician-central` | Member of crew Grid Response (central incidents) |
-| `technician-south` | Member of crew Field Service (south incidents) |
-| `area-manager` | Supervisor role with only the north area granted |
+| `customer` | Own home `s6-01` (Home · Militari 1, Militari cluster, Sector 6) |
+| `other-customer` | Own home `s4-01` (Home · Berceni 1, Sector 4) |
+| `business-customer` | Own business site `s3-06` (Old Town Bistro, Sector 3) |
+| `dispatcher` | The 14 Sector 6 sites and the `sector-6` area summary |
+| `technician` | Assigned sites `s6-01` and `s6-02`; member of crew Sector 6 Solar Care (Sector 6 incidents) |
+| `technician-s1` … `technician-s5`, `technician-ilfov` | Member of that area's crew (Sector 1 Solar Care … Sector 5 Solar Care, Ilfov Field Service) |
+| `area-manager` | Supervisor role with only `sector-6` granted |
+| `supervisor` | All seven explicitly granted demo areas (overall manager) |
 
-The seed also loads the synthetic site profiles in `backend/fixtures/site_profiles.json` (map position, segment, installed kWp and a monthly billing profile), three crews and eight synthetic incidents described as demo policy rules, never as equipment diagnoses.
+The seed also loads the synthetic site profiles (map position, zone, cluster, segment, installed kWp and a monthly billing profile), seven crews (one per area, each covering every incident family except `Billing`) and eleven synthetic incidents across the areas, from a `P0` area event in Titan to `P3` reminders, described as demo policy rules, never as equipment diagnoses.
 
 Submit credentials to `POST /api/v1/auth/login` using the documentation's Try it out action. The browser stores the HttpOnly session cookie; subsequent requests use it automatically. `GET /api/v1/me` returns the current account and CSRF token. Logout requires that token in `X-CSRF-Token`.
 
-North includes six recent feeds, one stale feed and one unavailable feed. `north-04` has mandatory-only input, `north-05` has unavailable mandatory PV, `central-01` has battery percentage without battery power, and `central-02` has complete battery flows. Coverage describes reporting freshness; it is not an equipment health diagnosis.
+Sector 6 includes twelve recent feeds, one stale feed (`s6-02`) and one registered site without telemetry (`s6-03`, with a `P3` telemetry incident). `s6-04` has mandatory-only input, `s6-09` has unavailable mandatory PV, `s3-01` has battery percentage without battery power, and `s3-02` has complete battery flows. Coverage describes reporting freshness; it is not an equipment health diagnosis.
 
 ## Phase 1 handoff
 
@@ -168,7 +171,7 @@ Run `create-user` once for each username. If `alice` already exists, sign in wit
 Field crews work in one area and cover a list of incident families (`Production`, `Temperature`, `Telemetry`, `Voltage`, `Area event`, `Local issue`, `Billing`, `Other`). Only technician accounts can join a crew; a technician's operations zone is the area of each crew he belongs to:
 
 ```sh
-.venv/bin/python -m backend create-crew "Night Crew" --area north --skills "Production,Telemetry,Local issue" --shift 18:00-23:00
+.venv/bin/python -m backend create-crew "Night Crew" --area sector-6 --skills "Production,Telemetry,Local issue" --shift 18:00-23:00
 .venv/bin/python -m backend add-crew-member "Night Crew" alice-tech
 ```
 
@@ -210,7 +213,7 @@ Migration `003_customer_features.sql` adds a customer account type, supply contr
 | `GET /api/v1/lessons` | Lessons without the answer key, with completion and total reward |
 | `POST /api/v1/lessons/{id}/complete` | Checks the answers on the server; rewards once per account and lesson |
 
-Lesson rewards are a simulated bill credit, not money. Create a business customer with `python -m backend create-user bistro --role customer --account-type business`, or switch an existing customer with `python -m backend set-account-type <username> business`. `seed-demo` adds the `business-customer` account on `central-03`.
+Lesson rewards are a simulated bill credit, not money. Create a business customer with `python -m backend create-user bistro --role customer --account-type business`, or switch an existing customer with `python -m backend set-account-type <username> business`. `seed-demo` adds the `business-customer` account on `s3-06` (Old Town Bistro).
 
 Each support request also opens a linked operations incident (`P0` for immediate danger, otherwise `P2`). The response carries `incident_id`, any scheduled `meeting` (`start`, `end`, `crew_name`) and an attached `media` video. Meter and billing questions are routed to the `Dispatch desk`.
 
@@ -229,7 +232,7 @@ Migration `004_operations.sql` adds synthetic site profiles, crews, incidents wi
 
 | Method/path | Roles | Behavior |
 | --- | --- | --- |
-| `GET /api/v1/ops/map` | staff | Profiled sites in scope with position, zone, segment, kWp, freshness, open incident count and worst tier |
+| `GET /api/v1/ops/map` | staff | Profiled sites in scope with position, area alias, zone, cluster, segment, kWp, freshness, open incident count and worst tier; `clusters` (`id`, `name`, `area_id`, `kind`) that have a site in scope |
 | `GET /api/v1/ops/incidents?status=open\|all` | staff | Ordered by tier (`P0` first), then oldest first, with the active assignment |
 | `GET /api/v1/ops/incidents/{id}` | staff | The incident and its full log, oldest first |
 | `POST /api/v1/ops/incidents/{id}/assign` | dispatcher | Body `{crew_id?}`; without a crew, the first eligible available crew by name |
@@ -316,7 +319,7 @@ Time-limited commitments to **consume** ("use 10 kWh at 0.55 RON/kWh within 2 ho
 .venv/bin/python -m backend simulate-offer-meter <user_offer_id> --fraction 0.8 --coverage 1.0
 ```
 
-The attributed energy then reaches about `fraction × energy_kwh` (re-running tops up; existing intervals are never rewritten). `--coverage 0.5` reports the metric as missing in half of the new intervals to demonstrate the incomplete-data waiver. These readings are newer than the replay clock, so the site's freshness may show `future`. `seed-demo` adds, idempotently and without acceptances, two published offers by `supervisor` in area `north` (`demo-offer-north-consume`: 10 kWh at 0.55 RON/kWh within 2 hours, 0.30 RON per kWh not used; `demo-offer-north-export`: 10 kWh at 0.70 RON/kWh within 2 hours, 20% of the undelivered value) expiring 7 days after seeding, and the draft `demo-offer-north-draft`. Delete the local database and seed again for fresh expiries.
+The attributed energy then reaches about `fraction × energy_kwh` (re-running tops up; existing intervals are never rewritten). `--coverage 0.5` reports the metric as missing in half of the new intervals to demonstrate the incomplete-data waiver. These readings are newer than the replay clock, so the site's freshness may show `future`. `seed-demo` adds, idempotently and without acceptances, two published offers by `supervisor` in area `sector-6` (`demo-offer-s6-consume`: 10 kWh at 0.55 RON/kWh within 2 hours, 0.30 RON per kWh not used; `demo-offer-s6-export`: 10 kWh at 0.70 RON/kWh within 2 hours, 20% of the undelivered value) expiring 7 days after seeding, and the draft `demo-offer-s6-draft`. Delete the local database and seed again for fresh expiries.
 
 ## Frontend API
 
@@ -360,7 +363,7 @@ import { SolarClient, poll } from "../../packages/contracts/client";
 const api = new SolarClient("http://localhost:8000");
 await api.login(username, password);
 const stop = poll(
-  signal => api.latest("north-01", signal),
+  signal => api.latest("s6-01", signal),
   data => renderEnergy(data),
   error => showRefreshError(error),
 );

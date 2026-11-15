@@ -50,7 +50,7 @@ BASE = json.loads(
         Path(__file__).resolve().parents[1] / "backend" / "fixtures" / "telemetry.json"
     ).read_text()
 )
-DEMO = {"demo-offer-north-consume", "demo-offer-north-export", "demo-offer-north-draft"}
+DEMO = {"demo-offer-s6-consume", "demo-offer-s6-export", "demo-offer-s6-draft"}
 MANAGER = "/api/v1/manager/offers"
 
 
@@ -125,7 +125,7 @@ def draft(**changes) -> OfferDraft:
         "penalty_type": "per_unfulfilled_kwh",
         "penalty_value": "0.3",
         "offer_expires_at": T + timedelta(days=1),
-        "area_id": "north",
+        "area_id": "sector-6",
     }
     return OfferDraft(**(terms | changes))
 
@@ -184,7 +184,7 @@ def add_client(database, username: str, *site_ids: str) -> User:
     return User(user_id=username, username=username, role="customer")
 
 
-def add_consumer_site(database, site_id="north-09"):
+def add_consumer_site(database, site_id="s6-99"):
     """An import-only meter without PV and without a site profile."""
     with database.connect() as connection:
         connection.execute(
@@ -194,7 +194,7 @@ def add_consumer_site(database, site_id="north-09"):
             (
                 site_id,
                 f"Demo flat {site_id}",
-                "north",
+                "sector-6",
                 "simulated",
                 900,
                 1800,
@@ -253,9 +253,9 @@ def kinds(database, user=CUSTOMER) -> list[str]:
 
 
 def test_roles_and_area_scope_over_http(app, database):
-    central = make_offer(database, area_id="central")
+    other_area = make_offer(database, area_id="sector-3")
     dispatcher = login(app, "dispatcher")
-    for path in (MANAGER, "/api/v1/manager/clients", f"{MANAGER}/{central}"):
+    for path in (MANAGER, "/api/v1/manager/clients", f"{MANAGER}/{other_area}"):
         response = dispatcher.get(path)
         assert (response.status_code, response.json()["code"]) == (
             403,
@@ -270,19 +270,21 @@ def test_roles_and_area_scope_over_http(app, database):
     assert customer.get(MANAGER).status_code == 403
     assert customer.post(f"{MANAGER}/preview", json=body()).status_code == 403
     visible = {item["offer_id"] for item in customer.get("/api/v1/offers").json()}
-    assert visible == {"demo-offer-north-consume", "demo-offer-north-export"}
-    assert customer.post(f"/api/v1/offers/{central}/accept").status_code == 404
+    assert visible == {"demo-offer-s6-consume", "demo-offer-s6-export"}
+    assert customer.post(f"/api/v1/offers/{other_area}/accept").status_code == 404
 
     area = login(app, "area-manager")
     assert {item["offer_id"] for item in area.get(MANAGER).json()} == DEMO
     assert area.get(f"{MANAGER}?status=draft").json()[0]["offer_id"] == (
-        "demo-offer-north-draft"
+        "demo-offer-s6-draft"
     )
     for path in ("", "/preview", "/audit"):
-        assert area.get(f"{MANAGER}/{central}{path}").status_code == 404
+        assert area.get(f"{MANAGER}/{other_area}{path}").status_code == 404
     for path in ("", "/publish", "/cancel"):
-        assert area.post(f"{MANAGER}/{central}{path}", json=body()).status_code == 404
-    response = area.post(MANAGER, json=body(area_id="central"))
+        assert (
+            area.post(f"{MANAGER}/{other_area}{path}", json=body()).status_code == 404
+        )
+    response = area.post(MANAGER, json=body(area_id="sector-3"))
     assert (response.status_code, response.json()["code"]) == (422, "area_out_of_scope")
     response = area.post(
         MANAGER,
@@ -292,9 +294,9 @@ def test_roles_and_area_scope_over_http(app, database):
     clients = area.get("/api/v1/manager/clients").json()
     assert [client["username"] for client in clients] == ["customer"]
     assert clients[0]["sites"][0] | {"zone": None} == {
-        "site_id": "north-01",
-        "alias": "Demo home north-01",
-        "area_id": "north",
+        "site_id": "s6-01",
+        "alias": "Home · Militari 1",
+        "area_id": "sector-6",
         "zone": None,
         "segment": "prosumers",
         "installed_kwp": "6",
@@ -302,17 +304,17 @@ def test_roles_and_area_scope_over_http(app, database):
         "export_capable": True,
         "has_meter": True,
     }
-    assert area.get("/api/v1/manager/clients?area_id=central").status_code == 404
+    assert area.get("/api/v1/manager/clients?area_id=sector-3").status_code == 404
     wrong = area.post(MANAGER, json=body(), headers={"X-CSRF-Token": "wrong"})
     assert wrong.json()["code"] == "csrf_required"
 
     supervisor = login(app, "supervisor")
-    assert central in {item["offer_id"] for item in supervisor.get(MANAGER).json()}
+    assert other_area in {item["offer_id"] for item in supervisor.get(MANAGER).json()}
     assert {
         client["username"]
         for client in supervisor.get("/api/v1/manager/clients").json()
     } == {"customer", "other-customer", "business-customer"}
-    assert supervisor.get(f"{MANAGER}/{central}").json()["area_id"] == "central"
+    assert supervisor.get(f"{MANAGER}/{other_area}").json()["area_id"] == "sector-3"
 
 
 # ---------------------------------------------------------------- HTTP: full lifecycle
@@ -327,8 +329,7 @@ def test_offer_lifecycle_over_http(app, database, clock):
         "export_price_ron_kwh": 0.5,
     }
     assert (
-        customer.post("/api/v1/sites/north-01/contract", json=contract).status_code
-        == 200
+        customer.post("/api/v1/sites/s6-01/contract", json=contract).status_code == 200
     )
     terms = body(title="Lunch surplus")
     preview = manager.post(f"{MANAGER}/preview", json=terms).json()
@@ -368,8 +369,8 @@ def test_offer_lifecycle_over_http(app, database, clock):
     assert visible["max_penalty_bani"] == 120
     assert visible["eligible_sites"] == [
         {
-            "site_id": "north-01",
-            "alias": "Demo home north-01",
+            "site_id": "s6-01",
+            "alias": "Home · Militari 1",
             "reference_price_ron_per_kwh": "1.1",
             "reference_price_source": "contract",
             "export_capable": True,
@@ -380,18 +381,18 @@ def test_offer_lifecycle_over_http(app, database, clock):
     path = f"/api/v1/offers/{offer_id}/accept"
     clock.now = T
     first = customer.post(
-        path, json={"site_id": "north-01"}, headers={"Idempotency-Key": "k-1"}
+        path, json={"site_id": "s6-01"}, headers={"Idempotency-Key": "k-1"}
     )
     assert first.status_code == 201, first.text
     repeat = customer.post(
-        path, json={"site_id": "north-01"}, headers={"Idempotency-Key": "k-1"}
+        path, json={"site_id": "s6-01"}, headers={"Idempotency-Key": "k-1"}
     )
     assert repeat.status_code == 200
     assert repeat.json()["user_offer_id"] == first.json()["user_offer_id"]
     other = customer.post(path, json={}, headers={"Idempotency-Key": "k-2"})
     assert (other.status_code, other.json()["code"]) == (409, "already_accepted")
     reused = customer.post(
-        "/api/v1/offers/demo-offer-north-consume/accept",
+        "/api/v1/offers/demo-offer-s6-consume/accept",
         headers={"Idempotency-Key": "k-1"},
     )
     assert reused.json()["code"] == "idempotency_key_reused"
@@ -410,7 +411,7 @@ def test_offer_lifecycle_over_http(app, database, clock):
     locked = manager.post(f"{MANAGER}/{offer_id}", json=terms)
     assert (locked.status_code, locked.json()["code"]) == (409, "offer_locked")
 
-    meter(database, "north-01", T, 2, 6)  # 3 kWh in the first 30 minutes
+    meter(database, "s6-01", T, 2, 6)  # 3 kWh in the first 30 minutes
     clock.now = T + timedelta(minutes=35)
     live = customer.get("/api/v1/offers/mine?status=active").json()
     assert [item["user_offer_id"] for item in live] == [accepted["user_offer_id"]]
@@ -422,7 +423,7 @@ def test_offer_lifecycle_over_http(app, database, clock):
     assert (live[0]["coverage_ratio"], live[0]["projected_penalty_bani"]) == (0.5, 30)
     assert live[0]["settlement"] is None
     assert worker(database, clock.now)["settled"] == 0
-    meter(database, "north-01", T + timedelta(minutes=30), 1, 6)  # block now delivered
+    meter(database, "s6-01", T + timedelta(minutes=30), 1, 6)  # block now delivered
     assert (
         worker(database, T + timedelta(minutes=46))["settled"] == 1
     )  # early settlement
@@ -607,7 +608,11 @@ def test_validation_publish_rules_edit_and_audit(database):
     assert [entry.action for entry in trail] == ["offer.created", "offer.cancelled"]
     assert trail[1].detail == {"previous_status": "draft", "running_windows_closed": 0}
     assert refused(
-        call, database, offer_audit, AREA_MANAGER, make_offer(database, area_id="south")
+        call,
+        database,
+        offer_audit,
+        AREA_MANAGER,
+        make_offer(database, area_id="sector-4"),
     ) == (404, "not_found")
 
 
@@ -616,10 +621,10 @@ def test_validation_publish_rules_edit_and_audit(database):
 
 def test_targeting_modes_and_eligibility(database):
     add_consumer_site(database)
-    second = add_client(database, "c2", "north-02", "north-03")
-    business = add_client(database, "c4", "north-04")
-    zoned = add_client(database, "c5", "north-05")
-    flat = add_client(database, "c9", "north-09")
+    second = add_client(database, "c2", "s6-02", "s6-03")
+    business = add_client(database, "c4", "s6-13")
+    zoned = add_client(database, "c5", "s6-09")
+    flat = add_client(database, "c9", "s6-99")
 
     def audience(**changes):
         preview = call(database, preview_draft, SUPERVISOR, draft(**changes), T)
@@ -633,13 +638,13 @@ def test_targeting_modes_and_eligibility(database):
         "customer",
     ]
     assert audience(target_mode="segment", target_segment="consumers")[0] == ["c9"]
-    assert audience(target_min_kwp="7.5")[:2] == (["c2", "c4"], 2)  # 8 and 15 kWp
+    assert audience(target_min_kwp="7.5")[:2] == (["c2", "c4"], 2)  # 8 and 120 kWp
     assert audience(target_mode="clients", target_user_ids=["c2", "customer"])[0] == [
         "c2",
         "customer",
     ]
-    zone = one(database, "SELECT zone FROM site_profiles WHERE site_id='north-05'")[0]
-    incident = "demo-inc-north-05-production"
+    zone = one(database, "SELECT zone FROM site_profiles WHERE site_id='s6-09'")[0]
+    incident = "demo-inc-s6-09-production"
     assert audience(linked_incident_id=incident, target_zone=zone)[0] == ["c5"]
     assert audience(linked_incident_id=incident, target_zone="Elsewhere")[2][0] == (
         "target_zone must be the linked incident site's zone"
@@ -649,7 +654,7 @@ def test_targeting_modes_and_eligibility(database):
         database,
         preview_draft,
         SUPERVISOR,
-        draft(linked_incident_id="demo-inc-central-05-area"),
+        draft(linked_incident_id="demo-inc-s3-04-area"),
         T,
     ) == (422, "incident_out_of_scope")
     assert refused(
@@ -673,11 +678,11 @@ def test_targeting_modes_and_eligibility(database):
     assert "offer_new" in kinds(database, second)
     assert "offer_new" not in kinds(database, business)  # not targeted
     assert refused(accept, database, picked, second) == (422, "site_required")
-    assert refused(accept, database, picked, second, T, "north-01") == (
+    assert refused(accept, database, picked, second, T, "s6-01") == (
         422,
         "site_not_eligible",
     )
-    assert accept(database, picked, second, T, "north-03").site_id == "north-03"
+    assert accept(database, picked, second, T, "s6-03").site_id == "s6-03"
 
     export = make_offer(database, type="export")
     assert refused(accept, database, export, flat) == (422, "export_meter_required")
@@ -691,7 +696,7 @@ def test_targeting_modes_and_eligibility(database):
 
 
 def test_capacity_limits_active_cap_and_expiry(database):
-    other = add_client(database, "c2", "north-02")
+    other = add_client(database, "c2", "s6-02")
     single = make_offer(database, max_takers=1)
     accept(database, single)
     assert refused(accept, database, single, other) == (409, "offer_full")
@@ -725,7 +730,7 @@ def test_capacity_limits_active_cap_and_expiry(database):
 
 
 def test_concurrent_accepts_respect_max_takers(database):
-    users = [add_client(database, f"c{n}", f"north-0{n}") for n in range(2, 8)]
+    users = [add_client(database, f"c{n}", f"s6-0{n}") for n in range(2, 8)]
     offer_id = make_offer(database, max_takers=1)
     barrier = threading.Barrier(len(users))
     outcomes = []
@@ -758,7 +763,7 @@ def test_fifo_attribution_across_two_overlapping_offers(database):
     second = make_offer(database, energy_kwh="5")
     a = accept(database, first, now=T)
     b = accept(database, second, now=T + timedelta(minutes=30))
-    meter(database, "north-01", T, 10, 8)  # 20 kWh from T to T+150 minutes
+    meter(database, "s6-01", T, 10, 8)  # 20 kWh from T to T+150 minutes
     live = {
         item.user_offer_id: item
         for item in call(database, my_offers, CUSTOMER, "active")
@@ -788,7 +793,7 @@ def test_fifo_attribution_across_two_overlapping_offers(database):
 
 def test_grace_period_and_incomplete_meter_data_waive_penalty(database):
     view = accept(database, make_offer(database))
-    meter(database, "north-01", T, 4, 4)  # 4 kWh in the first hour only
+    meter(database, "s6-01", T, 4, 4)  # 4 kWh in the first hour only
     assert worker(database, T + timedelta(minutes=130))["settled"] == 0
     row = one(
         database, "SELECT * FROM user_offers WHERE user_offer_id=?", view.user_offer_id
@@ -816,11 +821,11 @@ def test_grace_period_and_incomplete_meter_data_waive_penalty(database):
 
 def test_late_meter_data_before_grace_counts(database):
     view = accept(database, make_offer(database))
-    meter(database, "north-01", T, 4, 8)  # 8 kWh in the first hour
+    meter(database, "s6-01", T, 4, 8)  # 8 kWh in the first hour
     assert worker(database, T + timedelta(minutes=125))["settled"] == 0
     meter(
         database,
-        "north-01",
+        "s6-01",
         T + timedelta(hours=1),
         4,
         4,
@@ -848,7 +853,7 @@ def test_export_offer_and_negative_savings(database):
         ),
     )
     assert view.reference_price_ron_per_kwh == "0.55"
-    meter(database, "north-01", T, 8, 3, metric="grid_export")  # 6 kWh exported
+    meter(database, "s6-01", T, 8, 3, metric="grid_export")  # 6 kWh exported
     assert worker(database, T + timedelta(minutes=180))["settled"] == 1
     settlement = call(database, my_offers, CUSTOMER, "all")[0].settlement
     assert (settlement.direction, settlement.fulfilled_kwh) == ("credit", "6")
@@ -866,7 +871,7 @@ def test_export_offer_and_negative_savings(database):
 def test_cancellation_mid_window_settles_delivered_energy_without_penalty(database):
     offer_id = make_offer(database)
     view = accept(database, offer_id)
-    meter(database, "north-01", T, 2, 6)  # 3 kWh
+    meter(database, "s6-01", T, 2, 6)  # 3 kWh
     detail = write(
         database, cancel_offer, SUPERVISOR, offer_id, "t", T + timedelta(minutes=40)
     )
@@ -885,7 +890,7 @@ def test_cancellation_mid_window_settles_delivered_energy_without_penalty(databa
 
 def test_settlement_is_idempotent_concurrent_and_restart_safe(database):
     view = accept(database, make_offer(database))
-    meter(database, "north-01", T, 2, 6)
+    meter(database, "s6-01", T, 2, 6)
     assert worker(database, T + timedelta(minutes=30))["progressed"] == 1
     # A new worker instance (restart mid-window) resumes from the database alone.
     restarted = settle_due(
@@ -922,7 +927,7 @@ def test_settlement_is_idempotent_concurrent_and_restart_safe(database):
 
 def test_reconcile_detects_and_fixes_tampered_counters(database, monkeypatch, capsys):
     accept(database, make_offer(database))
-    meter(database, "north-01", T, 8, 5)  # 10 kWh: completed, savings 7.50 RON
+    meter(database, "s6-01", T, 8, 5)  # 10 kWh: completed, savings 7.50 RON
     worker(database, T + timedelta(minutes=121))
     assert reconcile(database) == []
     with database.connect() as connection:
@@ -984,7 +989,7 @@ def test_meter_simulator_and_cli(database, monkeypatch, capsys):
         )["records"]
         == 0
     )
-    other = add_client(database, "c2", "north-02")
+    other = add_client(database, "c2", "s6-02")
     export = accept(database, make_offer(database, type="export"), other)
     partial = simulate_offer_meter(
         database, export.user_offer_id, 1.0, coverage=0.5, now=T + timedelta(hours=2)
@@ -1003,7 +1008,7 @@ def test_meter_simulator_and_cli(database, monkeypatch, capsys):
     assert "expired_offers" in capsys.readouterr().out
     live = accept(
         database,
-        "demo-offer-north-export",
+        "demo-offer-s6-export",
         now=datetime.now(UTC) - timedelta(minutes=20),
     )
     main(["simulate-offer-meter", live.user_offer_id, "--fraction", "0.5"])
@@ -1014,7 +1019,7 @@ def test_meter_simulator_and_cli(database, monkeypatch, capsys):
 
 def test_in_app_worker_settles_in_the_background(database):
     view = accept(database, make_offer(database))
-    meter(database, "north-01", T, 8, 5)
+    meter(database, "s6-01", T, 8, 5)
     settings = Settings(
         database_path=database.path,
         media_dir=database.path.parent / "media",
@@ -1037,7 +1042,7 @@ def test_in_app_worker_settles_in_the_background(database):
 def test_manager_detail_reports_live_progress(database):
     offer_id = make_offer(database)
     accept(database, offer_id)
-    meter(database, "north-01", T, 2, 6)
+    meter(database, "s6-01", T, 2, 6)
     detail = call(
         database, manager_offer_detail, SUPERVISOR, offer_id, T + timedelta(minutes=31)
     )

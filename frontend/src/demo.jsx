@@ -49,6 +49,8 @@ import {
   Truck,
 } from "lucide-react";
 import {
+  AREAS,
+  DEFAULT_SITE,
   roles,
   users,
   sites,
@@ -195,7 +197,7 @@ export default function DemoApp() {
     [toast, setToast] = useState(""),
     [menu, setMenu] = useState(false),
     [notifications, setNotifications] = useState(false),
-    [siteId, setSiteId] = useState("S01");
+    [siteId, setSiteId] = useState(DEFAULT_SITE);
   const user = db.users.find((u) => u.id === userId && u.active),
     client = !user || user.role === "client";
   useEffect(() => {
@@ -235,7 +237,7 @@ export default function DemoApp() {
     sessionStorage.setItem("solar-session", u.id);
     setUserId(u.id);
     setPage(navsFor(u)[0]);
-    setSiteId(u.sites[0] || "S01");
+    setSiteId(u.sites[0] || DEFAULT_SITE);
     setLogin(false);
     notify(`Welcome, ${u.name.split(" ")[0]}.`);
   }
@@ -404,7 +406,7 @@ export default function DemoApp() {
                   setNotifications(false);
                 }}
               >
-                <Pill tone={i.tier === "P1" ? "orange" : ""}>{i.tier}</Pill>
+                <Pill tone={["P0", "P1"].includes(i.tier) ? "orange" : ""}>{i.tier}</Pill>
                 <span>
                   {i.title}
                   <small>{i.site} · synthetic replay</small>
@@ -1005,7 +1007,10 @@ function Login({ db, onLogin, onClose }) {
                   className={email === u.email ? "selected" : ""}
                 >
                   {roles[role]}
-                  <small>{u.name}</small>
+                  <small>
+                    {u.name}
+                    {u.area && u.area !== "All" ? ` · ${u.area}` : ""}
+                  </small>
                 </button>
               )
             );
@@ -1022,7 +1027,9 @@ function Login({ db, onLogin, onClose }) {
                 className={email === u.email ? "selected" : ""}
               >
                 Business client
-                <small>{u.name}</small>
+                <small>
+                  {u.name} · {u.area}
+                </small>
               </button>
             ))}
         </div>
@@ -1789,9 +1796,10 @@ function Radar({ db, user, visibleSites, incidents, setSelected, notify }) {
     [focus, setFocus] = useState(null),
     [participation, setParticipation] = useState(50);
   // Area staff only ever get their own area: no "All areas" choice leaks others.
-  const areas = ["North", "Central", "South"].filter((a) =>
-    visibleSites.some((s) => s.area === a),
-  );
+  const areas = AREAS.filter((a) => visibleSites.some((s) => s.area === a));
+  // Map scope: the chosen area, else the staff member's own area(s); null = all.
+  const mapAreas =
+    area !== "All" ? [area] : user?.role === "ceo" ? null : areas;
   const open = incidents.filter((i) => isOpen(i));
   const filtered = visibleSites.filter(
     (s) =>
@@ -1822,6 +1830,7 @@ function Radar({ db, user, visibleSites, incidents, setSelected, notify }) {
       status: incident ? "incident" : s.stale ? "stale" : "ok",
       tier: incident?.tier || null,
       area: s.area,
+      cluster: s.cluster,
       detail: `Client: ${customers} · Inverter: ${inverter ? `${inverter.manufacturer} ${inverter.model}` : "not mapped"}${incident ? ` · ${incident.id} ${incident.title}` : ""}${incident && s.stale ? " · telemetry stale" : ""}`,
     };
   });
@@ -1876,12 +1885,12 @@ function Radar({ db, user, visibleSites, incidents, setSelected, notify }) {
         <section className="card radar">
           <div className="section-head">
             <div>
-              <h3>Installation map · Bucharest</h3>
+              <h3>Installation map · Bucharest and Ilfov</h3>
               <p>
                 {visibleSites.length} synthetic sites ·{" "}
                 {areas.length === 1
-                  ? `${areas[0]} area only`
-                  : `${areas.length} simulated areas`}{" "}
+                  ? `${areas[0]} only`
+                  : `${areas.length} areas (sectors and Ilfov)`}{" "}
                 · zoom and pan the street map
               </p>
             </div>
@@ -1926,6 +1935,7 @@ function Radar({ db, user, visibleSites, incidents, setSelected, notify }) {
           </div>
           <BucharestMap
             sites={mapSites}
+            areas={mapAreas}
             selectedId={focus}
             actionLabel="Open incident or site summary"
             onSelect={(id) => {
@@ -1945,13 +1955,13 @@ function Radar({ db, user, visibleSites, incidents, setSelected, notify }) {
             infrastructure has no health status.
           </p>
         </section>
-        <div>
+        <div className={"area-cards" + (areas.length > 3 ? " compact" : "")}>
           {areas.map((a) => {
             const ss = visibleSites.filter((s) => s.area === a);
             return (
               <section className="card area-card" key={a}>
                 <div className="section-head">
-                  <h3>{a} area</h3>
+                  <h3>{a}</h3>
                   <MapPin size={18} />
                 </div>
                 <strong>
@@ -1974,8 +1984,12 @@ function Radar({ db, user, visibleSites, incidents, setSelected, notify }) {
                   {ss.reduce((sum, s) => sum + s.capacity, 0)} kWp
                 </p>
                 {areas.length > 1 && (
-                  <button className="text-btn" onClick={() => setArea(a)}>
-                    Inspect area <ArrowUpRight size={15} />
+                  <button
+                    className="text-btn"
+                    aria-label={`Inspect ${a}`}
+                    onClick={() => setArea(a)}
+                  >
+                    Inspect <ArrowUpRight size={15} />
                   </button>
                 )}
               </section>
@@ -2039,7 +2053,7 @@ function CrewBanner({ db, user, setSelected }) {
         <Users size={20} />
       </span>
       <span>
-        <b>{crew.name}</b> · {crew.area} area · {crew.members.length} members
+        <b>{crew.name}</b> · {crew.area} · {crew.members.length} members
       </span>
       <Pill tone={busy ? "orange" : "green"}>
         {busy ? `● ${busy.status} · ${busy.incident}` : "✓ Available"}
@@ -2077,10 +2091,10 @@ function Incidents({ db, user, incidents, setSelected }) {
         <div>
           <h3>
             {user?.role === "technician"
-              ? `Every case in the ${technicianArea(db, user)} area, in the right order`
+              ? `Every case in ${technicianArea(db, user)}, in the right order`
               : user?.role === "ceo"
                 ? "Every case, in the right order"
-                : `Every case in the ${user?.area} area, in the right order`}
+                : `Every case in ${user?.area}, in the right order`}
           </h3>
           <p>
             Safety first, then age. Financial value never overrides urgency.
@@ -2845,9 +2859,9 @@ function Teams({ db, user, notify, setSelected }) {
           <div>
             <h3>Assignment report by incident</h3>
             <p>
-              {report.areas.length === 3
-                ? "All areas"
-                : `${report.areas.join(", ")} area`}{" "}
+              {report.areas.length === AREAS.length
+                ? "All areas (Sectors 1–6 and Ilfov)"
+                : report.areas.join(", ")}{" "}
               · safety tier first, then age · synthetic incidents and crews
             </p>
           </div>
@@ -3043,7 +3057,7 @@ function Revenue({ db, user }) {
   return (
     <RevenueView
       report={report}
-      scopeLabel={scope ? `${user.area} area` : "All areas"}
+      scopeLabel={scope ? user.area : "All areas (Sectors 1–6 and Ilfov)"}
     />
   );
 }
@@ -3145,10 +3159,10 @@ function Account({ db, user, current, notify, logout, setLogin }) {
               {user.role === "ceo"
                 ? "All installations"
                 : user.role === "technician"
-                  ? `${user.area} area · ${user.crew}`
+                  ? `${user.area} · ${user.crew}`
                   : user.sites.length
                     ? user.sites.join(", ")
-                    : user.area + " area"}
+                    : user.area}
             </b>
           </div>
           <div className="list-row">
@@ -3184,7 +3198,7 @@ function Account({ db, user, current, notify, logout, setLogin }) {
           <section className="card mt">
             <h3>Demo controls</h3>
             <p className="muted">
-              Restore the 24-site replay. Clears plans, support requests,
+              Restore the {sites.length}-site replay. Clears plans, support requests,
               videos, crew assignments, meetings and incident-log entries in
               this browser.
             </p>

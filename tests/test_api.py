@@ -5,8 +5,8 @@ import pytest
 from backend.db import stamp
 from backend.ingestion import ingest
 
-LATEST = "/api/v1/sites/north-01/energy/latest"
-HISTORY = "/api/v1/sites/north-01/energy"
+LATEST = "/api/v1/sites/s6-01/energy/latest"
+HISTORY = "/api/v1/sites/s6-01/energy"
 
 
 def test_authentication_and_session_cookie(client, signed_in):
@@ -21,9 +21,9 @@ def test_authentication_and_session_cookie(client, signed_in):
 @pytest.mark.parametrize(
     "path",
     [
-        "/api/v1/sites/south-01",
-        "/api/v1/sites/south-01/energy/latest",
-        "/api/v1/sites/south-01/energy?from=2026-07-15T00:00:00Z&to=2026-07-16T00:00:00Z",
+        "/api/v1/sites/s4-01",
+        "/api/v1/sites/s4-01/energy/latest",
+        "/api/v1/sites/s4-01/energy?from=2026-07-15T00:00:00Z&to=2026-07-16T00:00:00Z",
         "/api/v1/sites/no-such-site",
     ],
 )
@@ -37,38 +37,38 @@ def test_customer_cannot_change_site_ids(client, signed_in, path):
 
 def test_customer_site_list_and_no_area_access(client, signed_in):
     signed_in()
-    assert [site["site_id"] for site in client.get("/api/v1/sites").json()] == [
-        "north-01"
-    ]
+    assert [site["site_id"] for site in client.get("/api/v1/sites").json()] == ["s6-01"]
     assert client.get("/api/v1/areas").status_code == 403
-    assert client.get("/api/v1/areas/north/summary").status_code == 403
+    assert client.get("/api/v1/areas/sector-6/summary").status_code == 403
 
 
 def test_dispatcher_scope_and_coverage_denominator(client, signed_in):
     signed_in("dispatcher")
-    assert len(client.get("/api/v1/sites").json()) == 8
-    assert [area["area_id"] for area in client.get("/api/v1/areas").json()] == ["north"]
-    summary = client.get("/api/v1/areas/north/summary").json()
+    assert len(client.get("/api/v1/sites").json()) == 14
+    assert [area["area_id"] for area in client.get("/api/v1/areas").json()] == [
+        "sector-6"
+    ]
+    summary = client.get("/api/v1/areas/sector-6/summary").json()
     assert (
         summary["monitored_sites"],
         summary["recent_sites"],
         summary["stale_sites"],
         summary["unavailable_sites"],
-    ) == (8, 6, 1, 1)
+    ) == (14, 12, 1, 1)
     assert summary["incident_status"] == "not_evaluated"
     assert summary["area"]["topology_mode"] == "simulated"
-    assert client.get("/api/v1/areas/south/summary").status_code == 404
-    assert client.get("/api/v1/sites/south-01/energy/latest").status_code == 404
+    assert client.get("/api/v1/areas/sector-4/summary").status_code == 404
+    assert client.get("/api/v1/sites/s4-01/energy/latest").status_code == 404
 
 
 def test_assigned_technician_has_only_explicit_sites(client, signed_in):
     signed_in("technician")
     assert [site["site_id"] for site in client.get("/api/v1/sites").json()] == [
-        "north-01",
-        "north-02",
+        "s6-01",
+        "s6-02",
     ]
-    assert client.get("/api/v1/sites/north-04/energy/latest").status_code == 404
-    assert client.get("/api/v1/areas/north/summary").status_code == 404
+    assert client.get("/api/v1/sites/s6-04/energy/latest").status_code == 404
+    assert client.get("/api/v1/areas/sector-6/summary").status_code == 404
 
 
 def test_latest_preserves_zero_and_derives_only_supported_load(client, signed_in):
@@ -89,24 +89,24 @@ def test_latest_preserves_zero_and_derives_only_supported_load(client, signed_in
 
 def test_stale_and_missing_feeds_never_become_zero_production(client, signed_in):
     signed_in("dispatcher")
-    stale = client.get("/api/v1/sites/north-02/energy/latest").json()
+    stale = client.get("/api/v1/sites/s6-02/energy/latest").json()
     assert stale["freshness"]["status"] == "stale"
     assert stale["measurements"]["pv_power"]["value"] == 6
-    missing = client.get("/api/v1/sites/north-03/energy/latest").json()
+    missing = client.get("/api/v1/sites/s6-03/energy/latest").json()
     assert missing["freshness"]["status"] == "unavailable"
     assert missing["measurements"]["pv_power"]["value"] is None
     assert missing["measurements"]["pv_power"]["requirement"] == "mandatory"
-    mandatory_only = client.get("/api/v1/sites/north-04/energy/latest").json()
+    mandatory_only = client.get("/api/v1/sites/s6-04/energy/latest").json()
     assert mandatory_only["measurements"]["grid_import"]["availability"] == "missing"
     assert mandatory_only["measurements"]["home_load"]["value"] is None
 
 
 def test_soc_alone_does_not_establish_battery_power_or_load(client, signed_in):
     signed_in("supervisor")
-    soc_only = client.get("/api/v1/sites/central-01/energy/latest").json()
+    soc_only = client.get("/api/v1/sites/s3-01/energy/latest").json()
     assert soc_only["measurements"]["battery_soc"]["value"] == 65
     assert soc_only["measurements"]["home_load"]["value"] is None
-    battery = client.get("/api/v1/sites/central-02/energy/latest").json()
+    battery = client.get("/api/v1/sites/s3-02/energy/latest").json()
     assert battery["measurements"]["home_load"]["value"] == 2
 
 

@@ -48,23 +48,28 @@ test("invalid and no benefit tasks have no offer", () => {
 });
 test("two 3kW tasks fill each slot; third moves later", () => {
   let plans = [
-    { ...recommend(task)[0], site: "S01", status: "Accepted" },
-    { ...recommend(task)[0], site: "S02", status: "Accepted" },
+    { ...recommend(task)[0], site: "s6-01", status: "Accepted" },
+    { ...recommend(task)[0], site: "s6-02", status: "Accepted" },
   ];
-  const third = recommend(task, plans, "S03")[0];
+  const third = recommend(task, plans, "s6-03")[0];
   assert.ok(third.start >= 15);
   assert.equal(third.saving, 3.375);
-  assert.deepEqual(recommend(task, plans, "S01"), []);
+  assert.deepEqual(recommend(task, plans, "s6-01"), []);
   plans[1].status = "Cancelled";
-  assert.equal(recommend(task, plans, "S03")[0].start, 13);
+  assert.equal(recommend(task, plans, "s6-03")[0].start, 13);
 });
 test("site access is role and assignment scoped", () => {
   assert.equal(sites.filter((s) => canSee(users[0], s.id)).length, 1);
-  assert.equal(sites.filter((s) => canSee(users[4], s.id)).length, 24);
-  assert.equal(sites.filter((s) => canSee(users[5], s.id)).length, 8);
-  assert.equal(canSee(users[7], "S17"), false);
+  assert.equal(sites.filter((s) => canSee(users[4], s.id)).length, 60);
+  // The area manager (Sector 6) sees the 14 Sector 6 installations only.
+  assert.equal(users[5].area, "Sector 6");
+  assert.equal(sites.filter((s) => canSee(users[5], s.id)).length, 14);
+  assert.ok(sites.filter((s) => canSee(users[5], s.id)).every((s) => s.area === "Sector 6"));
+  assert.equal(canSee(users[7], "ilfov-01"), false);
   // A technician sees his crew's whole area, not only listed sites.
-  assert.equal(sites.filter((s) => canSee(users[7], s.id)).length, 8);
+  assert.equal(sites.filter((s) => canSee(users[7], s.id)).length, 14);
+  // Before login only Alex's Militari home is shown.
+  assert.deepEqual(sites.filter((s) => canSee(null, s.id)).map((s) => s.id), ["s6-01"]);
   assert.equal(canDispatch(users[7]), false);
   assert.equal(canReview(users[7]), true);
   // Only the PPC dispatcher assigns crews; managers are read-only.
@@ -85,39 +90,44 @@ test("supplier support role and accounts are removed", () => {
 test("safety precedes money and missing data stays unknown", () => {
   const db = seed(),
     r = rank(db.incidents);
-  assert.equal(r[0].tier, "P1");
+  assert.equal(r[0].tier, "P0");
+  assert.equal(r[0].id, "I109");
+  assert.deepEqual(r.slice(1, 4).map((i) => i.tier), ["P1", "P1", "P1"]);
   const missing = db.incidents.find((i) => i.family === "Telemetry");
   assert.equal(missing.value, null);
   assert.equal(missing.tier, "P3");
 });
 test("qualified crews cannot receive overlapping active dispatch work", () => {
   const i = seed().incidents[0];
-  assert.equal(eligible(crews[0], i, []), true);
-  assert.equal(eligible(crews[1], i, []), false);
+  const s6 = crews.find((c) => c.area === "Sector 6"),
+    s1 = crews.find((c) => c.area === "Sector 1");
+  assert.equal(eligible(s6, i, []), true);
+  assert.equal(eligible(s1, i, []), false);
   assert.equal(
-    eligible(crews[0], i, [{ crew: "Solar Care", kind: "dispatch", status: "Assigned" }]),
+    eligible(s6, i, [{ crew: "Sector 6 Solar Care", kind: "dispatch", status: "Assigned" }]),
     false,
   );
   assert.equal(
-    eligible(crews[0], i, [{ crew: "Solar Care", kind: "meeting", status: "Scheduled" }]),
+    eligible(s6, i, [{ crew: "Sector 6 Solar Care", kind: "meeting", status: "Scheduled" }]),
     true,
   );
-  assert.equal(eligible(crews[0], { ...i, family: "Billing" }, []), false);
+  assert.equal(eligible(s6, { ...i, family: "Billing" }, []), false);
 });
 test("customer request types route to the matching worker team", () => {
-  assert.equal(routeRequest("solar").routeTo, "Solar Care");
-  assert.equal(routeRequest("grid").routeTo, "Grid Response");
+  // Technical types go to the crew of the customer's area (resolved by routeVisit).
+  assert.equal(routeRequest("solar").routeTo, "Area crew");
+  assert.equal(routeRequest("grid").routeTo, "Area crew");
   assert.equal(routeRequest("billing").routeTo, "PPC Triage");
   assert.equal(routeRequest("meter").routeTo, "PPC Triage");
   assert.equal(routeRequest("upgrade").routeTo, "PPC Triage");
   assert.equal(routeRequest("unknown").routeTo, "PPC Triage");
 });
 test("request inboxes are filtered by worker route and site scope", () => {
-  const solarRequest = { site: "S01", routedTo: "Solar Care" };
-  const billingRequest = { site: "S01", routedTo: "PPC Triage" };
+  const solarRequest = { site: "s6-01", routedTo: "Sector 6 Solar Care" };
+  const billingRequest = { site: "s6-01", routedTo: "PPC Triage" };
   assert.equal(canReviewRequest(users[7], solarRequest), true);
   assert.equal(canReviewRequest(users[7], billingRequest), false);
-  // The North dispatcher answers billing questions; Central's does not see North.
+  // The Sector 6 dispatcher answers billing questions; Sector 3's does not see Sector 6.
   assert.equal(canReviewRequest(users[6], billingRequest), true);
   assert.equal(canReviewRequest(users[10], billingRequest), false);
 });

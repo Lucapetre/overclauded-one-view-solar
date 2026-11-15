@@ -127,7 +127,7 @@ test("every message is a non-empty string and every placeholder is a word", () =
 
 /* ------------------------------------------------- penalty rule preview */
 
-const baseForm = { ...defaultForm("north", Date.parse("2026-11-15T10:20:00Z")) };
+const baseForm = { ...defaultForm("sector-6", Date.parse("2026-11-15T10:20:00Z")) };
 
 test("builder penalty preview mirrors the server text for each penalty type", () => {
   // Expected strings produced by backend/offers_math.penalty_rule_text.
@@ -331,9 +331,9 @@ test("notification links route to the Offers page per role", () => {
     page: "Offers",
     focus: { kind: "userOffer", id: "abc123" },
   });
-  assert.deepEqual(notificationTarget("offers/demo-offer-north-consume", "customer"), {
+  assert.deepEqual(notificationTarget("offers/demo-offer-s6-consume", "customer"), {
     page: "Offers",
-    focus: { kind: "offer", id: "demo-offer-north-consume" },
+    focus: { kind: "offer", id: "demo-offer-s6-consume" },
   });
   assert.deepEqual(notificationTarget("offers/xyz", "supervisor"), {
     page: "Offers",
@@ -389,10 +389,10 @@ test("draft targeting fields are sent only for their mode", () => {
     ["userIds"],
   );
 
-  const zone = formToDraft({ ...baseForm, incidentId: "inc-1", incidentZone: "Pipera", zoneOnly: true }).draft;
+  const zone = formToDraft({ ...baseForm, incidentId: "inc-1", incidentZone: "Militari", zoneOnly: true }).draft;
   assert.equal(zone.linked_incident_id, "inc-1");
-  assert.equal(zone.target_zone, "Pipera");
-  const noZone = formToDraft({ ...baseForm, incidentId: "", incidentZone: "Pipera", zoneOnly: true }).draft;
+  assert.equal(zone.target_zone, "Militari");
+  const noZone = formToDraft({ ...baseForm, incidentId: "", incidentZone: "Militari", zoneOnly: true }).draft;
   assert.equal(noZone.target_zone, null, "a zone needs a linked incident");
   const limits = formToDraft({ ...baseForm, maxTakers: "5", maxTotalKwh: "50" }).draft;
   assert.equal(limits.max_takers, 5);
@@ -424,7 +424,7 @@ test("a saved offer round-trips through the builder form", () => {
     penalty_type: "percent_of_unfulfilled_value",
     penalty_value: "20",
     offer_expires_at: "2026-11-22T10:00:00Z",
-    area_id: "north",
+    area_id: "sector-6",
     target_mode: "segment",
     target_segment: "prosumers",
     target_min_kwp: "3",

@@ -9,12 +9,13 @@ from backend.provisioning import add_crew_member, create_crew
 
 OPS = "/api/v1/ops"
 REQUESTS = "/api/v1/support/requests"
-NORTH = {
-    "demo-inc-north-05-production",
-    "demo-inc-north-02-telemetry",
-    "demo-inc-north-03-telemetry",
+SECTOR_6 = {
+    "demo-inc-s6-09-production",
+    "demo-inc-s6-02-telemetry",
+    "demo-inc-s6-03-telemetry",
 }
-CENTRAL = {"demo-inc-central-05-area", "demo-inc-central-07-voltage"}
+SECTOR_3 = {"demo-inc-s3-04-area", "demo-inc-s3-09-voltage"}
+SOLAR_CARE = "Sector 6 Solar Care"
 PROFILES = json.loads(
     (
         Path(__file__).resolve().parents[1]
@@ -58,7 +59,7 @@ def test_customers_are_refused_operations(client, signed_in):
         response = client.get(f"{OPS}/{path}")
         assert response.status_code == 403, path
         assert response.json()["code"] == "operations_required"
-    incident = f"{OPS}/incidents/demo-inc-north-05-production"
+    incident = f"{OPS}/incidents/demo-inc-s6-09-production"
     assert client.get(incident).status_code == 403
     for action in ("assign", "send-team", "resolve"):
         assert post(client, session, f"{incident}/{action}").status_code == 403
@@ -67,72 +68,91 @@ def test_customers_are_refused_operations(client, signed_in):
 
 def test_scope_of_every_view_per_role(client, signed_in):
     signed_in("dispatcher")
-    assert set(ids(client.get(f"{OPS}/incidents"))) == NORTH
-    sites = client.get(f"{OPS}/map").json()["sites"]
-    assert len(sites) == 8 and {site["area_id"] for site in sites} == {"north"}
-    no_feed = next(site for site in sites if site["site_id"] == "north-03")
+    assert set(ids(client.get(f"{OPS}/incidents"))) == SECTOR_6
+    view = client.get(f"{OPS}/map").json()
+    sites = view["sites"]
+    assert len(sites) == 14 and {site["area_id"] for site in sites} == {"sector-6"}
+    assert {site["area_alias"] for site in sites} == {"Sector 6"}
+    no_feed = next(site for site in sites if site["site_id"] == "s6-03")
     assert (no_feed["freshness_status"], no_feed["worst_tier"]) == ("unavailable", "P3")
-    assert no_feed["open_incidents"] == 1 and no_feed["zone"] == "Floreasca"
+    assert no_feed["open_incidents"] == 1 and no_feed["zone"] == "Militari"
+    assert (no_feed["cluster"], no_feed["alias"]) == (
+        "militari-homes",
+        "Home · Militari 3",
+    )
+    # Only clusters with a site in scope, in fixture order, with their metadata.
+    assert view["clusters"] == [
+        cluster for cluster in PROFILES["clusters"] if cluster["area_id"] == "sector-6"
+    ]
+    assert [cluster["id"] for cluster in view["clusters"]] == [
+        "militari-homes",
+        "drumul-taberei-homes",
+        "militari-platform",
+    ]
     assert [crew["name"] for crew in client.get(f"{OPS}/teams").json()["crews"]] == [
-        "Solar Care"
+        SOLAR_CARE
     ]
     assert client.get(f"{OPS}/capacity").json() == {
         "areas": [
             {
-                "area_id": "north",
-                "alias": "Demo North",
-                "sites": 8,
-                "installed_kwp": 189,
+                "area_id": "sector-6",
+                "alias": "Sector 6",
+                "sites": 14,
+                "installed_kwp": 360,
             }
         ],
-        "total_installed_kwp": 189,
+        "total_installed_kwp": 360,
     }
     assert client.get(f"{OPS}/revenue").json()["code"] == "supervisor_required"
-    assert client.get(f"{OPS}/incidents/demo-inc-central-05-area").status_code == 404
+    assert client.get(f"{OPS}/incidents/demo-inc-s3-04-area").status_code == 404
 
     signed_in("supervisor")
     incidents = client.get(f"{OPS}/incidents").json()
-    assert len(incidents) == 8
+    assert len(incidents) == 11
     order = [(item["tier"], item["created_at"]) for item in incidents]
     assert order == sorted(order) and incidents[0]["tier"] == "P0"
     assert all("Synthetic" in item["evidence"] for item in incidents)
     map_view = client.get(f"{OPS}/map").json()
-    assert len(map_view["sites"]) == 24 and "SYNTHETIC" in map_view["note"]
-    assert map_view["center"]["zoom"] == 12
-    assert len(client.get(f"{OPS}/teams").json()["crews"]) == 3
+    assert len(map_view["sites"]) == 60 and "SYNTHETIC" in map_view["note"]
+    assert map_view["center"]["zoom"] == 11
+    assert map_view["clusters"] == PROFILES["clusters"]
+    assert {site["cluster"] for site in map_view["sites"]} - {None} == {
+        cluster["id"] for cluster in PROFILES["clusters"]
+    }
+    crews = client.get(f"{OPS}/teams").json()["crews"]
+    assert len(crews) == 7 and len({crew["area_id"] for crew in crews}) == 7
+    assert all("Billing" not in crew["skills"] for crew in crews)
     capacity = client.get(f"{OPS}/capacity").json()
     assert capacity["total_installed_kwp"] == sum(
         profile["installed_kwp"] for profile in PROFILES["profiles"]
     )
 
     signed_in("area-manager")
-    assert set(ids(client.get(f"{OPS}/incidents"))) == NORTH
+    assert set(ids(client.get(f"{OPS}/incidents"))) == SECTOR_6
     assert {site["area_id"] for site in client.get(f"{OPS}/map").json()["sites"]} == {
-        "north"
+        "sector-6"
     }
 
     # A technician's zone is his crew's area, beyond his two telemetry site grants.
     signed_in("technician")
-    assert set(ids(client.get(f"{OPS}/incidents"))) == NORTH
-    assert client.get("/api/v1/sites/north-03").status_code == 404
-    assert len(client.get(f"{OPS}/map").json()["sites"]) == 8
+    assert set(ids(client.get(f"{OPS}/incidents"))) == SECTOR_6
+    assert client.get("/api/v1/sites/s6-03").status_code == 404
+    assert len(client.get(f"{OPS}/map").json()["sites"]) == 14
     assert [crew["name"] for crew in client.get(f"{OPS}/teams").json()["crews"]] == [
-        "Solar Care"
+        SOLAR_CARE
     ]
     assert client.get(f"{OPS}/revenue").status_code == 403
 
-    signed_in("technician-central")
-    assert set(ids(client.get(f"{OPS}/incidents"))) == CENTRAL
-    assert (
-        client.get(f"{OPS}/incidents/demo-inc-north-05-production").status_code == 404
-    )
-    assert client.get(f"{OPS}/capacity").json()["areas"][0]["area_id"] == "central"
+    signed_in("technician-s3")
+    assert set(ids(client.get(f"{OPS}/incidents"))) == SECTOR_3
+    assert client.get(f"{OPS}/incidents/demo-inc-s6-09-production").status_code == 404
+    assert client.get(f"{OPS}/capacity").json()["areas"][0]["area_id"] == "sector-3"
 
 
 def test_support_requests_open_logged_incidents(client, signed_in):
     session = signed_in()
     body = {
-        "site_id": "north-01",
+        "site_id": "s6-01",
         "request_type": "battery",
         "description": "The battery has not charged since yesterday.",
     }
@@ -177,14 +197,14 @@ def test_support_requests_open_logged_incidents(client, signed_in):
     ]
     assert log[0]["actor"] == "customer" and "Checking the logs." in log[2]["detail"]
 
-    # Severity first: the danger report gets the only north crew; billing has no crew.
+    # Severity first: the danger report gets the only Sector 6 crew; billing has none.
     result = post(client, staff, f"{OPS}/dispatch/auto").json()
     assert result["assigned"] == [
-        {"incident_id": danger["incident_id"], "crew_name": "Solar Care", "tier": "P0"}
+        {"incident_id": danger["incident_id"], "crew_name": SOLAR_CARE, "tier": "P0"}
     ]
     skipped = {item["incident_id"]: item for item in result["skipped"]}
     assert skipped[billing["incident_id"]]["reason"] == "no_eligible_crew"
-    assert skipped["demo-inc-north-05-production"]["reason"] == "no_available_crew"
+    assert skipped["demo-inc-s6-09-production"]["reason"] == "no_available_crew"
     assert [item["tier"] for item in result["skipped"]] == sorted(
         item["tier"] for item in result["skipped"]
     )
@@ -198,31 +218,33 @@ def test_support_requests_open_logged_incidents(client, signed_in):
 
 def test_dispatcher_assignment_rules(client, signed_in):
     manager = signed_in("supervisor")
-    target = f"{OPS}/incidents/demo-inc-north-05-production"
+    target = f"{OPS}/incidents/demo-inc-s6-09-production"
     denied = post(client, manager, f"{target}/assign")
     assert denied.json()["code"] == "dispatcher_required"
     assert post(client, manager, f"{OPS}/dispatch/auto").status_code == 403
 
     session = signed_in("dispatcher")
-    wrong = post(client, session, f"{target}/assign", {"crew_id": "grid-response"})
+    wrong = post(
+        client, session, f"{target}/assign", {"crew_id": "sector-3-solar-care"}
+    )
     assert (wrong.status_code, wrong.json()["code"]) == (422, "crew_not_eligible")
     assert (
         post(client, session, f"{target}/assign", {"crew_id": "nope"}).status_code
         == 404
     )
     assert post(client, session, f"{target}/assign", {"crew": "x"}).status_code == 422
-    out_of_scope = f"{OPS}/incidents/demo-inc-central-05-area/assign"
+    out_of_scope = f"{OPS}/incidents/demo-inc-s3-04-area/assign"
     assert post(client, session, out_of_scope).status_code == 404
     assert client.post(f"{target}/assign", json={}).status_code == 403  # CSRF
 
     assigned = post(client, session, f"{target}/assign").json()
     assert assigned["status"] == "assigned"
-    assert assigned["assignment"]["crew_name"] == "Solar Care"
+    assert assigned["assignment"]["crew_name"] == SOLAR_CARE
     assert assigned["assignment"]["kind"] == "dispatch"
     again = post(client, session, f"{target}/assign")
     assert (again.status_code, again.json()["code"]) == (409, "already_assigned")
-    stale = f"{OPS}/incidents/demo-inc-north-02-telemetry/assign"
-    busy = post(client, session, stale, {"crew_id": "solar-care"})
+    stale = f"{OPS}/incidents/demo-inc-s6-02-telemetry/assign"
+    busy = post(client, session, stale, {"crew_id": "sector-6-solar-care"})
     assert (busy.status_code, busy.json()["code"]) == (409, "crew_unavailable")
     none = post(client, session, stale)
     assert (none.status_code, none.json()["code"]) == (409, "no_available_crew")
@@ -244,13 +266,13 @@ def test_dispatcher_assignment_rules(client, signed_in):
     assert post(client, session, f"{target}/assign").status_code == 409
     result = post(client, session, f"{OPS}/dispatch/auto").json()
     assert [item["incident_id"] for item in result["assigned"]] == [
-        "demo-inc-north-02-telemetry"
+        "demo-inc-s6-02-telemetry"
     ]
     assert ids(client.get(f"{OPS}/incidents")) == [
-        "demo-inc-north-02-telemetry",
-        "demo-inc-north-03-telemetry",
+        "demo-inc-s6-02-telemetry",
+        "demo-inc-s6-03-telemetry",
     ]
-    assert "demo-inc-north-05-production" in ids(
+    assert "demo-inc-s6-09-production" in ids(
         client.get(f"{OPS}/incidents", params={"status": "all"})
     )
 
@@ -262,25 +284,25 @@ def test_technician_send_team_and_meetings(client, signed_in, database):
         customer,
         REQUESTS,
         {
-            "site_id": "north-01",
+            "site_id": "s6-01",
             "request_type": "solar",
             "description": "Production looks low today.",
         },
     ).json()
     incident = f"{OPS}/incidents/{request['incident_id']}"
-    # A second north crew lets us test conflicts between crews in one zone.
+    # A second Sector 6 crew lets us test conflicts between crews in one zone.
     create_crew(
-        database, "Night Crew", "north", ["Production", "Telemetry"], "18:00-23:00"
+        database, "Night Crew", "sector-6", ["Production", "Telemetry"], "18:00-23:00"
     )
-    add_crew_member(database, "Night Crew", "technician-central")
+    add_crew_member(database, "Night Crew", "technician-s3")
 
     session = signed_in("technician")
     assert post(client, session, f"{incident}/assign").json()["code"] == (
         "dispatcher_required"
     )
     assert post(client, session, f"{OPS}/dispatch/auto").status_code == 403
-    central = f"{OPS}/incidents/demo-inc-central-07-voltage"
-    assert post(client, session, f"{central}/send-team").status_code == 404
+    elsewhere = f"{OPS}/incidents/demo-inc-s3-09-voltage"
+    assert post(client, session, f"{elsewhere}/send-team").status_code == 404
     slot = {"start": "2026-07-16T10:00:00Z", "end": "2026-07-16T11:00:00Z"}
     for bad in (
         {"start": slot["end"], "end": slot["start"]},
@@ -293,7 +315,7 @@ def test_technician_send_team_and_meetings(client, signed_in, database):
     assert booked["assignment"]["kind"] == "meeting"
     assert booked["log"][-1]["action"] == "meeting_scheduled"
     assert "by technician" in booked["log"][-1]["detail"]
-    no_feed = f"{OPS}/incidents/demo-inc-north-03-telemetry"
+    no_feed = f"{OPS}/incidents/demo-inc-s6-03-telemetry"
     overlap = post(
         client,
         session,
@@ -305,19 +327,19 @@ def test_technician_send_team_and_meetings(client, signed_in, database):
     assert post(client, session, f"{no_feed}/meeting", adjacent).status_code == 200
 
     # Meetings do not block the crew; an on-site dispatch does.
-    production = f"{OPS}/incidents/demo-inc-north-05-production"
+    production = f"{OPS}/incidents/demo-inc-s6-09-production"
     sent = post(client, session, f"{production}/send-team").json()
     assert sent["status"] == "team_sent"
     assert (sent["assignment"]["kind"], sent["assignment"]["status"]) == (
         "dispatch",
         "team_sent",
     )
-    stale = f"{OPS}/incidents/demo-inc-north-02-telemetry"
+    stale = f"{OPS}/incidents/demo-inc-s6-02-telemetry"
     busy = post(client, session, f"{stale}/send-team")
     assert (busy.status_code, busy.json()["code"]) == (409, "crew_unavailable")
     assert post(client, session, f"{production}/send-team").status_code == 409
 
-    other = signed_in("technician-central")
+    other = signed_in("technician-s3")
     taken = post(client, other, f"{production}/send-team")
     assert (taken.status_code, taken.json()["code"]) == (409, "assigned_to_other_crew")
     taken = post(client, other, f"{incident}/meeting", adjacent)
@@ -334,7 +356,7 @@ def test_technician_send_team_and_meetings(client, signed_in, database):
     done = post(client, session, f"{production}/resolve").json()
     assert done["status"] == "resolved"
     crew = client.get(f"{OPS}/teams").json()["crews"][0]
-    assert crew["name"] == "Solar Care" and crew["available"] is True
+    assert crew["name"] == SOLAR_CARE and crew["available"] is True
     assert crew["active_assignment"]["kind"] == "meeting"
 
     signed_in()
@@ -346,7 +368,7 @@ def test_technician_send_team_and_meetings(client, signed_in, database):
     assert mine["meeting"] == {
         "start": "2026-07-16T10:00:00Z",
         "end": "2026-07-16T11:00:00Z",
-        "crew_name": "Solar Care",
+        "crew_name": SOLAR_CARE,
     }
 
 
@@ -358,7 +380,7 @@ def test_teams_report_matches_for_area_and_overall_managers(client, signed_in):
 
     signed_in("supervisor")
     overall = client.get(f"{OPS}/teams").json()
-    solar = next(crew for crew in overall["crews"] if crew["name"] == "Solar Care")
+    solar = next(crew for crew in overall["crews"] if crew["name"] == SOLAR_CARE)
     assert solar["report"] == {
         "assigned_total": 2,
         "completed_total": 1,
@@ -366,9 +388,9 @@ def test_teams_report_matches_for_area_and_overall_managers(client, signed_in):
         "completed_by_tier": {"P0": 0, "P1": 1, "P2": 0, "P3": 0},
     }
     assert solar["available"] is False and solar["members"] == ["technician"]
-    assert solar["active_assignment"]["incident_id"] == "demo-inc-north-02-telemetry"
-    assert solar["area_alias"] == "Demo North"
-    assert overall["unassigned_incidents"] == 6
+    assert solar["active_assignment"]["incident_id"] == "demo-inc-s6-02-telemetry"
+    assert solar["area_alias"] == "Sector 6"
+    assert overall["unassigned_incidents"] == 9
     report = overall["assignments"]
     assert [(row["tier"], row["status"]) for row in report] == [
         ("P2", "assigned"),
@@ -377,10 +399,10 @@ def test_teams_report_matches_for_area_and_overall_managers(client, signed_in):
     assert report[1]["created_by"] == "dispatcher" and report[1]["completed_at"]
 
     signed_in("area-manager")
-    north = client.get(f"{OPS}/teams").json()
-    assert north["crews"] == [solar]
-    assert north["assignments"] == report
-    assert north["unassigned_incidents"] == 1
+    sector = client.get(f"{OPS}/teams").json()
+    assert sector["crews"] == [solar]
+    assert sector["assignments"] == report
+    assert sector["unassigned_incidents"] == 1
 
 
 def money(value):
@@ -395,7 +417,7 @@ def test_revenue_estimate_is_scoped_and_uses_contract_prices(client, signed_in):
         "import_price_ron_kwh": 1.2,
         "export_price_ron_kwh": 0.5,
     }
-    saved = post(client, business, "/api/v1/sites/central-03/contract", contract)
+    saved = post(client, business, "/api/v1/sites/s3-06/contract", contract)
     assert saved.status_code == 200
 
     signed_in("dispatcher")
@@ -407,26 +429,25 @@ def test_revenue_estimate_is_scoped_and_uses_contract_prices(client, signed_in):
     assert "synthetic" in view["basis"] and "not invoices" in view["basis"]
     accounts = {item["site_id"]: item for item in view["business_accounts"]}
     # By hand: 2600 kWh x 1.2 + 160 fee - 180 kWh x 0.5 = 3190 RON.
-    bistro = accounts["central-03"]
+    bistro = accounts["s3-06"]
     assert (bistro["energy_sales_ron"], bistro["export_payments_ron"]) == (3120, 90)
     assert (bistro["service_fees_ron"], bistro["net_revenue_ron"]) == (160, 3190)
     assert bistro["price_source"] == "contract"
     # Default tariff 1.3 / 0.55: 14000 x 1.3 + 600 - 3000 x 0.55 = 17150 RON.
-    factory = accounts["central-07"]
+    factory = accounts["s6-13"]
     assert (factory["net_revenue_ron"], factory["price_source"]) == (
         17150,
         "default_tariff",
     )
     nets = [item["net_revenue_ron"] for item in view["business_accounts"]]
-    assert nets == sorted(nets, reverse=True) and len(nets) == 7
+    assert nets == sorted(nets, reverse=True) and len(nets) == 25
 
     tariff = PROFILES["default_tariff"]
     expected = {"home": 0.0, "business": 0.0}
     for profile in PROFILES["profiles"]:
-        site = f"{profile['area']}-{profile['number']:02d}"
         prices = (
             (1.2, 0.5)
-            if site == "central-03"
+            if profile["site_id"] == "s3-06"
             else (tariff["import_price_ron_kwh"], tariff["export_price_ron_kwh"])
         )
         expected[profile["segment"]] += (
@@ -435,34 +456,38 @@ def test_revenue_estimate_is_scoped_and_uses_contract_prices(client, signed_in):
             - profile["monthly_export_kwh"] * prices[1]
         )
     total = sum(expected.values())
-    assert view["totals"]["sites"] == 24
+    assert view["totals"]["sites"] == 60
     assert view["totals"]["net_revenue_ron"] == money(total)
     assert view["annualized_net_revenue_ron"] == money(total * 12)
     segments = view["by_segment"]
     assert segments["business"]["net_revenue_ron"] == money(expected["business"])
-    assert segments["business"]["sites"] == 7 and segments["home"]["sites"] == 17
+    assert segments["business"]["sites"] == 25 and segments["home"]["sites"] == 35
     assert (
         abs(segments["business"]["share_of_net"] - expected["business"] / total) < 1e-3
     )
     assert segments["business"]["share_of_net"] > 0.9
-    assert [area["area_id"] for area in view["by_area"]] == [
-        "central",
-        "north",
-        "south",
+    assert [area["area_id"] for area in view["by_area"]] == ["ilfov"] + [
+        f"sector-{n}" for n in range(1, 7)
     ]
-    assert sum(area["business_sites"] for area in view["by_area"]) == 7
+    assert sum(area["business_sites"] for area in view["by_area"]) == 25
+    ilfov = view["by_area"][0]
+    assert (ilfov["alias"], ilfov["sites"], ilfov["business_sites"]) == (
+        "Ilfov",
+        10,
+        10,
+    )
 
     signed_in("area-manager")
-    north = client.get(f"{OPS}/revenue").json()
-    assert [area["area_id"] for area in north["by_area"]] == ["north"]
-    assert north["totals"]["sites"] == 8
-    assert {item["area_id"] for item in north["business_accounts"]} == {"north"}
+    sector = client.get(f"{OPS}/revenue").json()
+    assert [area["area_id"] for area in sector["by_area"]] == ["sector-6"]
+    assert sector["totals"]["sites"] == 14
+    assert {item["area_id"] for item in sector["business_accounts"]} == {"sector-6"}
 
 
 def test_support_video_upload_and_download(client, signed_in):
     session = signed_in()
     body = {
-        "site_id": "north-01",
+        "site_id": "s6-01",
         "request_type": "panel-damage",
         "description": "There is a crack on one panel.",
     }
@@ -539,7 +564,7 @@ def test_crew_cli_creates_crews_and_members(database, monkeypatch, capsys):
             "create-crew",
             "Night Crew",
             "--area",
-            "south",
+            "sector-4",
             "--skills",
             "Production, Area event",
             "--shift",
@@ -556,13 +581,13 @@ def test_crew_cli_creates_crews_and_members(database, monkeypatch, capsys):
             "SELECT user_id FROM crew_members WHERE crew_id='night-crew'"
         ).fetchall()
     assert json.loads(crew["skills"]) == ["Production", "Area event"]
-    assert (crew["area_id"], crew["shift"]) == ("south", "18:00-23:00")
+    assert (crew["area_id"], crew["shift"]) == ("sector-4", "18:00-23:00")
     assert [row["user_id"] for row in members] == ["technician"]
     for argv in (
-        ["create-crew", "Night Crew", "--area", "south", "--skills", "Other"],
-        ["create-crew", "X", "--area", "south", "--skills", "Wizardry"],
+        ["create-crew", "Night Crew", "--area", "sector-4", "--skills", "Other"],
+        ["create-crew", "X", "--area", "sector-4", "--skills", "Wizardry"],
         ["create-crew", "X", "--area", "nowhere", "--skills", "Other"],
-        ["create-crew", "X", "--area", "south", "--skills", "Other", "--shift", "9"],
+        ["create-crew", "X", "--area", "sector-4", "--skills", "Other", "--shift", "9"],
         ["add-crew-member", "Night Crew", "dispatcher"],
         ["add-crew-member", "No Crew", "technician"],
     ):
