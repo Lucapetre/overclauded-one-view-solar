@@ -475,7 +475,7 @@ export function FriendlyEnergy({ kwh, subject, accountType, loading }) {
 }
 
 /** Production outlook from live weather: sky, season, humidity and temperature. */
-export function ForecastCard({ kwp, kwpAssumed, contract, accountType }) {
+export function ForecastCard({ kwp, kwpAssumed, contract, accountType, replay = false }) {
   const { weather, failed, retry } = useWeather();
   const prices = contract
     ? {
@@ -494,6 +494,12 @@ export function ForecastCard({ kwp, kwpAssumed, contract, accountType }) {
             From the live weather forecast for {LOCATION.name}: sunshine, season,
             temperature and humidity.
           </p>
+          {replay && (
+            <p className="forecast-replay-note" role="note">
+              Live public weather for today's real date, not the replay
+              scenario. The Plan page uses the scenario's own forecast.
+            </p>
+          )}
         </div>
         <CloudSun size={24} />
       </div>

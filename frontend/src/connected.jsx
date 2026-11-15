@@ -1203,6 +1203,7 @@ function SiteHome({
             site={site}
             accountType={accountType}
             onError={onError}
+            replay={clock?.mode === "scenario"}
           />
         </>
       )}

@@ -336,7 +336,7 @@ export function useContract(api, siteId, onError) {
 
 const DEFAULT_KWP = { home: 5, business: 30 };
 
-export function ContractAndForecast({ api, site, accountType, readOnly, onError }) {
+export function ContractAndForecast({ api, site, accountType, readOnly, onError, replay }) {
   const [view, save] = useContract(api, site.site_id, onError);
   const contract = view?.contract || null;
   return (
@@ -346,6 +346,7 @@ export function ContractAndForecast({ api, site, accountType, readOnly, onError 
         kwpAssumed={!contract?.installed_kwp}
         contract={contract}
         accountType={accountType}
+        replay={replay}
       />
       {view ? (
         <ContractCard

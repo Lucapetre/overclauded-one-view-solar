@@ -20,6 +20,8 @@ Do not run `seed-demo` against a component-scenario database.
 
 ### Run the component demo
 
+> **Disk space:** the demo workspace needs about 2 GB, and pytest and SQLite also write temporary files (to `%TEMP%` on Windows). If your system drive is nearly full, put both on another drive before running anything, for example in PowerShell: `$env:TEMP='D:\ovs-tmp'; $env:TMP='D:\ovs-tmp'`, and use a workspace such as `D:\ovs-demo`.
+
 Quick start on Windows PowerShell, from the repository root.
 
 Needs Python 3.12 and Node/npm. The existing workspace already has `.venv\Scripts\python.exe`; create it only on a fresh checkout.
