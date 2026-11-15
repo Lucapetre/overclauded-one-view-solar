@@ -30,3 +30,14 @@ def test_demo_login_signs_in_existing_accounts_when_enabled(database):
         assert missing.status_code == 404
         bad = client.post("/api/v1/auth/demo-login", json={"username": ""})
         assert bad.status_code == 422
+
+
+def test_lan_hosts_only_allowed_in_demo_lan_mode():
+    from backend.security import is_private_host
+
+    assert is_private_host("10.200.21.180")
+    assert is_private_host("192.168.1.20")
+    assert not is_private_host("8.8.8.8")
+    assert not is_private_host("example.com")
+    assert not is_private_host(None)
+    assert Settings().demo_lan is False

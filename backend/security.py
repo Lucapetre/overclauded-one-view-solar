@@ -42,17 +42,34 @@ def token_hash(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
 
 
+def is_private_host(host: str | None) -> bool:
+    """True for RFC 1918 / loopback IPv4 literals (used only in local demo LAN mode)."""
+    import ipaddress
+
+    try:
+        address = ipaddress.ip_address(host or "")
+    except ValueError:
+        return False
+    return address.is_private and not address.is_unspecified
+
+
 def check_origin(request: Request):
     settings = request.app.state.settings
     origin = request.headers.get("origin")
     same_origin = str(request.base_url).rstrip("/")
     if origin and origin not in (*settings.allowed_origins, same_origin):
         raise ApiError(403, "origin_not_allowed", "This browser origin is not allowed")
-    if not settings.cookie_secure and request.url.hostname not in (
-        "localhost",
-        "127.0.0.1",
-        "::1",
-        "testserver",
+    lan_ok = settings.demo_lan and is_private_host(request.url.hostname)
+    if (
+        not settings.cookie_secure
+        and not lan_ok
+        and request.url.hostname
+        not in (
+            "localhost",
+            "127.0.0.1",
+            "::1",
+            "testserver",
+        )
     ):
         raise ApiError(
             403, "https_required", "Non-loopback sessions require secure HTTPS cookies"
@@ -95,7 +112,9 @@ LOOPBACK_PEERS = ("127.0.0.1", "::1", "localhost", "testclient")
 def require_demo_login(request: Request):
     """One-click demo sign-in exists only when explicitly enabled, and only for loopback clients."""
     peer = request.client.host if request.client else ""
-    if not request.app.state.settings.demo_login or peer not in LOOPBACK_PEERS:
+    settings = request.app.state.settings
+    allowed = peer in LOOPBACK_PEERS or (settings.demo_lan and is_private_host(peer))
+    if not settings.demo_login or not allowed:
         raise ApiError(404, "not_found", "Resource not found")
     check_origin(request)
 

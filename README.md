@@ -20,6 +20,14 @@ Do not run `seed-demo` against a component-scenario database.
 
 ### Run the component demo
 
+**Same demo as presented, one command** (new empty workspace outside the repo, ~2 GB free):
+
+```
+python -m scripts.setup_demo --workspace D:/ovs-demo
+```
+
+It builds the scenario, renames accounts to albert, maria, elena, andrei, mihai, ana, radu and ioana, runs `enrich-demo` (adding the city demo, incidents, crews, offers, revenue, the agenda and victor), builds the frontend and writes `LOGINS.md` in the workspace. Every synthetic demo account gets the same public demo password, `SolarDemo2026!` (synthetic local data only; change it with `--password`), so every machine has identical logins. Then start the server with `SOLAR_DEMO_LOGIN=true` and open `/demo/` for one-click sign-in. For phones on the same Wi-Fi, add `SOLAR_DEMO_LAN=true` and `--host 0.0.0.0`, then open `http://<laptop Wi-Fi IP>:8020/demo/`. These switches are for local demos only and are off by default. The database itself is not committed; each machine generates it.
+
 > **Disk space:** the demo workspace needs about 2 GB, and pytest and SQLite also write temporary files (to `%TEMP%` on Windows). If your system drive is nearly full, put both on another drive before running anything, for example in PowerShell: `$env:TEMP='D:\ovs-tmp'; $env:TMP='D:\ovs-tmp'`, and use a workspace such as `D:\ovs-demo`.
 
 Quick start on Windows PowerShell, from the repository root.

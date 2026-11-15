@@ -57,6 +57,10 @@ class Settings:
     )
     offer_worker_interval_seconds: int = 30
     # Local demo only: one-click sign-in to existing accounts from /demo/ (loopback only).
+    # Local demo only: also allow phones/laptops on the same private (LAN) network.
+    demo_lan: bool = field(
+        default_factory=lambda: os.getenv("SOLAR_DEMO_LAN", "false").lower() == "true"
+    )
     demo_login: bool = field(
         default_factory=lambda: os.getenv("SOLAR_DEMO_LOGIN", "false").lower() == "true"
     )
