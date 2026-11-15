@@ -2,7 +2,7 @@ import { seed } from "./domain";
 // v3: Bucharest Sectors 1–6 and Ilfov (fixture site ids, one crew per area). v2 crews
 // live in the db, assignments carry kind/area/assignedBy, no supplier-support role and
 // no audit page. Older v1/v2 state is ignored so it cannot break the new screens.
-const KEY = "solarlenes-demo-v3";
+const KEY = "solarlens-demo-v3";
 const list = (value, fallback) => (Array.isArray(value) ? value : fallback);
 export function readDB() {
   let stored;
@@ -50,7 +50,7 @@ export function mutate(fn) {
 }
 const mediaDB = () =>
   new Promise((resolve, reject) => {
-    const r = indexedDB.open("solarlenes-media", 1);
+    const r = indexedDB.open("solarlens-media", 1);
     r.onupgradeneeded = () => r.result.createObjectStore("files");
     r.onsuccess = () => resolve(r.result);
     r.onerror = () => reject(r.error);

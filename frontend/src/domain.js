@@ -13,7 +13,7 @@ export const users = [
   {
     id: "u1",
     name: "Alex Morgan",
-    email: "alex@solarlenes.demo",
+    email: "alex@solarlens.demo",
     role: "client",
     sites: ["s6-01"],
     area: "Sector 6",
@@ -21,7 +21,7 @@ export const users = [
   {
     id: "u2",
     name: "Elena Popescu",
-    email: "elena@solarlenes.demo",
+    email: "elena@solarlens.demo",
     role: "client",
     sites: ["s3-01"],
     area: "Sector 3",
@@ -29,7 +29,7 @@ export const users = [
   {
     id: "u3",
     name: "David Ionescu",
-    email: "david@solarlenes.demo",
+    email: "david@solarlens.demo",
     role: "client",
     sites: ["s1-01"],
     area: "Sector 1",
@@ -37,7 +37,7 @@ export const users = [
   {
     id: "u4",
     name: "Sofia Marin",
-    email: "sofia@solarlenes.demo",
+    email: "sofia@solarlens.demo",
     role: "client",
     sites: ["s4-01"],
     area: "Sector 4",
@@ -45,7 +45,7 @@ export const users = [
   {
     id: "u5",
     name: "Andrei Radu",
-    email: "ceo@solarlenes.demo",
+    email: "ceo@solarlens.demo",
     role: "ceo",
     sites: [],
     area: "All",
@@ -53,7 +53,7 @@ export const users = [
   {
     id: "u6",
     name: "Maria Stan",
-    email: "manager@solarlenes.demo",
+    email: "manager@solarlens.demo",
     role: "manager",
     sites: [],
     area: "Sector 6",
@@ -61,7 +61,7 @@ export const users = [
   {
     id: "u7",
     name: "Radu Pavel",
-    email: "dispatch@solarlenes.demo",
+    email: "dispatch@solarlens.demo",
     role: "dispatcher",
     sites: [],
     area: "Sector 6",
@@ -69,7 +69,7 @@ export const users = [
   {
     id: "u8",
     name: "Ioana Dima",
-    email: "ioana@solarlenes.demo",
+    email: "ioana@solarlens.demo",
     role: "technician",
     sites: [],
     area: "Sector 6",
@@ -78,7 +78,7 @@ export const users = [
   {
     id: "u9",
     name: "Mihai Petrescu",
-    email: "mihai@solarlenes.demo",
+    email: "mihai@solarlens.demo",
     role: "technician",
     sites: [],
     area: "Sector 3",
@@ -87,7 +87,7 @@ export const users = [
   {
     id: "u10",
     name: "Ana Tudor",
-    email: "ana@solarlenes.demo",
+    email: "ana@solarlens.demo",
     role: "technician",
     sites: [],
     area: "Ilfov",
@@ -96,7 +96,7 @@ export const users = [
   {
     id: "u14",
     name: "Carmen Voicu",
-    email: "dispatch.s3@solarlenes.demo",
+    email: "dispatch.s3@solarlens.demo",
     role: "dispatcher",
     sites: [],
     area: "Sector 3",
@@ -104,7 +104,7 @@ export const users = [
   {
     id: "u15",
     name: "Dorin Ilie",
-    email: "dispatch.ilfov@solarlenes.demo",
+    email: "dispatch.ilfov@solarlens.demo",
     role: "dispatcher",
     sites: [],
     area: "Ilfov",
@@ -112,7 +112,7 @@ export const users = [
   {
     id: "u16",
     name: "Ilinca Barbu",
-    email: "bistro@solarlenes.demo",
+    email: "bistro@solarlens.demo",
     role: "client",
     sites: ["s1-05"],
     area: "Sector 1",

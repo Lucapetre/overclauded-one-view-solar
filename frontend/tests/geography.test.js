@@ -170,14 +170,14 @@ test("demo accounts are scoped to sectors and Ilfov", () => {
   assert.equal(sites.find((s) => s.id === byId("u1").sites[0]).cluster, "militari-homes");
   for (const u of users.filter((x) => x.role === "client"))
     assert.equal(areaOf(u.sites[0]), u.area, u.email);
-  assert.equal(byId("u16").email, "bistro@solarlenes.demo");
+  assert.equal(byId("u16").email, "bistro@solarlens.demo");
   assert.equal(sites.find((s) => s.id === "s1-05").cluster, "dorobanti-floreasca-hospitality");
   assert.deepEqual(
     users.filter((u) => u.role === "dispatcher").map((u) => [u.email, u.area]),
     [
-      ["dispatch@solarlenes.demo", "Sector 6"],
-      ["dispatch.s3@solarlenes.demo", "Sector 3"],
-      ["dispatch.ilfov@solarlenes.demo", "Ilfov"],
+      ["dispatch@solarlens.demo", "Sector 6"],
+      ["dispatch.s3@solarlens.demo", "Sector 3"],
+      ["dispatch.ilfov@solarlens.demo", "Ilfov"],
     ],
   );
   for (const u of users)

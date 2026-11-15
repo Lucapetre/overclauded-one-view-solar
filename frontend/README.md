@@ -1,4 +1,4 @@
-# SolarLenes
+# SolarLens
 
 React + Vite frontend integrated with the FastAPI backend. `/consumer` and `/ops` use actual backend authentication, authorized site lists, normalized energy or imported provider telemetry, history and reporting coverage. The original full workflow prototype remains separate at `/demo/`. All bundled datasets are synthetic.
 
@@ -68,7 +68,7 @@ Tests for these adapters are `tests/planView.test.js`, `equipmentView.test.js`, 
 - **Plan** (`planner.jsx`, `planView.js`): create/edit a non-interruptible task, compare the usual/run-now baseline with a recommended slot, inspect tariff/forecast/battery constraints, and explicitly accept or release a commitment. Measured progress is whole-site connection-point energy; it is not appliance submetering. The replay badge names the scenario and Bucharest analytical time.
 - **Support**: connected customers send typed requests (13 request types) and follow-ups; staff reply under Requests. An optional short video (MP4 or WebM, at most 30 MB and 60 seconds) can be attached: type and size are checked first, then the duration is read from the file's metadata in the browser (the server re-checks type, size and file signature). The request is created first and the video uploaded to it; if the upload fails the request still exists and the customer can retry with **Attach a video** in the support history. Video is off for immediate-danger reports. The history plays attached videos and shows a meeting booked by a technician (Bucharest time and crew).
 - **Lessons**: short card-based lessons with a mini test. Passing earns a simulated bill credit once per lesson; in connected mode the server checks the answers.
-- **Business accounts**: the backend account type (`home` or `business`) drives wording and comparisons. The demo has 25 business sites from the shared fixture (restaurants, cafés, bars and a hotel in the centre; factories, warehouses, cold storage, a data centre and logistics depots on the industrial platforms and in Ilfov); `bistro@solarlenes.demo` (Bistro Soare, s1-05, Dorobanți, Sector 1) is the business login.
+- **Business accounts**: the backend account type (`home` or `business`) drives wording and comparisons. The demo has 25 business sites from the shared fixture (restaurants, cafés, bars and a hotel in the centre; factories, warehouses, cold storage, a data centre and logistics depots on the industrial platforms and in Ilfov); `bistro@solarlens.demo` (Bistro Soare, s1-05, Dorobanți, Sector 1) is the business login.
 
 ## Staff features (connected app)
 
@@ -122,23 +122,23 @@ Every seeded account uses the public development password `SolarDemo2026!`. The 
 
 | Account | Role | Scope |
 | --- | --- | --- |
-| alex@solarlenes.demo | Client | s6-01 The Green House (Militari, Sector 6) |
-| elena@solarlenes.demo | Client | s3-01 (Titan, Sector 3) |
-| david@solarlenes.demo | Client | s1-01 (Băneasa, Sector 1) |
-| sofia@solarlenes.demo | Client | s4-01 (Berceni, Sector 4) |
-| bistro@solarlenes.demo | Client (business) | s1-05 Bistro Soare (Dorobanți, Sector 1) |
-| ceo@solarlenes.demo | Overall manager | All 60 sites in Sectors 1–6 and Ilfov: Area Radar, Incidents, Teams (read-only), Revenue, demo reset |
-| manager@solarlenes.demo | Area manager | Sector 6 only (14 sites): Area Radar, Incidents, Teams (read-only), Revenue |
-| dispatch@solarlenes.demo | PPC dispatcher | Sector 6: assigns crews, answers PPC Triage requests (incl. billing) |
-| dispatch.s3@solarlenes.demo | PPC dispatcher | Sector 3 incidents and request triage |
-| dispatch.ilfov@solarlenes.demo | PPC dispatcher | Ilfov incidents and request triage |
-| ioana@solarlenes.demo | O&M technician | Sector 6 Solar Care crew; all Sector 6 incidents |
-| mihai@solarlenes.demo | O&M technician | Sector 3 Grid Response crew; all Sector 3 incidents |
-| ana@solarlenes.demo | O&M technician | Ilfov Field Service crew; all Ilfov incidents (incl. the P0) |
+| alex@solarlens.demo | Client | s6-01 The Green House (Militari, Sector 6) |
+| elena@solarlens.demo | Client | s3-01 (Titan, Sector 3) |
+| david@solarlens.demo | Client | s1-01 (Băneasa, Sector 1) |
+| sofia@solarlens.demo | Client | s4-01 (Berceni, Sector 4) |
+| bistro@solarlens.demo | Client (business) | s1-05 Bistro Soare (Dorobanți, Sector 1) |
+| ceo@solarlens.demo | Overall manager | All 60 sites in Sectors 1–6 and Ilfov: Area Radar, Incidents, Teams (read-only), Revenue, demo reset |
+| manager@solarlens.demo | Area manager | Sector 6 only (14 sites): Area Radar, Incidents, Teams (read-only), Revenue |
+| dispatch@solarlens.demo | PPC dispatcher | Sector 6: assigns crews, answers PPC Triage requests (incl. billing) |
+| dispatch.s3@solarlens.demo | PPC dispatcher | Sector 3 incidents and request triage |
+| dispatch.ilfov@solarlens.demo | PPC dispatcher | Ilfov incidents and request triage |
+| ioana@solarlens.demo | O&M technician | Sector 6 Solar Care crew; all Sector 6 incidents |
+| mihai@solarlens.demo | O&M technician | Sector 3 Grid Response crew; all Sector 3 incidents |
+| ana@solarlens.demo | O&M technician | Ilfov Field Service crew; all Ilfov incidents (incl. the P0) |
 
 Seven crews, one per area: Sector 1 Rooftop Care, Sector 2 Solar Service, Sector 3 Grid Response, Sector 4 PV Care, Sector 5 Solar Response, Sector 6 Solar Care and Ilfov Field Service (only the Sector 3, Sector 6 and Ilfov crews have a lead login). Twelve synthetic incidents cover every area, including one P0 in Ilfov.
 
-Menus: overall and area manager — Area Radar, Incidents, Teams, Revenue, Account; dispatcher — Area Radar, Incidents, Virtual Visits, Teams, Account; technician — Incidents, Virtual Visits, Account. Browser state uses the key `solarlenes-demo-v3`; older v1/v2 state is ignored.
+Menus: overall and area manager — Area Radar, Incidents, Teams, Revenue, Account; dispatcher — Area Radar, Incidents, Virtual Visits, Teams, Account; technician — Incidents, Virtual Visits, Account. Browser state uses the key `solarlens-demo-v3`; older v1/v2 state is ignored.
 
 ## Demonstration
 

@@ -216,7 +216,7 @@ function SignIn({ onSession, initialError }) {
       <section className="auth-story">
         <a className="brand" href="/">
           <Sun size={32} />
-          SolarLenes<span className="brand-dot">®</span>
+          SolarLens<span className="brand-dot">®</span>
         </a>
         <div className="eyebrow">YOUR ENERGY, CONNECTED</div>
         <h1>
@@ -555,7 +555,7 @@ export default function ConnectedApp() {
       <aside className={`sidebar ${menu ? "mobile-open" : ""}`}>
         <a className="brand" href={customer ? "/consumer" : "/ops"}>
           <Sun size={30} strokeWidth={1.7} />
-          SolarLenes<span className="brand-dot">®</span>
+          SolarLens<span className="brand-dot">®</span>
         </a>
         <div className="workspace-label">
           {customer ? "YOUR ENERGY WORKSPACE" : "PPC OPERATIONS"}
@@ -619,7 +619,7 @@ export default function ConnectedApp() {
             <Menu />
           </button>
           <a className="mobile-brand" href={customer ? "/consumer" : "/ops"}>
-            SolarLenes
+            SolarLens
           </a>
           <div className="breadcrumb">
             Workspace <ChevronRight size={13} />
@@ -991,7 +991,7 @@ export default function ConnectedApp() {
           <footer>
             <span>
               <Sun size={15} />
-              SolarLenes <span className="footer-divider">/</span> Energy, in
+              SolarLens <span className="footer-divider">/</span> Energy, in
               your hands.
             </span>
             <span>

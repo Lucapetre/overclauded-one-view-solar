@@ -30,7 +30,7 @@ export default function DemoLanding() {
     <main className="demo-landing">
       <header>
         <a className="brand" href="/demo/">
-          <Sun size={30} /> SolarLenes<span className="brand-dot">®</span>
+          <Sun size={30} /> SolarLens<span className="brand-dot">®</span>
         </a>
         <div className="eyebrow">DEMO · SYNTHETIC DATA · NOT CONNECTED TO REAL EQUIPMENT</div>
         <h1>

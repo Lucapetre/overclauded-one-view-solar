@@ -269,7 +269,7 @@ export default function DemoApp() {
           }}
         >
           <Sun size={30} strokeWidth={1.7} />
-          SolarLenes<span className="brand-dot">®</span>
+          SolarLens<span className="brand-dot">®</span>
         </a>
         <div className="workspace-label">
           {client ? "YOUR ENERGY WORKSPACE" : "PPC OPERATIONS"}
@@ -328,7 +328,7 @@ export default function DemoApp() {
                 : "SL"}
             </span>
             <span>
-              <b>{user?.name || "Welcome to SolarLenes"}</b>
+              <b>{user?.name || "Welcome to SolarLens"}</b>
               <small>{user ? roles[user.role] : "Explore the preview"}</small>
             </span>
             <ChevronRight size={16} />
@@ -352,7 +352,7 @@ export default function DemoApp() {
               nav(navs[0]);
             }}
           >
-            SolarLenes
+            SolarLens
           </a>
           <div className="breadcrumb">
             Workspace <ChevronRight size={13} /> <b>{active}</b>
@@ -496,7 +496,7 @@ export default function DemoApp() {
           <footer>
             <span>
               <Sun size={15} />
-              SolarLenes <span className="footer-divider">/</span> Energy, in
+              SolarLens <span className="footer-divider">/</span> Energy, in
               your hands.
             </span>
             <span>Synthetic data · Europe/Bucharest · No device control</span>
@@ -938,11 +938,11 @@ function EnergyChart({ consumptionLabel }) {
   );
 }
 function Login({ db, onLogin, onClose }) {
-  const [email, setEmail] = useState("alex@solarlenes.demo"),
+  const [email, setEmail] = useState("alex@solarlens.demo"),
     [password, setPassword] = useState("SolarDemo2026!"),
     [error, setError] = useState("");
   return (
-    <Modal title="Welcome to SolarLenes" onClose={onClose}>
+    <Modal title="Welcome to SolarLens" onClose={onClose}>
       <p className="muted">One platform. A workspace shaped around you.</p>
       <form
         onSubmit={(e) => {

@@ -7,7 +7,7 @@ from backend.main import create_app
 def test_frontend_routes_serve_built_application_and_keep_api_404s(database, tmp_path):
     dist = tmp_path / "dist"
     (dist / "assets").mkdir(parents=True)
-    (dist / "index.html").write_text('<!doctype html><div id="root">SolarLenes</div>')
+    (dist / "index.html").write_text('<!doctype html><div id="root">SolarLens</div>')
     (dist / "assets" / "app.js").write_text("console.log('frontend')")
     with TestClient(
         create_app(Settings(database_path=database.path, frontend_dist=dist))
@@ -23,7 +23,7 @@ def test_frontend_routes_serve_built_application_and_keep_api_404s(database, tmp
         ):
             response = client.get(path)
             assert response.status_code == 200
-            assert "SolarLenes" in response.text
+            assert "SolarLens" in response.text
             assert "text/html" in response.headers["content-type"]
         assert client.get("/assets/app.js").status_code == 200
         assert client.get("/api/v1/not-a-route").status_code == 404

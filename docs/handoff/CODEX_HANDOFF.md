@@ -51,7 +51,7 @@ Everything runs on one replay clock (16–21 July 2026 scenario) and works local
 
 ## Project primer (you know nothing yet; start here)
 
-**What the product is.** "One View Solar / SolarLenes" is a hackathon prototype for a Romanian electricity distributor (PPC). It brings data from many solar installations into one place for two kinds of users:
+**What the product is.** "One View Solar / SolarLens" is a hackathon prototype for a Romanian electricity distributor (PPC). It brings data from many solar installations into one place for two kinds of users:
 - **Customers (prosumers):** households and businesses, using a mobile-first "consumer" workspace.
 - **Operations staff:** dispatchers, technicians and managers, using the "ops" workspace.
 

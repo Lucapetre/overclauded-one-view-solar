@@ -901,7 +901,7 @@ export function PlanPage({ api, site, clock, onError }) {
     <div className="plan-page">
       <p className="plan-intro">
         <Sun size={16} aria-hidden="true" /> A recommended time for your flexible work. Estimates only: you decide, and
-        SolarLenes never switches equipment on or off.
+        SolarLens never switches equipment on or off.
       </p>
       <div className="plan-layout">
         <section className="card plan-list" aria-labelledby="plan-list-title">
