@@ -56,6 +56,10 @@ class Settings:
         )
     )
     offer_worker_interval_seconds: int = 30
+    # Local demo only: one-click sign-in to existing accounts from /demo/ (loopback only).
+    demo_login: bool = field(
+        default_factory=lambda: os.getenv("SOLAR_DEMO_LOGIN", "false").lower() == "true"
+    )
     offer_settlement_grace_minutes: int = 60
     offer_max_active_per_client: int = 3
     # Injectable analytical UTC clock for planning, offers acceptance and settlement.

@@ -298,14 +298,15 @@ function degraded(decision) {
     });
 }
 
-function WhyDetails({ decision, bands, task }) {
+function WhyDetails({ decision, bands, task, children }) {
   const used = bandsUsed(decision.interval_plan, bands);
   const battery = batteryView(decision.battery);
   const { facts, assumptions } = splitReasons(decision.reason_codes);
   const counts = evidenceCounts(decision.evidence_ids);
   return (
     <details className="plan-why">
-      <summary>Why this recommendation?</summary>
+      <summary>Why?</summary>
+      {children}
       {used.length > 0 && (
         <>
           <h4>Contract bands used</h4>
@@ -447,6 +448,35 @@ export function RecommendationCard({ api, siteId, task, plan, bands, compact = f
   const difference = decision ? differenceText(decision.estimated_difference_ron, decision.baseline_kind) : null;
   const canAccept = decision && task.status === "suggested" && decision.recommended_start && decision.status !== "no_feasible_start";
   const lost = decision ? degraded(decision) : [];
+  const factsBlock = decision && !committed && !compact ? (
+    <dl className="plan-facts">
+              <dt>Deadline</dt>
+              <dd>Finished by {localDateTime(task.deadline)}</dd>
+              <dt>Limits respected</dt>
+              <dd>{(decision.constraints_applied || []).map(constraintText).join(" · ")}</dd>
+              {decision.binding_constraints?.length > 0 && (
+                <>
+                  <dt>Limits that ruled out a cheaper time</dt>
+                  <dd>{decision.binding_constraints.map(constraintText).join(" · ")}</dd>
+                </>
+              )}
+              <dt>Inputs</dt>
+              <dd>
+                {confidenceView.label} · {coverageText(decision.input_coverage)}
+              </dd>
+              <dt>Forecast issued</dt>
+              <dd>{localDateTime(decision.forecast?.issue_time)}</dd>
+              <dt>Contract</dt>
+              <dd>
+                {versionLabel(decision.contract_version_id)}
+                {decision.export_compensation ? ` · ${compensationText(decision.export_compensation).toLowerCase()}` : ""}
+              </dd>
+              <dt>Battery</dt>
+              <dd className={battery.included ? "" : "plan-battery-excluded"}>
+                <BatteryCharging size={13} aria-hidden="true" /> {battery.title}
+              </dd>
+            </dl>
+  ) : null;
   return (
     <section className={`card plan-card ${compact ? "compact" : ""}`} aria-labelledby={`plan-${task.task_id}`}>
       <div className="plan-card-head">
@@ -504,35 +534,6 @@ export function RecommendationCard({ api, siteId, task, plan, bands, compact = f
                 ? `${difference.text} ${unknownReason(decision)}`
                 : `${difference.text}; based on your contract and the solar forecast${battery.included ? ", with your battery" : ""}.`}
           </p>
-          {!compact && (
-            <dl className="plan-facts">
-              <dt>Deadline</dt>
-              <dd>Finished by {localDateTime(task.deadline)}</dd>
-              <dt>Limits respected</dt>
-              <dd>{(decision.constraints_applied || []).map(constraintText).join(" · ")}</dd>
-              {decision.binding_constraints?.length > 0 && (
-                <>
-                  <dt>Limits that ruled out a cheaper time</dt>
-                  <dd>{decision.binding_constraints.map(constraintText).join(" · ")}</dd>
-                </>
-              )}
-              <dt>Inputs</dt>
-              <dd>
-                {confidenceView.label} · {coverageText(decision.input_coverage)}
-              </dd>
-              <dt>Forecast issued</dt>
-              <dd>{localDateTime(decision.forecast?.issue_time)}</dd>
-              <dt>Contract</dt>
-              <dd>
-                {versionLabel(decision.contract_version_id)}
-                {decision.export_compensation ? ` · ${compensationText(decision.export_compensation).toLowerCase()}` : ""}
-              </dd>
-              <dt>Battery</dt>
-              <dd className={battery.included ? "" : "plan-battery-excluded"}>
-                <BatteryCharging size={13} aria-hidden="true" /> {battery.title}
-              </dd>
-            </dl>
-          )}
           {compact && (
             <p className="plan-compact-facts">
               <span>Deadline {localTime(task.deadline)}</span>
@@ -554,12 +555,14 @@ export function RecommendationCard({ api, siteId, task, plan, bands, compact = f
         </div>
       )}
       {decision && !compact && !["running", "completed"].includes(task.status) && (
-        <WhyDetails decision={decision} bands={bands} task={task} />
+        <WhyDetails decision={decision} bands={bands} task={task}>
+          {factsBlock}
+        </WhyDetails>
       )}
       <div className="button-row plan-actions">
         {canAccept && (
           <button className="btn yellow" onClick={() => { setNotice(null); setDialog("accept"); }}>
-            Accept this time <Check size={16} />
+            Accept <Check size={16} />
           </button>
         )}
         {task.status === "accepted" && !compact && (
@@ -768,7 +771,7 @@ function TaskForm({ api, siteId, task, now, onSaved, onClose }) {
   return (
     <section className="card plan-form" aria-labelledby="plan-form-title">
       <div className="section-head">
-        <h3 id="plan-form-title">{task ? "Edit task" : "New flexible task"}</h3>
+        <h3 id="plan-form-title">{task ? "Edit task" : "Add a task"}</h3>
         <button className="icon-btn" aria-label="Close form" onClick={onClose}>
           <X size={18} />
         </button>
@@ -778,16 +781,6 @@ function TaskForm({ api, siteId, task, now, onSaved, onClose }) {
           <label>
             Name
             <input required maxLength={80} value={form.label} onChange={(event) => set("label", event.target.value)} placeholder="e.g. Laundry batch" />
-          </label>
-          <label>
-            Kind
-            <select value={form.kind} onChange={(event) => set("kind", event.target.value)}>
-              {TASK_KINDS.map((kind) => (
-                <option key={kind.value} value={kind.value}>
-                  {kind.label}
-                </option>
-              ))}
-            </select>
           </label>
           <label>
             Power while running (kW)
@@ -802,8 +795,22 @@ function TaskForm({ api, siteId, task, now, onSaved, onClose }) {
           Runs in one go for {minutes ? durationText(minutes) : "—"} (energy ÷ power). These are your values, not a measurement of the appliance.
         </p>
         <div className="form-grid">
+          <DateTime label="Finish by" prefix="deadline" form={form} set={set} required />
+        </div>
+        <details className="plan-advanced">
+          <summary>Advanced options</summary>
+        <div className="form-grid">
+          <label>
+            Kind
+            <select value={form.kind} onChange={(event) => set("kind", event.target.value)}>
+              {TASK_KINDS.map((kind) => (
+                <option key={kind.value} value={kind.value}>
+                  {kind.label}
+                </option>
+              ))}
+            </select>
+          </label>
           <DateTime label="Earliest start" prefix="earliest" form={form} set={set} required />
-          <DateTime label="Finish by (deadline)" prefix="deadline" form={form} set={set} required />
           <DateTime label="Latest start" prefix="latest" form={form} set={set} />
           <DateTime label="Your usual start" prefix="usual" form={form} set={set} hint="Used as the comparison; otherwise “run now”." />
           <fieldset className="plan-datetime">
@@ -823,6 +830,7 @@ function TaskForm({ api, siteId, task, now, onSaved, onClose }) {
           Note (optional)
           <input maxLength={200} value={form.assumption_note} onChange={(event) => set("assumption_note", event.target.value)} placeholder="e.g. Illustrative values" />
         </label>
+        </details>
         <p className="small-note">All times are Europe/Bucharest.</p>
         {errors.length > 0 && (
           <ul className="error" role="alert">
@@ -892,15 +900,15 @@ export function PlanPage({ api, site, clock, onError }) {
   return (
     <div className="plan-page">
       <p className="plan-intro">
-        <Sun size={16} aria-hidden="true" /> Recommendations are estimates from your contract bands, the solar forecast and your
-        equipment. Accepting records a commitment; SolarLenes never switches your equipment on or off.
+        <Sun size={16} aria-hidden="true" /> A recommended time for your flexible work. Estimates only: you decide, and
+        SolarLenes never switches equipment on or off.
       </p>
       <div className="plan-layout">
         <section className="card plan-list" aria-labelledby="plan-list-title">
           <div className="section-head">
-            <h3 id="plan-list-title">Your flexible tasks</h3>
+            <h3 id="plan-list-title">Your tasks</h3>
             <button className="btn secondary" onClick={() => setEditing("new")}>
-              <Plus size={15} /> New task
+              <Plus size={15} /> Add task
             </button>
           </div>
           {tasks.loading && <p className="muted">Loading tasks…</p>}
@@ -968,13 +976,16 @@ export function PlanPage({ api, site, clock, onError }) {
           )}
         </div>
       </div>
-      {contractView ? (
-        <div className="plan-contract">
-          <ContractCard key={site.site_id} contract={contractView.contract} version={contractView.version} onSave={saveContract} />
-        </div>
-      ) : (
-        <section className="card empty">Loading your contract…</section>
-      )}
+      <details className="plan-contract-details">
+        <summary>Your contract prices (advanced)</summary>
+        {contractView ? (
+          <div className="plan-contract">
+            <ContractCard key={site.site_id} contract={contractView.contract} version={contractView.version} onSave={saveContract} />
+          </div>
+        ) : (
+          <section className="card empty">Loading your contract…</section>
+        )}
+      </details>
     </div>
   );
 }

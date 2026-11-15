@@ -3,10 +3,12 @@
 // propose and view, and see review/apply disabled. Apply sends the plan's input digest
 // and one Idempotency-Key per click (reused only when retrying that same click).
 import React, { useEffect, useRef, useState } from "react";
-import { ArrowRight, CheckCircle2, ClipboardCheck, Info, RefreshCw, Route, Users } from "lucide-react";
+import { ArrowRight, Bot, CheckCircle2, ClipboardCheck, Info, RefreshCw, Route, UserCheck, Users } from "lucide-react";
 import { SolarApiError } from "../../packages/contracts/client";
 import { OpsNotice, Pill, newIdempotencyKey, usePolled } from "./opsShared";
 import { friendlyError } from "./opsData";
+import { AutoDispatch } from "./opsAuto";
+import { automationSummary } from "./dispatchView";
 import {
   activityText,
   bandTone,
@@ -127,7 +129,41 @@ function VisitTable({ visits, remote = false }) {
   );
 }
 
-export function PlanTeamsPanel({ api, user, crews = [], onChanged, onError, reload }) {
+/** Three plain columns: what was automated, what waits for approval, what needs a person. */
+function AutomationSummary({ summary }) {
+  const columns = [
+    { key: "automated", title: "Done automatically", Icon: Bot, tone: "green", lines: summary.automated, empty: "Nothing yet. Press Propose a plan or Assign by severity." },
+    { key: "approval", title: "Needs your approval", Icon: ClipboardCheck, tone: "yellow", lines: summary.approval, empty: "Nothing waiting for approval." },
+    { key: "person", title: "Needs a person", Icon: UserCheck, tone: "orange", lines: summary.person, empty: "Every ranked case has an owner in this plan." },
+  ];
+  return (
+    <div className="ops-automation" aria-label="What was automated and what needs approval">
+      {columns.map(({ key, title, Icon, tone, lines, empty }) => (
+        <section key={key} className={`ops-auto-col tone-${tone}`}>
+          <h4>
+            <Icon size={16} aria-hidden="true" /> {title} <span className="muted">({lines.length})</span>
+          </h4>
+          {lines.length ? (
+            <ul>
+              {lines.map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ul>
+          ) : (
+            <p className="muted">{empty}</p>
+          )}
+        </section>
+      ))}
+      {summary.verdict && (
+        <p className="ops-auto-verdict">
+          <Pill tone={summary.verdict.tone}>{summary.verdict.text}</Pill> against the FIFO/manual baseline, same constraints.
+        </p>
+      )}
+    </div>
+  );
+}
+
+export function PlanTeamsPanel({ api, user, crews = [], onChanged, onError, reload, variant = "page", labels = {} }) {
   const role = user.role;
   const [horizon, setHorizon] = useState(12),
     [busy, setBusy] = useState(null),
@@ -213,11 +249,14 @@ export function PlanTeamsPanel({ api, user, crews = [], onChanged, onError, relo
   const completeness = plan ? completenessLines(plan.input_completeness) : null;
   const jobs = planJobs(plan);
   const staleCode = error?.detail?.code;
+  const [autoResult, setAutoResult] = useState(null);
+  const dispatch = variant === "dispatch";
+  const summary = dispatch ? automationSummary(plan, autoResult) : null;
   return (
-    <section className="card ops-plan" aria-labelledby="plan-teams-title">
+    <section className={`card ops-plan${dispatch ? " ops-plan-hero" : ""}`} aria-labelledby="plan-teams-title">
       <div className="section-head">
         <div>
-          <div className="eyebrow">PLAN TEAMS</div>
+          <div className="eyebrow">{dispatch ? "PLAN TEAMS · OPTIMISATION" : "PLAN TEAMS"}</div>
           <h3 id="plan-teams-title">Crew plan: who goes where, in what order</h3>
           <p className="muted">
             A feasible heuristic proposal from synthetic planning inputs (fictional crews,
@@ -228,7 +267,22 @@ export function PlanTeamsPanel({ api, user, crews = [], onChanged, onError, relo
         <Pill>Synthetic planning inputs</Pill>
       </div>
 
+      {dispatch && <AutomationSummary summary={summary} />}
+
       <div className="ops-plan-controls">
+        {dispatch && (
+          <AutoDispatch
+            api={api}
+            labels={labels}
+            onResult={setAutoResult}
+            onDone={() => {
+              latest.refresh();
+              onChanged?.();
+            }}
+            onError={onError}
+            compact
+          />
+        )}
         <label>
           Horizon
           <select value={horizon} onChange={(e) => setHorizon(Number(e.target.value))}>

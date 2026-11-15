@@ -16,6 +16,11 @@ import {
 import { Modal, OpsNotice, Pill, usePolled } from "./opsShared";
 import { OpsStatusMap } from "./opsMapPanel";
 import { PlanTeamsPanel } from "./opsPlan";
+import { AutoDispatch } from "./opsAuto";
+import { LiveStamp, PriorityChips, SiteTable } from "./opsSiteList";
+import { siteListRows, ticketsBySite, visibleSiteSet } from "./dispatchView";
+
+export { AutoDispatch };
 import {
   AssignmentReport,
   CrewSummary,
@@ -47,22 +52,26 @@ export { OpsNotice, usePolled };
 
 /* ----------------------------- Area Radar ----------------------------- */
 
-/** Map and fleet forecast shown above the coverage cards on Area Radar. */
+/** Live map, priority filter, complete site list and fleet forecast of the manager radar. */
 export function RadarOps({
   api,
   aliases,
   scopeSites,
   onOpenSite,
   onOpenIncidents,
+  onOpenIncident,
   onError,
   reload,
 }) {
   const map = usePolled((signal) => api.opsMap(signal), `map:${reload}`, onError);
+  const queue = usePolled((signal) => api.opsQueue("open", signal), `radar-queue:${reload}`, onError);
   const capacity = usePolled(
     (signal) => api.opsCapacity(signal),
     `capacity:${reload}`,
     onError,
   );
+  const tickets = useMemo(() => ticketsBySite(queue.data), [queue.data]);
+  const rows = useMemo(() => siteListRows(map.data, tickets), [map.data, tickets]);
   const sites = useMemo(
     () => (map.data ? toStatusMapSites(map.data, aliases, toMapSites) : []),
     [map.data, aliases],
@@ -72,27 +81,72 @@ export function RadarOps({
     [capacity.data],
   );
   const [focus, setFocus] = useState(null);
+  const [bands, setBands] = useState([]);
+  const [area, setArea] = useState("all");
+  const shown = useMemo(() => visibleSiteSet(rows, { bands, area }), [rows, bands, area]);
+  const toggleBand = (band) =>
+    setBands((previous) => (previous.includes(band) ? previous.filter((b) => b !== band) : [...previous, band]));
   const unmapped = map.data?.counts?.unmapped_sites ?? 0;
   const missing = map.data?.status_sites
     ? 0
     : Math.max(0, scopeSites - sites.length);
   const areaList = [...new Set(sites.map((site) => site.area).filter(Boolean))];
-  const openSites = sites.filter((site) => site.status === "incident").length;
+  const areaOptions = [...new Map(rows.map((r) => [r.areaId, r.area])).entries()];
+  const openSites = rows.filter((r) => r.priority).length;
+  const open = (id) => {
+    setFocus(id);
+    const status = [...(map.data.status_sites || []), ...(map.data.unmapped || [])].find(
+      (item) => item.site_id === id,
+    );
+    const site = map.data.sites.find((item) => item.site_id === id);
+    if (status?.episode_ids?.length || site?.open_incidents > 0)
+      onOpenIncidents(id, status?.alias || site?.alias || id);
+    else onOpenSite(id);
+  };
   return (
     <>
       <section className="card ops-map-card">
         <div className="section-head">
           <div>
-            <h3>Installation map · Bucharest and Ilfov</h3>
+            <h3>
+              {areaList.length === 1 ? `${areaList[0]} installation map` : "Installation map · Bucharest and Ilfov"}
+            </h3>
             <p className="muted">
               {map.data
-                ? `${sites.length} synthetic sites · ${areaList.length === 1 ? areaList[0] : `${areaList.length} areas`} · ${openSites} with active issues${unmapped ? ` · ${unmapped} unmapped` : ""} · zoom and pan the street map`
+                ? `${rows.length} synthetic sites · ${areaList.length === 1 ? areaList[0] : `${areaList.length} areas`} · ${openSites} with open cases${unmapped ? ` · ${unmapped} unmapped` : ""}`
                 : "Loading the map of your scope…"}
             </p>
           </div>
-          <Pill>Synthetic demo data</Pill>
+          <div className="radar-live">
+            <LiveStamp asOf={map.data?.status_as_of} error={map.error && map.data} />
+            <Pill>Synthetic demo data</Pill>
+          </div>
         </div>
-        <OpsNotice error={map.error} onRetry={map.refresh} />
+        <OpsNotice error={map.error && !map.data ? map.error : null} onRetry={map.refresh} />
+        {map.data && (
+          <div className="radar-filters">
+            <PriorityChips
+              counts={map.data.counts}
+              rows={rows}
+              selected={bands}
+              onToggle={toggleBand}
+              onClear={() => setBands([])}
+            />
+            {areaOptions.length > 1 && (
+              <label className="ops-filter">
+                <span>Area</span>
+                <select value={area} onChange={(event) => setArea(event.target.value)}>
+                  <option value="all">All areas</option>
+                  {areaOptions.map(([id, name]) => (
+                    <option key={id} value={id}>
+                      {name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+          </div>
+        )}
         {map.data && (
           <OpsStatusMap
             map={map.data}
@@ -100,16 +154,10 @@ export function RadarOps({
             selectedSiteId={focus}
             onSiteClick={setFocus}
             actionLabel="Open cases or installation"
-            onAction={(id) => {
-              setFocus(id);
-              const status = [...(map.data.status_sites || []), ...(map.data.unmapped || [])].find(
-                (item) => item.site_id === id,
-              );
-              const site = map.data.sites.find((item) => item.site_id === id);
-              if (status?.episode_ids?.length || site?.open_incidents > 0)
-                onOpenIncidents(id, status?.alias || site?.alias || id);
-              else onOpenSite(id);
-            }}
+            onAction={open}
+            visibleSiteIds={shown}
+            tickets={tickets}
+            showList={false}
           />
         )}
         {map.data && missing > 0 && (
@@ -120,13 +168,26 @@ export function RadarOps({
             shown on the map.
           </p>
         )}
-        <p className="small-note">
-          A coverage map, not a network model. A site with an active case opens
-          the ranked queue filtered to that site; other sites open the
-          installation detail. A recent feed is not an equipment health check,
-          and missing data is shown as unknown, never as healthy.
-        </p>
       </section>
+      {map.data && (
+        <section className="card mt" aria-labelledby="site-list-title">
+          <div className="section-head">
+            <div>
+              <h3 id="site-list-title">Sites and open tickets</h3>
+              <p className="muted">
+                Every site in your scope with its status, priority, assignment and last update. Click a site to
+                see it on the map.
+              </p>
+            </div>
+            <Pill>{shown ? `${shown.size} of ${rows.length}` : rows.length} sites</Pill>
+          </div>
+          <SiteTable rows={rows} shownIds={shown} selectedId={focus} onSelect={setFocus} onOpen={onOpenIncident} />
+          <p className="small-note">
+            A coverage map, not a network model. A recent feed is not an equipment health check, and missing data is
+            shown as unknown, never as healthy.
+          </p>
+        </section>
+      )}
       {capacity.error ? (
         <OpsNotice error={capacity.error} onRetry={capacity.refresh} />
       ) : capacity.loading ? (
@@ -146,66 +207,6 @@ export function RadarOps({
 }
 
 /* ------------------------------ Incidents ----------------------------- */
-
-export function AutoDispatch({ api, labels, onDone, onError }) {
-  const [busy, setBusy] = useState(false),
-    [result, setResult] = useState(null),
-    [error, setError] = useState(null);
-  async function run() {
-    setBusy(true);
-    setError(null);
-    try {
-      const value = await api.autoDispatch();
-      setResult(value);
-      onDone?.();
-    } catch (failure) {
-      if (!onError(failure)) setError(failure);
-    } finally {
-      setBusy(false);
-    }
-  }
-  const label = (id, tier) => labels[id] || `${tier} · ${shortId(id)}`;
-  return (
-    <div className="ops-auto">
-      <button className="btn yellow" onClick={run} disabled={busy}>
-        {busy ? "Assigning…" : "Assign by severity"} <ArrowRight size={16} />
-      </button>
-      {error && <p className="error">{friendlyError(error)}</p>}
-      {result && (
-        <div className="info-box ops-result" role="status">
-          <b>
-            Assigned {result.assigned.length} · skipped {result.skipped.length}
-          </b>
-          {result.assigned.length > 0 && (
-            <ul>
-              {result.assigned.map((a) => (
-                <li key={a.incident_id}>
-                  ✓ {label(a.incident_id, a.tier)} → <b>{a.crew_name}</b>
-                </li>
-              ))}
-            </ul>
-          )}
-          {result.skipped.length > 0 && (
-            <ul>
-              {result.skipped.map((s) => (
-                <li key={s.incident_id}>
-                  – Not assigned: {label(s.incident_id, s.tier)}, because{" "}
-                  {skipReason(s.reason)}.
-                </li>
-              ))}
-            </ul>
-          )}
-          {!result.assigned.length && !result.skipped.length && (
-            <p>Every open incident in your scope already has a crew.</p>
-          )}
-          <p className="small-note">
-            Demo only: no real team was contacted.
-          </p>
-        </div>
-      )}
-    </div>
-  );
-}
 
 const incidentLabels = (list) =>
   Object.fromEntries(

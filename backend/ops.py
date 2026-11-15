@@ -923,6 +923,56 @@ def _net(total: dict) -> float:
     )
 
 
+def _provider_billing_rows(connection, user: User) -> list[dict]:
+    """Billing profiles for the provider scenario sites (which have no `site_profiles` row).
+
+    Monthly energy is the measured PCC meter energy of the imported week scaled to 30 days when the
+    site has an authoritative meter; otherwise a labelled demo profile from the installed kWp.
+    Service fees are demo assumptions. These are estimates, never invoices.
+    """
+    placed = connection.execute(
+        "SELECT p.site_id, s.alias, s.area_id, p.location_label AS zone, p.segment, "
+        "p.business_type, p.installed_kwp, c.import_price_ron_kwh, c.export_price_ron_kwh "
+        "FROM site_placements p JOIN sites s ON s.site_id=p.site_id "
+        "LEFT JOIN contracts c ON c.site_id=p.site_id "
+        "WHERE s.area_id IN (SELECT area_id FROM user_areas WHERE user_id=?) "
+        "AND NOT EXISTS (SELECT 1 FROM site_profiles sp WHERE sp.site_id=p.site_id) "
+        "ORDER BY p.site_id",
+        (user.user_id,),
+    ).fetchall()
+    rows = []
+    for row in placed:
+        kwp = row["installed_kwp"] or 5.0
+        business = row["segment"] == "business"
+        measured = {
+            metric: connection.execute(
+                "SELECT COUNT(*), COALESCE(SUM(value_kwh),0) FROM component_grid_frames "
+                "WHERE site_id=? AND metric=? AND value_origin='measured' "
+                "AND value_kwh IS NOT NULL",
+                (row["site_id"], metric),
+            ).fetchone()
+            for metric in ("grid_import", "grid_export")
+        }
+        frames = min(measured["grid_import"][0], measured["grid_export"][0])
+        if frames >= 96:
+            scale = 30 * 96 / frames
+            monthly_import = measured["grid_import"][1] * scale
+            monthly_export = measured["grid_export"][1] * scale
+        else:
+            monthly_import = (900 + 120 * kwp) if business else (130 + 25 * kwp)
+            monthly_export = (40 * kwp) if business else (90 * kwp)
+        rows.append(
+            {
+                **dict(row),
+                "installed_kwp": kwp,
+                "monthly_import_kwh": round(monthly_import, 1),
+                "monthly_export_kwh": round(monthly_export, 1),
+                "service_fee_ron": 120.0 if business else 25.0,
+            }
+        )
+    return rows
+
+
 def revenue(connection, user: User) -> RevenueView:
     require_role(user, "supervisor")
     tariff = profile_source()["default_tariff"]
@@ -939,6 +989,8 @@ def revenue(connection, user: User) -> RevenueView:
         "ORDER BY s.site_id",
         (user.user_id,),
     ).fetchall()
+
+    rows = [*rows, *_provider_billing_rows(connection, user)]
 
     def empty():
         return {key: 0.0 for key in AMOUNTS} | {"sites": 0}

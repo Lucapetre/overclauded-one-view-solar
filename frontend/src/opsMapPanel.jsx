@@ -38,10 +38,11 @@ export function OpsStatusMap({
   visibleSiteIds = null,
   height = 440,
   showList = true,
+  tickets = null,
 }) {
   const all = useMemo(
-    () => (map ? toStatusMapSites(map, aliases, toMapSites) : []),
-    [map, aliases],
+    () => (map ? toStatusMapSites(map, aliases, toMapSites, tickets) : []),
+    [map, aliases, tickets],
   );
   const sites = useMemo(
     () => (visibleSiteIds ? all.filter((s) => visibleSiteIds.has(s.id)) : all),

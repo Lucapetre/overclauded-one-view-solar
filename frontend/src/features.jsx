@@ -1007,10 +1007,12 @@ export function LessonDeck({ catalog, onComplete }) {
       <div className="learn-intro lesson-wallet">
         <Coins size={30} />
         <span>
-          {money(catalog.total_reward_ron)} RON earned
+          {money(catalog.total_reward_ron)} RON energy credit
           <small>
             {done} of {catalog.lessons.length} lessons complete · Pass the mini
-            test at the end of a lesson to earn its reward. {catalog.reward_note}
+            test at the end of a lesson to earn its credit. The credit is applied
+            to your energy consumption on your bill. It is not cash paid to you
+            and cannot be withdrawn.
           </small>
         </span>
       </div>
@@ -1038,8 +1040,8 @@ export function LessonDeck({ catalog, onComplete }) {
               <div className="lesson-reward">
                 <Coins size={15} />
                 {item.completed
-                  ? `${money(item.reward_ron)} RON earned`
-                  : `Earn ${money(item.reward_ron)} RON`}
+                  ? `${money(item.reward_ron)} RON credit earned`
+                  : `Earn ${money(item.reward_ron)} RON bill credit`}
               </div>
               <button
                 className={`btn full ${item.completed ? "secondary" : "yellow"}`}
@@ -1107,14 +1109,14 @@ function LessonPlayer({ lesson, onClose, onComplete }) {
               <CheckCircle2 size={46} />
               <h2>
                 {result.reward_ron > 0
-                  ? `+${money(result.reward_ron)} RON earned`
+                  ? `+${money(result.reward_ron)} RON credit earned`
                   : "All correct"}
               </h2>
               <p>
                 {result.already_completed
                   ? "You had already earned this lesson's reward."
-                  : "Well done. Your reward was added to your learning credit."}{" "}
-                Total: {money(result.total_reward_ron)} RON.
+                  : "Well done. The credit will be applied to your energy consumption on your bill."}{" "}
+                Total credit: {money(result.total_reward_ron)} RON (not cash).
               </p>
               <button className="btn yellow" onClick={onClose}>
                 Back to lessons <ArrowRight size={16} />

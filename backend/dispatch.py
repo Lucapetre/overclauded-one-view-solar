@@ -21,6 +21,7 @@ import json
 import uuid
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from backend import correlation as corr
 from backend import crew_planner as cp
@@ -2327,41 +2328,78 @@ def agenda(connection, user: User) -> dict:
     )
     ids = [c["crew_id"] for c in crews]
     now = analytical_now(connection)
-    items, deferred = [], []
+    items, deferred, history = [], [], []
+    select = (
+        "SELECT a.*, c.name AS crew_name, i.title, i.tier, i.site_id, i.evidence, "
+        "i.support_request_id, s.alias AS site_alias, "
+        "COALESCE(sp.location_label, pr.zone) AS zone, m.media_id, m.filename AS media_filename, "
+        "m.content_type AS media_content_type, m.size_bytes AS media_size_bytes "
+        "FROM assignments a JOIN crews c ON c.crew_id=a.crew_id JOIN incidents i ON "
+        "i.incident_id=a.incident_id JOIN sites s ON s.site_id=i.site_id "
+        "LEFT JOIN site_placements sp ON sp.site_id=i.site_id "
+        "LEFT JOIN site_profiles pr ON pr.site_id=i.site_id "
+        "LEFT JOIN support_media m ON m.request_id=i.support_request_id "
+    )
+
+    def window(r):
+        if not r["scheduled_start"]:
+            return None
+        local = ZoneInfo("Europe/Bucharest")
+        first = _parse(r["scheduled_start"]).astimezone(local).strftime("%H:%M")
+        last = _parse(r["scheduled_end"])
+        return first + (f"-{last.astimezone(local).strftime('%H:%M')}" if last else "")
+
+    def item(r):
+        return {
+            "assignment_id": r["assignment_id"],
+            "crew_id": r["crew_id"],
+            "crew_name": r["crew_name"],
+            "incident_id": r["incident_id"],
+            "title": r["title"],
+            "tier": r["tier"],
+            "site_id": r["site_id"],
+            "site_alias": r["site_alias"],
+            "activity": r["activity"],
+            "kind": r["kind"],
+            "status": r["status"],
+            "progress": r["progress"],
+            "revision": r["revision"],
+            "scheduled_start": r["scheduled_start"],
+            "scheduled_end": r["scheduled_end"],
+            "eta_arrival": r["eta_arrival"],
+            "travel_minutes": r["travel_minutes"],
+            "position": _node_position(connection, r["site_id"]),
+            "plan_id": r["plan_id"],
+            "zone": r["zone"],
+            "reason": (r["evidence"] or "")[:300] or None,
+            "window_label": window(r),
+            "support_request_id": r["support_request_id"],
+            "media": {
+                "media_id": r["media_id"],
+                "filename": r["media_filename"],
+                "content_type": r["media_content_type"],
+                "size_bytes": r["media_size_bytes"],
+            }
+            if r["media_id"]
+            else None,
+        }
+
     if ids:
         marks = ",".join("?" * len(ids))
         for r in connection.execute(
-            "SELECT a.*, c.name AS crew_name, i.title, i.tier, i.site_id, s.alias AS site_alias "
-            "FROM assignments a JOIN crews c ON c.crew_id=a.crew_id JOIN incidents i ON "
-            "i.incident_id=a.incident_id JOIN sites s ON s.site_id=i.site_id "
-            f"WHERE a.crew_id IN ({marks}) AND a.status IN "
+            select + f"WHERE a.crew_id IN ({marks}) AND a.status IN "
             "('assigned','team_sent','meeting_scheduled') "
             "ORDER BY a.scheduled_start, a.created_at LIMIT 200",
             tuple(ids),
         ):
-            items.append(
-                {
-                    "assignment_id": r["assignment_id"],
-                    "crew_id": r["crew_id"],
-                    "crew_name": r["crew_name"],
-                    "incident_id": r["incident_id"],
-                    "title": r["title"],
-                    "tier": r["tier"],
-                    "site_id": r["site_id"],
-                    "site_alias": r["site_alias"],
-                    "activity": r["activity"],
-                    "kind": r["kind"],
-                    "status": r["status"],
-                    "progress": r["progress"],
-                    "revision": r["revision"],
-                    "scheduled_start": r["scheduled_start"],
-                    "scheduled_end": r["scheduled_end"],
-                    "eta_arrival": r["eta_arrival"],
-                    "travel_minutes": r["travel_minutes"],
-                    "position": _node_position(connection, r["site_id"]),
-                    "plan_id": r["plan_id"],
-                }
-            )
+            items.append(item(r))
+        for r in connection.execute(
+            select + f"WHERE a.crew_id IN ({marks}) AND a.status='completed' "
+            "AND COALESCE(a.completed_at, a.scheduled_end, a.created_at) >= ? "
+            "ORDER BY COALESCE(a.completed_at, a.scheduled_end) DESC LIMIT 30",
+            (*ids, stamp(now - timedelta(hours=72))),
+        ):
+            history.append(item(r))
         for r in connection.execute(
             f"SELECT * FROM crew_plan_items WHERE crew_id IN ({marks}) AND state='deferred' "
             "ORDER BY start_at LIMIT 100",
@@ -2383,6 +2421,7 @@ def agenda(connection, user: User) -> dict:
         "items": items,
         "deferred": deferred,
         "eta_label": ETA_LABEL,
+        "history": history,
     }
 
 

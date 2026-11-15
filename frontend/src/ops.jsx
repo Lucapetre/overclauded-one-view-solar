@@ -265,6 +265,18 @@ export function RevenueView({ report, scopeLabel = "All areas" }) {
             About {num(report.annualNet)} RON a year at this rate ·{" "}
             {totals.sites} sites
           </p>
+          {bySegment.business && (
+            <div className="ops-business-highlight">
+              <Building2 size={18} aria-hidden="true" />
+              <span>
+                <b>Business customers: {ron(bySegment.business.net || 0)} / month</b>
+                <small>
+                  {pct(bySegment.business.share || 0)} of net revenue from {bySegment.business.sites || 0} business
+                  site{bySegment.business.sites === 1 ? "" : "s"}
+                </small>
+              </span>
+            </div>
+          )}
           <div className="ops-breakdown">
             <span>
               Energy sales<b>{ron(totals.energySales)}</b>

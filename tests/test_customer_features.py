@@ -91,8 +91,11 @@ def test_support_request_conversation_and_scope(client, signed_in):
     assert client.get(REQUESTS).json() == []
     assert post(client, other, replies, {"text": "hello"}).status_code == 404
 
-    # The technician's crew covers Sector 6; staff of other areas would not see it.
-    staff = signed_in("technician")
+    # A technician has no request inbox: an unlinked request is neither listed nor reachable.
+    signed_in("technician")
+    assert client.get(REQUESTS).json() == []
+    # The dispatcher covers Sector 6 and sees the requests.
+    staff = signed_in("dispatcher")
     assert len(client.get(REQUESTS).json()) == 2
     assert post(client, staff, REQUESTS, body).status_code == 403
     answered = post(client, staff, replies, {"text": "We will check the logs."}).json()

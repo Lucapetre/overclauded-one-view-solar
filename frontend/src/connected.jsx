@@ -71,6 +71,7 @@ import { notificationTarget } from "./offersLogic";
 import { t as offerText } from "./offersText";
 // Shared staff/support styles (e.g. .meeting-note) also used by customer pages.
 import "./ops.css";
+import "./roles.css";
 // Staff pages (and Leaflet) load only for operations accounts.
 const lazyOps = (name) =>
   lazy(() => import("./opsPages").then((module) => ({ default: module[name] })));
@@ -83,6 +84,9 @@ const AgendaPage = lazy(() =>
   import("./opsAgenda").then((module) => ({ default: module.AgendaPage })),
 );
 const TeamsPage = lazyOps("TeamsPage");
+const DispatchPage = lazy(() =>
+  import("./dispatchHome").then((module) => ({ default: module.DispatchPage })),
+);
 const RevenuePage = lazyOps("RevenuePage");
 // Power Block Offers pages load on first visit.
 const OffersPage = lazy(() =>
@@ -98,7 +102,8 @@ const NextTaskCard = lazy(() =>
 const ManagerOffersPage = lazy(() =>
   import("./offersManager").then((module) => ({ default: module.ManagerOffersPage })),
 );
-import { bottomNav, pagesFor } from "./opsData";
+import { bottomNav, pagesFor, roleLabel, scopeName } from "./opsData";
+import { CustomerHome, SimpleHistory } from "./customerHome";
 import { words } from "./friendly";
 import { total } from "./periods";
 
@@ -113,6 +118,7 @@ const pageIcons = {
   Home: House,
   Plan: CalendarClock,
   Agenda: ListChecks,
+  Dispatch: Radio,
   "Area Radar": Radio,
   Incidents: Tickets,
   Teams: Users,
@@ -507,7 +513,10 @@ export default function ConnectedApp() {
     scopeError || Object.values(records).some((item) => item.error),
   );
   const mobileNav = bottomNav(pages, active);
-  const opsPage = ["Agenda", "Incidents", "Teams", "Revenue", "Requests", "Offers"].includes(active);
+  const opsPage = ["Agenda", "Dispatch", "Incidents", "Teams", "Revenue", "Requests", "Offers"].includes(active);
+  const areaNames = scope.areas.map((area) => area.alias);
+  const roleText = roleLabel(user, areaNames);
+  const scopeText = scopeName(user, areaNames);
   function navigate(next) {
     setPage(next);
     setMenu(false);
@@ -594,7 +603,7 @@ export default function ConnectedApp() {
             </span>
             <span>
               <b>{user.username}</b>
-              <small>{roles[user.role]}</small>
+              <small>{roleText}</small>
             </span>
             <ChevronRight size={16} />
           </button>
@@ -665,13 +674,17 @@ export default function ConnectedApp() {
               </div>
               <h1>
                 {active === "Home"
-                  ? `Your energy, ${user.username}`
+                  ? accountType === "business"
+                    ? `Your business, ${user.username}`
+                    : `Your energy, ${user.username}`
+                  : active === "Dispatch"
+                    ? "Dispatch: decide, plan, send"
                   : active === "Plan"
                     ? "Run flexible work at the right time"
                   : active === "Area Radar"
                     ? "Your monitored installations"
                     : active === "Agenda"
-                      ? "Your visits for today"
+                      ? "Your jobs for today"
                     : active === "Incidents"
                       ? "Every case, in the right order"
                       : active === "Teams"
@@ -685,7 +698,7 @@ export default function ConnectedApp() {
                     : active === "Sites"
                       ? "Installation detail"
                       : active === "History"
-                        ? "Every reading has a story"
+                        ? "How your energy was used"
                         : active === "Learn"
                           ? "Learn a little, earn a little"
                           : active === "Support"
@@ -698,10 +711,12 @@ export default function ConnectedApp() {
               <p>
                 {active === "Plan"
                   ? "Your tasks, a recommended time and the evidence behind it. Costs are estimates; you decide."
+                  : active === "Dispatch"
+                  ? "Incoming requests, the ranked queue, the crew optimiser and your crews on the map. The optimiser proposes; you approve."
                   : active === "Area Radar"
-                  ? "Map, forecast and source coverage across your authorized scope. Equipment health remains unassessed."
+                  ? `${scopeText}: live map, priorities, site list and forecast. Equipment health remains unassessed.`
                   : active === "Agenda"
-                    ? "Your crew's planned visits in order, with progress you report. Synthetic planning inputs; times are estimates."
+                    ? "Where to go, what to do and why. One button moves each job forward."
                   : active === "Incidents"
                     ? "Correlated synthetic episodes in your scope, safety and deadlines first, next to the same cases on the map. Each change is kept in the log."
                     : active === "Teams"
@@ -715,7 +730,7 @@ export default function ConnectedApp() {
                         : active === "Requests"
                           ? "Customer requests in your scope, with their videos and booked meetings."
                   : active === "Learn"
-                    ? "Short interactive lessons. Pass the mini test to earn a small reward."
+                    ? "Short interactive lessons. Pass the mini test to earn a small credit on your energy bill (not cash)."
                     : active === "Support"
                       ? "One request, sent to the right team."
                       : customer
@@ -748,7 +763,7 @@ export default function ConnectedApp() {
               Loading your authorized installations…
             </section>
           ) : !scope.sites.length &&
-            !["Account", "Learn", "Requests", "Agenda", "Incidents", "Teams", "Revenue", "Offers"].includes(
+            !["Account", "Learn", "Requests", "Agenda", "Dispatch", "Incidents", "Teams", "Revenue", "Offers"].includes(
               active,
             ) ? (
             <section className="card empty">
@@ -770,19 +785,45 @@ export default function ConnectedApp() {
                   scopeSites={scope.sites.length}
                   onOpenSite={selectSite}
                   onOpenIncidents={openSiteIncidents}
+                  onOpenIncident={openIncident}
                   onError={expire}
                   reload={reload}
                 />
               )}
-              {active === "Area Radar" && (
-                <Radar
-                  scope={scope}
-                  records={records}
-                  areaRecords={areaRecords}
-                  onSelect={selectSite}
+              {active === "Dispatch" && (
+                <DispatchPage
+                  api={api}
+                  user={user}
+                  aliases={aliases}
+                  onOpenIncident={openIncident}
+                  onOpenIncidents={(id) =>
+                    id ? openSiteIncidents(id, id) : navigate("Incidents")
+                  }
+                  onOpenRequests={(id) => {
+                    navigate("Requests");
+                    if (id) setRequestFocus(id);
+                  }}
+                  onError={expire}
+                  reload={reload}
                 />
               )}
-              {(active === "Home" || active === "Sites") && current && (
+              {active === "Home" && customer && current && (
+                <CustomerHome
+                  key={siteId}
+                  api={api}
+                  site={current}
+                  record={record}
+                  accountType={accountType}
+                  clock={clock}
+                  navigate={navigate}
+                  onError={expire}
+                  userId={user.user_id}
+                  showOffers={pages.includes("Offers")}
+                  retry={retry}
+                  scene={<HouseScene />}
+                />
+              )}
+              {active === "Sites" && !customer && current && (
                 <SiteHome
                   site={current}
                   record={record}
@@ -806,22 +847,24 @@ export default function ConnectedApp() {
                   onError={expire}
                 />
               )}
-              {active === "History" &&
-                current &&
-                (record?.data ? (
-                  <History
-                    key={siteId}
+              {active === "History" && customer && current && (
+                <SimpleHistory
+                  key={siteId}
+                  api={api}
+                  site={current}
+                  accountType={accountType}
+                  clock={clock}
+                  onError={expire}
+                >
+                  <TechnicalHistory
                     site={current}
                     record={record}
                     reload={reload}
                     onError={expire}
+                    retry={retry}
                   />
-                ) : (
-                  <section className="card empty">
-                    <ErrorNotice error={record?.error} onRetry={retry} />
-                    Waiting for source data…
-                  </section>
-                ))}
+                </SimpleHistory>
+              )}
               {active === "Learn" && <LearnPage api={api} onError={expire} />}
               {active === "Support" && current && (
                 <SupportPage
@@ -902,9 +945,9 @@ export default function ConnectedApp() {
                       ? accountType === "business"
                         ? "Business customer"
                         : "Home customer"
-                      : roles[user.role]}
+                      : roleText}
                   </Pill>
-                  {!customer && scope.areas.length > 0 && (
+                  {!customer && scope.areas.length > 0 && user.role !== "technician" && (
                     <div className="list-row">
                       <b>
                         {user.role === "supervisor"
@@ -916,6 +959,7 @@ export default function ConnectedApp() {
                       </span>
                     </div>
                   )}
+                  {user.role !== "technician" && (
                   <div className="list-row">
                     <b>Installation access</b>
                     <span>
@@ -923,6 +967,7 @@ export default function ConnectedApp() {
                       {scope.sites.length === 1 ? "site" : "sites"}
                     </span>
                   </div>
+                  )}
                   <div className="list-row">
                     <b>Time display</b>
                     <span>Europe/Bucharest</span>
@@ -1408,6 +1453,28 @@ function Radar({ scope, records, areaRecords, onSelect }) {
         </div>
       </section>
     </>
+  );
+}
+
+/** The original source-level history, only opened on request ("Technical details"). */
+function TechnicalHistory({ site, record, reload, onError, retry }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <details
+      className="card mt history-technical"
+      onToggle={(event) => setOpen(event.currentTarget.open)}
+    >
+      <summary>Technical details: source measurements</summary>
+      {open &&
+        (record?.data ? (
+          <History site={site} record={record} reload={reload} onError={onError} />
+        ) : (
+          <div className="empty">
+            <ErrorNotice error={record?.error} onRetry={retry} />
+            Waiting for source data…
+          </div>
+        ))}
+    </details>
   );
 }
 

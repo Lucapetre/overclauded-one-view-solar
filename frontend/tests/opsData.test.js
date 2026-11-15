@@ -30,26 +30,18 @@ test("menus follow the product owner's role decisions", () => {
     "Revenue",
     "Offers",
     "Sites",
-    "History",
     "Account",
   ]);
   assert.deepEqual(pagesFor("dispatcher"), [
-    "Area Radar",
+    "Dispatch",
     "Incidents",
     "Teams",
     "Requests",
     "Sites",
-    "History",
     "Account",
   ]);
-  assert.deepEqual(pagesFor("technician"), [
-    "Agenda",
-    "Incidents",
-    "Requests",
-    "Sites",
-    "History",
-    "Account",
-  ]);
+  // Technicians get a simple agenda only: no history, no requests inbox, no radar.
+  assert.deepEqual(pagesFor("technician"), ["Agenda", "Account"]);
   assert.deepEqual(pagesFor("customer"), [
     "Home",
     "Plan",
@@ -59,8 +51,11 @@ test("menus follow the product owner's role decisions", () => {
     "Learn",
     "Account",
   ]);
-  // Managers have no Requests page; nobody gets an audit page; technicians no radar.
+  // Only customers keep History; managers have no Requests page; nobody gets Audit.
+  for (const role of ["supervisor", "dispatcher", "technician"])
+    assert.ok(!pagesFor(role).includes("History"), `${role} has no History`);
   assert.ok(!pagesFor("supervisor").includes("Requests"));
+  assert.ok(!pagesFor("technician").includes("Requests"));
   assert.ok(!pagesFor("technician").includes("Area Radar"));
   for (const pages of Object.values(ROLE_PAGES)) assert.ok(!pages.includes("Audit"));
   assert.deepEqual(pagesFor("unknown"), ["Account"]);
@@ -73,11 +68,10 @@ test("bottom navigation caps long menus with a More entry", () => {
     more: false,
     moreActive: false,
   });
-  const technician = bottomNav(pagesFor("technician"), "History");
-  assert.deepEqual(technician.items, ["Agenda", "Incidents", "Requests", "Sites"]);
-  assert.equal(technician.more, true);
-  assert.equal(technician.moreActive, true);
-  const long = bottomNav(pagesFor("supervisor"), "History");
+  const technician = bottomNav(pagesFor("technician"), "Agenda");
+  assert.deepEqual(technician.items, ["Agenda", "Account"]);
+  assert.equal(technician.more, false);
+  const long = bottomNav(pagesFor("supervisor"), "Sites");
   assert.deepEqual(long.items, ["Area Radar", "Incidents", "Teams", "Revenue"]);
   assert.equal(long.more, true);
   assert.equal(long.moreActive, true);

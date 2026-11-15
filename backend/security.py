@@ -86,6 +86,81 @@ def login(request: Request, credentials: Login) -> tuple[str, SessionView]:
     )
     if not row or not valid:
         raise ApiError(401, "invalid_credentials", "Invalid username or password")
+    return start_session(request, row, "login")
+
+
+LOOPBACK_PEERS = ("127.0.0.1", "::1", "localhost", "testclient")
+
+
+def require_demo_login(request: Request):
+    """One-click demo sign-in exists only when explicitly enabled, and only for loopback clients."""
+    peer = request.client.host if request.client else ""
+    if not request.app.state.settings.demo_login or peer not in LOOPBACK_PEERS:
+        raise ApiError(404, "not_found", "Resource not found")
+    check_origin(request)
+
+
+def demo_login(request: Request, username: str) -> tuple[str, SessionView]:
+    require_demo_login(request)
+    with request.app.state.database.connect() as connection:
+        row = connection.execute(
+            "SELECT * FROM users WHERE username=?", (username,)
+        ).fetchone()
+    if not row:
+        raise ApiError(404, "not_found", "Resource not found")
+    return start_session(request, row, "demo_login")
+
+
+def demo_accounts(request: Request) -> list[dict]:
+    require_demo_login(request)
+    with request.app.state.database.connect() as connection:
+        users = connection.execute(
+            "SELECT user_id, username, role, account_type FROM users ORDER BY role, username"
+        ).fetchall()
+        result = []
+        for user in users:
+            sites = [
+                row[0]
+                for row in connection.execute(
+                    "SELECT s.alias FROM user_sites us JOIN sites s ON s.site_id=us.site_id "
+                    "WHERE us.user_id=? ORDER BY s.alias LIMIT 5",
+                    (user["user_id"],),
+                )
+            ]
+            areas = [
+                row[0]
+                for row in connection.execute(
+                    "SELECT a.alias FROM user_areas ua JOIN areas a ON a.area_id=ua.area_id "
+                    "WHERE ua.user_id=? ORDER BY a.alias",
+                    (user["user_id"],),
+                )
+            ]
+            try:
+                crews = [
+                    row[0]
+                    for row in connection.execute(
+                        "SELECT c.name FROM crew_members m JOIN crews c ON c.crew_id=m.crew_id "
+                        "WHERE m.user_id=? ORDER BY c.name",
+                        (user["user_id"],),
+                    )
+                ]
+            except Exception:
+                crews = []
+            result.append(
+                {
+                    "username": user["username"],
+                    "role": user["role"],
+                    "account_type": user["account_type"],
+                    "sites": sites,
+                    "areas": areas,
+                    "crews": crews,
+                }
+            )
+    return result
+
+
+def start_session(request: Request, row, action: str) -> tuple[str, SessionView]:
+    database = request.app.state.database
     token = secrets.token_urlsafe(32)
     csrf = secrets.token_urlsafe(32)
     expires = datetime.now(UTC) + timedelta(
@@ -105,7 +180,7 @@ def login(request: Request, credentials: Login) -> tuple[str, SessionView]:
         database.audit(
             connection,
             row["user_id"],
-            "login",
+            action,
             row["user_id"],
             request.state.request_id,
         )

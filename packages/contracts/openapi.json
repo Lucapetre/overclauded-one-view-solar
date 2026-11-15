@@ -124,6 +124,16 @@
             "title": "Kind",
             "type": "string"
           },
+          "media": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AgendaMedia"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "plan_id": {
             "anyOf": [
               {
@@ -155,6 +165,17 @@
               }
             ],
             "title": "Progress"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
           },
           "revision": {
             "title": "Revision",
@@ -196,6 +217,17 @@
             "title": "Status",
             "type": "string"
           },
+          "support_request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Support Request Id"
+          },
           "tier": {
             "enum": [
               "P0",
@@ -220,6 +252,28 @@
               }
             ],
             "title": "Travel Minutes"
+          },
+          "window_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Window Label"
+          },
+          "zone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zone"
           }
         },
         "required": [
@@ -244,6 +298,35 @@
           "plan_id"
         ],
         "title": "AgendaItem",
+        "type": "object"
+      },
+      "AgendaMedia": {
+        "additionalProperties": false,
+        "properties": {
+          "content_type": {
+            "title": "Content Type",
+            "type": "string"
+          },
+          "filename": {
+            "title": "Filename",
+            "type": "string"
+          },
+          "media_id": {
+            "title": "Media Id",
+            "type": "string"
+          },
+          "size_bytes": {
+            "title": "Size Bytes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "media_id",
+          "filename",
+          "content_type",
+          "size_bytes"
+        ],
+        "title": "AgendaMedia",
         "type": "object"
       },
       "AgendaView": {
@@ -271,6 +354,14 @@
           "eta_label": {
             "title": "Eta Label",
             "type": "string"
+          },
+          "history": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/AgendaItem"
+            },
+            "title": "History",
+            "type": "array"
           },
           "items": {
             "items": {
@@ -2783,6 +2874,181 @@
           "points"
         ],
         "title": "EnergyHistory",
+        "type": "object"
+      },
+      "EnergyOverview": {
+        "additionalProperties": false,
+        "properties": {
+          "as_of": {
+            "format": "date-time",
+            "title": "As Of",
+            "type": "string"
+          },
+          "clock": {
+            "enum": [
+              "scenario",
+              "live"
+            ],
+            "title": "Clock",
+            "type": "string"
+          },
+          "consumption": {
+            "$ref": "#/components/schemas/OverviewMetric"
+          },
+          "grid_export": {
+            "$ref": "#/components/schemas/OverviewMetric"
+          },
+          "grid_import": {
+            "$ref": "#/components/schemas/OverviewMetric"
+          },
+          "interval_end": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interval End"
+          },
+          "interval_start": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interval Start"
+          },
+          "pv": {
+            "$ref": "#/components/schemas/OverviewMetric"
+          },
+          "site_id": {
+            "title": "Site Id",
+            "type": "string"
+          },
+          "source": {
+            "enum": [
+              "component_meters",
+              "provider_frames",
+              "compact_telemetry",
+              "none"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "synthetic": {
+            "default": true,
+            "title": "Synthetic",
+            "type": "boolean"
+          },
+          "today": {
+            "$ref": "#/components/schemas/TodayTotals"
+          }
+        },
+        "required": [
+          "site_id",
+          "as_of",
+          "clock",
+          "source",
+          "interval_start",
+          "interval_end",
+          "pv",
+          "grid_import",
+          "grid_export",
+          "consumption",
+          "today"
+        ],
+        "title": "EnergyOverview",
+        "type": "object"
+      },
+      "EnergyPeriods": {
+        "additionalProperties": false,
+        "properties": {
+          "as_of": {
+            "format": "date-time",
+            "title": "As Of",
+            "type": "string"
+          },
+          "buckets": {
+            "items": {
+              "$ref": "#/components/schemas/PeriodBucket"
+            },
+            "title": "Buckets",
+            "type": "array"
+          },
+          "end": {
+            "format": "date-time",
+            "title": "End",
+            "type": "string"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "origin_summary": {
+            "$ref": "#/components/schemas/OriginSummary"
+          },
+          "period": {
+            "enum": [
+              "today",
+              "week",
+              "month",
+              "year"
+            ],
+            "title": "Period",
+            "type": "string"
+          },
+          "resolution": {
+            "enum": [
+              "hour",
+              "day",
+              "month"
+            ],
+            "title": "Resolution",
+            "type": "string"
+          },
+          "site_id": {
+            "title": "Site Id",
+            "type": "string"
+          },
+          "start": {
+            "format": "date-time",
+            "title": "Start",
+            "type": "string"
+          },
+          "synthetic": {
+            "title": "Synthetic",
+            "type": "boolean"
+          },
+          "timezone": {
+            "title": "Timezone",
+            "type": "string"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/PeriodTotals"
+          }
+        },
+        "required": [
+          "site_id",
+          "period",
+          "as_of",
+          "timezone",
+          "resolution",
+          "start",
+          "end",
+          "buckets",
+          "totals",
+          "origin_summary",
+          "synthetic",
+          "note"
+        ],
+        "title": "EnergyPeriods",
         "type": "object"
       },
       "EnergySnapshot": {
@@ -6323,6 +6589,28 @@
         "title": "OpsMap",
         "type": "object"
       },
+      "OriginSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "derived": {
+            "default": 0,
+            "title": "Derived",
+            "type": "integer"
+          },
+          "measured": {
+            "default": 0,
+            "title": "Measured",
+            "type": "integer"
+          },
+          "synthetic_profile": {
+            "default": 0,
+            "title": "Synthetic Profile",
+            "type": "integer"
+          }
+        },
+        "title": "OriginSummary",
+        "type": "object"
+      },
       "OverrideRequest": {
         "additionalProperties": false,
         "properties": {
@@ -6417,6 +6705,255 @@
           "expires_at"
         ],
         "title": "OverrideView",
+        "type": "object"
+      },
+      "OverviewMetric": {
+        "additionalProperties": false,
+        "properties": {
+          "basis": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Basis"
+          },
+          "origin": {
+            "anyOf": [
+              {
+                "enum": [
+                  "measured",
+                  "derived"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Origin"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "unit": {
+            "enum": [
+              "kW",
+              "kWh"
+            ],
+            "title": "Unit",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "value",
+          "unit"
+        ],
+        "title": "OverviewMetric",
+        "type": "object"
+      },
+      "PeriodBucket": {
+        "additionalProperties": false,
+        "properties": {
+          "complete": {
+            "title": "Complete",
+            "type": "boolean"
+          },
+          "consumption_kwh": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Consumption Kwh"
+          },
+          "end": {
+            "format": "date-time",
+            "title": "End",
+            "type": "string"
+          },
+          "grid_export_kwh": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grid Export Kwh"
+          },
+          "grid_import_kwh": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grid Import Kwh"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "origin": {
+            "enum": [
+              "measured",
+              "derived",
+              "synthetic_profile"
+            ],
+            "title": "Origin",
+            "type": "string"
+          },
+          "production_kwh": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Production Kwh"
+          },
+          "start": {
+            "format": "date-time",
+            "title": "Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "start",
+          "end",
+          "label",
+          "origin",
+          "complete",
+          "production_kwh",
+          "consumption_kwh",
+          "grid_import_kwh",
+          "grid_export_kwh"
+        ],
+        "title": "PeriodBucket",
+        "type": "object"
+      },
+      "PeriodTotals": {
+        "additionalProperties": false,
+        "properties": {
+          "consumption_kwh": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Consumption Kwh"
+          },
+          "grid_export_kwh": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grid Export Kwh"
+          },
+          "grid_import_kwh": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grid Import Kwh"
+          },
+          "peak_kw": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Peak Kw"
+          },
+          "peak_kw_origin": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Peak Kw Origin"
+          },
+          "production_kwh": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Production Kwh"
+          },
+          "self_consumption_share": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Self Consumption Share"
+          }
+        },
+        "required": [
+          "production_kwh",
+          "consumption_kwh",
+          "grid_import_kwh",
+          "grid_export_kwh",
+          "self_consumption_share",
+          "peak_kw",
+          "peak_kw_origin"
+        ],
+        "title": "PeriodTotals",
         "type": "object"
       },
       "PlanApproval": {
@@ -10790,6 +11327,42 @@
           "P3"
         ],
         "title": "TierCounts",
+        "type": "object"
+      },
+      "TodayTotals": {
+        "additionalProperties": false,
+        "properties": {
+          "consumption": {
+            "$ref": "#/components/schemas/OverviewMetric"
+          },
+          "grid_export": {
+            "$ref": "#/components/schemas/OverviewMetric"
+          },
+          "grid_import": {
+            "$ref": "#/components/schemas/OverviewMetric"
+          },
+          "production": {
+            "$ref": "#/components/schemas/OverviewMetric"
+          },
+          "self_consumption_share": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Self Consumption Share"
+          }
+        },
+        "required": [
+          "production",
+          "grid_import",
+          "grid_export",
+          "consumption"
+        ],
+        "title": "TodayTotals",
         "type": "object"
       },
       "UnmappedSites": {
@@ -18603,6 +19176,276 @@
           }
         ],
         "summary": "Latest",
+        "tags": [
+          "energy"
+        ]
+      }
+    },
+    "/api/v1/sites/{site_id}/energy/overview": {
+      "get": {
+        "operationId": "energy_overview_api_v1_sites__site_id__energy_overview_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "site_id",
+            "required": true,
+            "schema": {
+              "title": "Site Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnergyOverview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Request Entity Too Large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "summary": "Energy Overview",
+        "tags": [
+          "energy"
+        ]
+      }
+    },
+    "/api/v1/sites/{site_id}/energy/periods": {
+      "get": {
+        "operationId": "energy_periods_api_v1_sites__site_id__energy_periods_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "site_id",
+            "required": true,
+            "schema": {
+              "title": "Site Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "period",
+            "required": false,
+            "schema": {
+              "default": "today",
+              "enum": [
+                "today",
+                "week",
+                "month",
+                "year"
+              ],
+              "title": "Period",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnergyPeriods"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Request Entity Too Large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "summary": "Energy Periods",
         "tags": [
           "energy"
         ]

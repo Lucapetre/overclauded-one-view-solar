@@ -16,19 +16,10 @@ export const ROLE_PAGES = {
     "Revenue",
     "Offers",
     "Sites",
-    "History",
     "Account",
   ],
-  dispatcher: [
-    "Area Radar",
-    "Incidents",
-    "Teams",
-    "Requests",
-    "Sites",
-    "History",
-    "Account",
-  ],
-  technician: ["Agenda", "Incidents", "Requests", "Sites", "History", "Account"],
+  dispatcher: ["Dispatch", "Incidents", "Teams", "Requests", "Sites", "Account"],
+  technician: ["Agenda", "Account"],
 };
 export const pagesFor = (role) => ROLE_PAGES[role] || ["Account"];
 
@@ -418,4 +409,24 @@ export function ageLabel(iso, now = Date.now()) {
   const hours = Math.round(minutes / 60);
   if (hours < 48) return `${hours} h`;
   return `${Math.round(hours / 24)} days`;
+}
+
+const ROLE_NAMES = {
+  customer: "Customer",
+  dispatcher: "PPC dispatcher",
+  technician: "Field technician",
+  supervisor: "PPC manager",
+};
+/** A manager limited to one area is an area manager; the server scopes all data. */
+export const isAreaManager = (user, areaNames = []) =>
+  user?.role === "supervisor" && areaNames.length === 1;
+/** "PPC manager", "Area manager · Ilfov", "PPC dispatcher"… */
+export function roleLabel(user, areaNames = []) {
+  if (isAreaManager(user, areaNames)) return `Area manager · ${areaNames[0]}`;
+  return ROLE_NAMES[user?.role] || "Account";
+}
+/** Scope wording for page text: the single area's name, or the list. */
+export function scopeName(user, areaNames = []) {
+  if (!areaNames.length) return "Your scope";
+  return areaNames.length === 1 ? areaNames[0] : areaNames.join(" and ");
 }

@@ -331,6 +331,13 @@ class ApplyRequest(Model):
     expected_input_digest: str = Field(min_length=8, max_length=128)
 
 
+class AgendaMedia(Model):
+    media_id: str
+    filename: str
+    content_type: str
+    size_bytes: int
+
+
 class AgendaItem(Model):
     assignment_id: str
     crew_id: str
@@ -351,6 +358,12 @@ class AgendaItem(Model):
     travel_minutes: int | None
     position: SitePosition | None
     plan_id: str | None
+    # Where, why and (for a linked customer request) the video; added for the technician agenda.
+    zone: str | None = None
+    reason: str | None = None
+    window_label: str | None = None
+    support_request_id: str | None = None
+    media: AgendaMedia | None = None
 
 
 class DeferredItem(Model):
@@ -368,6 +381,8 @@ class AgendaView(Model):
     items: list[AgendaItem]
     deferred: list[DeferredItem]
     eta_label: str
+    # Recently completed work (last 72 h), newest first.
+    history: list[AgendaItem] = []
 
 
 class ProgressRequest(Model):

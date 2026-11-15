@@ -294,7 +294,7 @@ export function CareCard({ record, accountType, onLearn, onSupport }) {
           <BookOpen size={20} />
         </span>
         <div>
-          <small>ONE MINUTE · EARN A REWARD</small>
+          <small>ONE MINUTE · EARN BILL CREDIT</small>
           <b>Making sense of your solar</b>
           <p>Short lessons with a mini test.</p>
         </div>

@@ -41,6 +41,7 @@ from backend.customer_models import (
 )
 from backend.db import Database, site_from_row
 from backend.energy import history, snapshot
+from backend.energy_views import EnergyOverview, EnergyPeriods, overview, periods
 from backend.errors import ApiError
 from backend.ingestion import ingest
 from backend.media import is_upload, media_file, store_media
@@ -161,6 +162,8 @@ from backend.security import (
     authenticated,
     authorized_areas,
     authorized_site,
+    demo_accounts,
+    demo_login,
     login,
     pipeline_access,
     require_csrf,
@@ -288,6 +291,29 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.post("/api/v1/auth/login", response_model=SessionView, tags=["auth"])
     def sign_in(request: Request, credentials: Login, response: Response):
         token, session = login(request, credentials)
+        response.set_cookie(
+            COOKIE,
+            token,
+            httponly=True,
+            secure=settings.cookie_secure,
+            samesite="lax",
+            max_age=settings.session_hours * 3600,
+            path="/",
+        )
+        return session
+
+    @app.get("/api/v1/auth/demo-accounts", include_in_schema=False)
+    def list_demo_accounts(request: Request):
+        return demo_accounts(request)
+
+    @app.post("/api/v1/auth/demo-login", include_in_schema=False)
+    def sign_in_demo(
+        request: Request, payload: Annotated[dict, Body()], response: Response
+    ):
+        username = payload.get("username") if isinstance(payload, dict) else None
+        if not isinstance(username, str) or not 1 <= len(username) <= 96:
+            raise ApiError(422, "invalid_request", "Choose a demo account")
+        token, session = demo_login(request, username)
         response.set_cookie(
             COOKIE,
             token,
@@ -464,6 +490,28 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 connection,
                 site_from_row(authorized_site(connection, session.user, site_id)),
             )
+
+    @app.get(
+        "/api/v1/sites/{site_id}/energy/overview",
+        response_model=EnergyOverview,
+        tags=["energy"],
+    )
+    def energy_overview(site_id: str, session: Session):
+        with database.connect() as connection:
+            return overview(connection, session.user, site_id)
+
+    @app.get(
+        "/api/v1/sites/{site_id}/energy/periods",
+        response_model=EnergyPeriods,
+        tags=["energy"],
+    )
+    def energy_periods(
+        site_id: str,
+        session: Session,
+        period: Literal["today", "week", "month", "year"] = "today",
+    ):
+        with database.connect() as connection:
+            return periods(connection, session.user, site_id, period)
 
     @app.get(
         "/api/v1/sites/{site_id}/energy", response_model=EnergyHistory, tags=["energy"]

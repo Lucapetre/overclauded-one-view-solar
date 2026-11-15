@@ -187,7 +187,7 @@ const legacyStatus = (status) =>
  * (site_placements). Sites without a position are not placed (see `unmapped`).
  * Falls back to plain MapSite markers for an older backend.
  */
-export function toStatusMapSites(map, aliases = {}, legacy = null) {
+export function toStatusMapSites(map, aliases = {}, legacy = null, tickets = null) {
   const sites = map?.sites || [];
   const status = map?.status_sites || [];
   const base = new Map(sites.map((s) => [s.site_id, s]));
@@ -208,6 +208,7 @@ export function toStatusMapSites(map, aliases = {}, legacy = null) {
         s.episode_ids?.length
           ? `${s.episode_ids.length} active episode${s.episode_ids.length === 1 ? "" : "s"}`
           : null,
+        ...ticketLines(tickets?.[s.site_id]),
         s.position.fictional ? `${s.position.label || "Fictional demo point"} (fictional coordinates)` : s.position.label,
       ].filter(Boolean);
       return {
@@ -233,6 +234,14 @@ export function toStatusMapSites(map, aliases = {}, legacy = null) {
   // Compact sites the projection did not cover keep their plain marker.
   if (legacy) out.push(...legacy(sites.filter((s) => !covered.has(s.site_id)), aliases));
   return out;
+}
+
+/** Popup lines for a site's open tickets: "P1 · Battery restriction", at most 3. */
+export function ticketLines(list = []) {
+  if (!list?.length) return [];
+  const shown = list.slice(0, 3).map((t) => `${t.band} · ${t.title}${t.deadline ? ` — ${t.deadline}` : ""}`);
+  if (list.length > 3) shown.push(`+ ${list.length - 3} more open case${list.length - 3 === 1 ? "" : "s"}`);
+  return shown;
 }
 
 /** Unmapped sites (no coordinates): never placed at (0,0) or near another site. */

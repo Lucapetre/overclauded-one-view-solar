@@ -767,3 +767,16 @@
   min-width: 0;
   padding: 7px 8px;
 }
+
+
+/* Local demo landing (/demo/) */
+.demo-landing { max-width: 1100px; margin: 0 auto; padding: 40px 20px 60px; }
+.demo-landing header { margin-bottom: 28px; }
+.demo-landing header .brand { color: var(--ink); display: inline-flex; gap: 8px; align-items: center; margin-bottom: 24px; }
+.demo-landing h1 { font-size: clamp(30px, 4vw, 46px); margin: 10px 0; }
+.demo-landing-group { margin-top: 26px; }
+.demo-landing-group h2 { font-size: 18px; margin-bottom: 12px; }
+.demo-landing-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
+.demo-account { padding: 18px; display: flex; flex-direction: column; gap: 10px; }
+.demo-account p { font-size: 13px; color: #5d6957; flex: 1; }
+.demo-landing-off { padding: 18px; margin-bottom: 20px; }

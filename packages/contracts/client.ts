@@ -42,6 +42,8 @@ import type {
   TaskProgress,
   TaskUpdate,
   EquipmentEvidence,
+  EnergyOverview,
+  EnergyPeriods,
   EquipmentSummary,
   AgendaView,
   ApplyRequest,
@@ -55,6 +57,16 @@ import type {
   StatusProjection,
   UnmappedSites,
 } from "./index";
+
+/** Account offered on the local demo landing page (not part of the public API contract). */
+export type DemoAccount = {
+  username: string;
+  role: "customer" | "dispatcher" | "technician" | "supervisor";
+  account_type: "home" | "business";
+  sites: string[];
+  areas: string[];
+  crews: string[];
+};
 
 export class SolarApiError extends Error {
   constructor(public readonly status: number, public readonly detail: ErrorEnvelope) {
@@ -102,6 +114,19 @@ export class SolarClient {
   async login(username: string, password: string): Promise<SessionView> {
     const session = await this.request<SessionView>("/api/v1/auth/login", {
       method: "POST", body: JSON.stringify({ username, password }),
+    });
+    this.csrfToken = session.csrf_token;
+    return session;
+  }
+
+  /** Local demo mode only (server started with SOLAR_DEMO_LOGIN=true, loopback client). */
+  demoAccounts(signal?: AbortSignal): Promise<DemoAccount[]> {
+    return this.request("/api/v1/auth/demo-accounts", { signal });
+  }
+
+  async demoLogin(username: string): Promise<SessionView> {
+    const session = await this.request<SessionView>("/api/v1/auth/demo-login", {
+      method: "POST", body: JSON.stringify({ username }),
     });
     this.csrfToken = session.csrf_token;
     return session;
@@ -411,6 +436,29 @@ export class SolarClient {
    */
   equipmentSummary(siteId: string, signal?: AbortSignal): Promise<EquipmentSummary> {
     return this.request(`/api/v1/sites/${encodeURIComponent(siteId)}/equipment/summary`, { signal });
+  }
+
+  /**
+   * Home cards: latest PV, grid import, grid export and DERIVED consumption (kW) plus today's kWh totals,
+   * for provider sites with component meters. A missing input is `value: null` with a `reason`.
+   */
+  siteEnergyOverview(siteId: string, signal?: AbortSignal): Promise<EnergyOverview> {
+    return this.request(`/api/v1/sites/${encodeURIComponent(siteId)}/energy/overview`, { signal });
+  }
+
+  /**
+   * Production / consumption / grid import / export buckets for today (hourly), week and month (daily)
+   * or year (monthly). Each bucket is `measured`, `derived` or a clearly labelled `synthetic_profile`.
+   */
+  siteEnergyPeriods(
+    siteId: string,
+    period: "today" | "week" | "month" | "year",
+    signal?: AbortSignal,
+  ): Promise<EnergyPeriods> {
+    return this.request(
+      `/api/v1/sites/${encodeURIComponent(siteId)}/energy/periods?period=${period}`,
+      { signal },
+    );
   }
 
   /** Bounded 15-minute evidence frames (at most 7 days, limit <= 1000); no raw payloads. */

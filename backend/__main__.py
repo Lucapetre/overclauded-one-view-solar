@@ -203,6 +203,16 @@ def main(argv=None):
         "correlate",
         help="Run the incident correlation rules at the current analytical time",
     )
+    enrich = commands.add_parser(
+        "enrich-demo",
+        help="Idempotent SYNTHETIC enrichment of a scenario database: city demo, grants, "
+        "contracts, offers, incidents, crews and agenda (refuses unless a scenario is active)",
+    )
+    enrich.add_argument(
+        "--allow-live",
+        action="store_true",
+        help="Run even though no scenario clock is active",
+    )
     arguments = parser.parse_args(argv)
     settings = Settings()
     database = Database(settings.database_path)
@@ -351,6 +361,16 @@ def execute(arguments, database: Database, settings: Settings):
         print(
             "Scenario operations provisioned (synthetic crews, shifts and travel matrix). "
             f"New account credentials are stored privately at {destination}"
+        )
+    elif arguments.command == "enrich-demo":
+        from backend.enrich import enrich_demo
+
+        print(
+            json.dumps(
+                enrich_demo(database, settings, allow_live=arguments.allow_live),
+                indent=2,
+                default=str,
+            )
         )
     elif arguments.command == "correlate":
         print(json.dumps(run_correlation(database), indent=2, default=str))

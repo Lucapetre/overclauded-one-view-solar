@@ -316,9 +316,20 @@ def _requests(connection, user: User, where: str, parameters: tuple):
     return result
 
 
+# A technician has no request inbox: a request (and its video) is visible only through an
+# assignment the dispatcher created on its incident for one of the technician's crews.
+LINKED_TO_CREW_MEMBER = (
+    "EXISTS (SELECT 1 FROM incidents li JOIN assignments la ON la.incident_id=li.incident_id "
+    "JOIN crew_members lm ON lm.crew_id=la.crew_id WHERE li.support_request_id=r.request_id "
+    "AND lm.user_id=? AND la.status != 'cancelled')"
+)
+
+
 def list_requests(connection, user: User) -> list[SupportRequest]:
     if user.role == "customer":
         return _requests(connection, user, "r.user_id=?", (user.user_id,))
+    if user.role == "technician":
+        return _requests(connection, user, LINKED_TO_CREW_MEMBER, (user.user_id,))
     sites = [row["site_id"] for row in accessible_sites(connection, user)]
     if not sites:
         return []
@@ -332,7 +343,15 @@ def _visible_request(connection, user: User, request_id: str):
     ).fetchone()
     if row and user.role == "customer" and row["user_id"] == user.user_id:
         return row
-    if row and user.role != "customer":
+    if row and user.role == "technician":
+        linked = connection.execute(
+            "SELECT 1 FROM support_requests r WHERE r.request_id=? AND "
+            + LINKED_TO_CREW_MEMBER,
+            (request_id, user.user_id),
+        ).fetchone()
+        if linked:
+            return row
+    elif row and user.role != "customer":
         authorized_site(connection, user, row["site_id"])
         return row
     raise ApiError(404, "not_found", "Resource not found")

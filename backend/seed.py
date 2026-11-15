@@ -192,8 +192,10 @@ PROFILE_FIELDS = (
 )
 
 
-def seed_operations(connection):
-    """Synthetic site profiles, crews and incidents. Idempotent."""
+def seed_operations(connection, as_of: datetime | None = None):
+    """Synthetic site profiles, crews and incidents. Idempotent.
+
+    `as_of` places the incident times relative to a scenario clock instead of the fixed replay time."""
     for profile in profile_source()["profiles"]:
         connection.execute(
             f"INSERT OR IGNORE INTO site_profiles(site_id,{','.join(PROFILE_FIELDS)}) "
@@ -217,7 +219,7 @@ def seed_operations(connection):
                 (crew_id, member),
             )
     for incident_id, site_id, tier, family, title, evidence, minutes in INCIDENTS:
-        opened = stamp(REPLAY_AT - timedelta(minutes=minutes))
+        opened = stamp((as_of or REPLAY_AT) - timedelta(minutes=minutes))
         open_incident(
             connection,
             incident_id=incident_id,
@@ -279,9 +281,9 @@ OFFER_FIELDS = (
 )
 
 
-def seed_offers(database: Database, connection):
-    """Demo offers expiring 7 days after seeding (wall clock). Idempotent; no acceptances."""
-    now = datetime.now(UTC)
+def seed_offers(database: Database, connection, now: datetime | None = None):
+    """Demo offers expiring 7 days after seeding (wall clock, or `now`). Idempotent; no acceptances."""
+    now = now or datetime.now(UTC)
     for offer_id, published, terms in DEMO_OFFERS:
         offer = dict(zip(OFFER_FIELDS, terms, strict=True)) | {
             "offer_id": offer_id,
@@ -386,8 +388,12 @@ def _telemetry(base: dict, site_id: str) -> dict:
     return record
 
 
-def seed_demo(database: Database, password: str | None = None) -> dict[str, str]:
-    """Idempotent, explicitly synthetic demo. Existing passwords are never reset."""
+def seed_demo(
+    database: Database, password: str | None = None, *, as_of: datetime | None = None
+) -> dict[str, str]:
+    """Idempotent, explicitly synthetic demo. Existing passwords are never reset.
+
+    `as_of` (the scenario clock) re-times the demo incidents and offers; telemetry stays as fixtured."""
     database.migrate()
     base = json.loads(
         (Path(__file__).parent / "fixtures" / "telemetry.json").read_text()
@@ -450,8 +456,8 @@ def seed_demo(database: Database, password: str | None = None) -> dict[str, str]
         connection.execute(
             "INSERT OR IGNORE INTO settings VALUES ('replay_at',?)", (stamp(REPLAY_AT),)
         )
-        seed_operations(connection)
-        seed_offers(database, connection)
+        seed_operations(connection, as_of)
+        seed_offers(database, connection, as_of)
         # One transaction for every feed: a commit per record is slow on Windows.
         for profile in source["profiles"]:
             if profile["site_id"] != NO_TELEMETRY:  # A registered but unavailable feed.
