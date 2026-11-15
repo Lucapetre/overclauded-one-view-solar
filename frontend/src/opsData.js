@@ -7,12 +7,13 @@ export const TIERS = ["P0", "P1", "P2", "P3"];
 
 /** Menu per role (product owner's decisions). The first page is the landing page. */
 export const ROLE_PAGES = {
-  customer: ["Home", "History", "Support", "Learn", "Account"],
+  customer: ["Home", "Offers", "History", "Support", "Learn", "Account"],
   supervisor: [
     "Area Radar",
     "Incidents",
     "Teams",
     "Revenue",
+    "Offers",
     "Sites",
     "History",
     "Account",
@@ -329,6 +330,8 @@ export const FRIENDLY_ERRORS = {
   dispatcher_required: "Only a PPC dispatcher can assign crews.",
   technician_required: "Only a technician can do this.",
   supervisor_required: "Revenue is available to managers only.",
+  manager_required: "Offers are managed by distributor managers only.",
+  customer_required: "Offers can be accepted by customer accounts only.",
   crew_member_required:
     "Only a member of the assigned crew can mark this incident resolved.",
   already_assigned:

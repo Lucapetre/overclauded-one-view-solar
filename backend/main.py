@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Annotated, Any, Literal
 
-from fastapi import Body, Depends, FastAPI, Query, Request, Response
+from fastapi import Body, Depends, FastAPI, Header, Query, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
@@ -53,6 +53,40 @@ from backend.models import (
     TelemetryRecord,
     utc,
 )
+from backend.offers import (
+    accept_offer,
+    cancel_offer,
+    client_offers,
+    create_offer,
+    list_manager_offers,
+    list_notifications,
+    manager_clients,
+    manager_offer_detail,
+    mark_all_read,
+    mark_read,
+    my_offers,
+    offer_audit,
+    preview_draft,
+    preview_offer,
+    publish_offer,
+    savings_summary,
+    update_offer,
+)
+from backend.offers_models import (
+    AcceptOffer,
+    AuditEntry,
+    ClientOffer,
+    ManagerClient,
+    ManagerOffer,
+    ManagerOfferDetail,
+    NotificationList,
+    OfferDraft,
+    OfferPreview,
+    OfferStatus,
+    SavingsSummary,
+    UserOffer,
+)
+from backend.offers_worker import start_background_worker
 from backend.ops import (
     assign_incident,
     auto_dispatch,
@@ -109,7 +143,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         database.migrate()
+        stop = (
+            start_background_worker(database, settings)
+            if settings.offer_worker
+            else None
+        )
         yield
+        if stop:
+            stop()
 
     app = FastAPI(
         title="One View Solar telemetry API",
@@ -127,7 +168,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         allow_origins=list(settings.allowed_origins),
         allow_credentials=True,
         allow_methods=["GET", "POST"],
-        allow_headers=["Content-Type", "X-CSRF-Token"],
+        allow_headers=["Content-Type", "X-CSRF-Token", "Idempotency-Key"],
         expose_headers=["X-Request-ID"],
     )
 
@@ -730,6 +771,227 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 lesson_id,
                 payload.answers,
                 request.state.request_id,
+            )
+
+    @app.get(
+        "/api/v1/manager/offers",
+        response_model=list[ManagerOffer],
+        tags=["power offers"],
+    )
+    def manager_offers(session: Session, status: OfferStatus | None = None):
+        with database.connect() as connection:
+            return list_manager_offers(
+                connection, session.user, status, settings.clock()
+            )
+
+    @app.post(
+        "/api/v1/manager/offers",
+        response_model=ManagerOfferDetail,
+        status_code=201,
+        tags=["power offers"],
+    )
+    def new_offer(payload: OfferDraft, request: Request, session: Session):
+        require_csrf(request, session)
+        with database.connect() as connection:
+            return create_offer(
+                database,
+                connection,
+                session.user,
+                payload,
+                request.state.request_id,
+                settings.clock(),
+            )
+
+    @app.post(
+        "/api/v1/manager/offers/preview",
+        response_model=OfferPreview,
+        tags=["power offers"],
+    )
+    def preview_new_offer(payload: OfferDraft, request: Request, session: Session):
+        require_csrf(request, session)
+        with database.connect() as connection:
+            return preview_draft(connection, session.user, payload, settings.clock())
+
+    @app.get(
+        "/api/v1/manager/clients",
+        response_model=list[ManagerClient],
+        tags=["power offers"],
+    )
+    def offer_clients(
+        session: Session,
+        area_id: Annotated[str | None, Query(max_length=96)] = None,
+    ):
+        with database.connect() as connection:
+            return manager_clients(connection, session.user, area_id)
+
+    @app.get(
+        "/api/v1/manager/offers/{offer_id}",
+        response_model=ManagerOfferDetail,
+        tags=["power offers"],
+    )
+    def manager_offer(offer_id: str, session: Session):
+        with database.connect() as connection:
+            return manager_offer_detail(
+                connection, session.user, offer_id, settings.clock()
+            )
+
+    @app.post(
+        "/api/v1/manager/offers/{offer_id}",
+        response_model=ManagerOfferDetail,
+        tags=["power offers"],
+    )
+    def edit_offer(
+        offer_id: str, payload: OfferDraft, request: Request, session: Session
+    ):
+        require_csrf(request, session)
+        with database.connect() as connection:
+            return update_offer(
+                database,
+                connection,
+                session.user,
+                offer_id,
+                payload,
+                request.state.request_id,
+                settings.clock(),
+            )
+
+    @app.get(
+        "/api/v1/manager/offers/{offer_id}/preview",
+        response_model=OfferPreview,
+        tags=["power offers"],
+    )
+    def preview_saved_offer(offer_id: str, session: Session):
+        with database.connect() as connection:
+            return preview_offer(connection, session.user, offer_id, settings.clock())
+
+    @app.post(
+        "/api/v1/manager/offers/{offer_id}/publish",
+        response_model=ManagerOfferDetail,
+        tags=["power offers"],
+    )
+    def publish_saved_offer(offer_id: str, request: Request, session: Session):
+        require_csrf(request, session)
+        with database.connect() as connection:
+            return publish_offer(
+                database,
+                connection,
+                session.user,
+                offer_id,
+                request.state.request_id,
+                settings.clock(),
+            )
+
+    @app.post(
+        "/api/v1/manager/offers/{offer_id}/cancel",
+        response_model=ManagerOfferDetail,
+        tags=["power offers"],
+    )
+    def cancel_saved_offer(offer_id: str, request: Request, session: Session):
+        require_csrf(request, session)
+        with database.connect() as connection:
+            return cancel_offer(
+                database,
+                connection,
+                session.user,
+                offer_id,
+                request.state.request_id,
+                settings.clock(),
+            )
+
+    @app.get(
+        "/api/v1/manager/offers/{offer_id}/audit",
+        response_model=list[AuditEntry],
+        tags=["power offers"],
+    )
+    def offer_audit_log(offer_id: str, session: Session):
+        with database.connect() as connection:
+            return offer_audit(connection, session.user, offer_id)
+
+    @app.get("/api/v1/offers", response_model=list[ClientOffer], tags=["power offers"])
+    def available_offers(session: Session):
+        with database.connect() as connection:
+            return client_offers(connection, session.user, settings.clock())
+
+    @app.get(
+        "/api/v1/offers/mine", response_model=list[UserOffer], tags=["power offers"]
+    )
+    def accepted_offers(
+        session: Session, status: Literal["active", "history", "all"] = "all"
+    ):
+        with database.connect() as connection:
+            return my_offers(connection, session.user, status)
+
+    @app.get(
+        "/api/v1/offers/savings", response_model=SavingsSummary, tags=["power offers"]
+    )
+    def offer_savings(session: Session):
+        with database.connect() as connection:
+            return savings_summary(connection, session.user, settings.clock())
+
+    @app.post(
+        "/api/v1/offers/{offer_id}/accept",
+        response_model=UserOffer,
+        status_code=201,
+        tags=["power offers"],
+        responses={200: {"model": UserOffer, "description": "Idempotent repeat"}},
+    )
+    def accept(
+        offer_id: str,
+        request: Request,
+        response: Response,
+        session: Session,
+        payload: Annotated[AcceptOffer | None, Body()] = None,
+        idempotency_key: Annotated[
+            str | None,
+            Header(alias="Idempotency-Key", min_length=1, max_length=128),
+        ] = None,
+    ):
+        require_csrf(request, session)
+        with database.connect() as connection:
+            view, created = accept_offer(
+                database,
+                connection,
+                session.user,
+                offer_id,
+                payload.site_id if payload else None,
+                idempotency_key,
+                request.state.request_id,
+                settings.clock(),
+                settings.offer_max_active_per_client,
+            )
+        if not created:
+            response.status_code = 200
+        return view
+
+    @app.get(
+        "/api/v1/notifications",
+        response_model=NotificationList,
+        tags=["notifications"],
+    )
+    def notifications(session: Session, unread: bool = False):
+        with database.connect() as connection:
+            return list_notifications(connection, session.user, unread)
+
+    @app.post(
+        "/api/v1/notifications/read-all",
+        response_model=NotificationList,
+        tags=["notifications"],
+    )
+    def read_all_notifications(request: Request, session: Session):
+        require_csrf(request, session)
+        with database.connect() as connection:
+            return mark_all_read(connection, session.user, settings.clock())
+
+    @app.post(
+        "/api/v1/notifications/{notification_id}/read",
+        response_model=NotificationList,
+        tags=["notifications"],
+    )
+    def read_notification(notification_id: str, request: Request, session: Session):
+        require_csrf(request, session)
+        with database.connect() as connection:
+            return mark_read(
+                connection, session.user, notification_id, settings.clock()
             )
 
     @app.post(

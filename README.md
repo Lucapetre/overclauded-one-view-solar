@@ -249,6 +249,75 @@ Incident log: every state change appends an entry with the actor, action and det
 
 Revenue is an estimate, not invoices: per site and month, `energy_sales = monthly_import_kwh × import_price`, `export_payments = monthly_export_kwh × export_price` (paid to the prosumer), `service_fees = service_fee_ron` and `net_revenue = energy_sales + service_fees − export_payments`. Prices come from the site's saved contract, otherwise the fixture's default tariff (1.30 / 0.55 RON/kWh). The response splits totals by segment (with `share_of_net`) and area, lists business accounts by net revenue and gives an annualized net figure. Money is rounded to 2 decimals.
 
+## Power Block Offers
+
+Time-limited commitments to **consume** ("use 10 kWh at 0.55 RON/kWh within 2 hours of accepting") or **export** ("feed 10 kWh into the grid at 0.70 RON/kWh within 2 hours") a fixed block of energy at an agreed price, with a penalty on the unfulfilled part, a Savings/Earnings Counter for clients and an offer management area for managers. Migration `005_power_offers.sql` adds the tables below and a nullable `audit.detail` column (JSON). All demo prices, tariffs and settlements are synthetic.
+
+| Table | Contents |
+| --- | --- |
+| `offers` | Terms (`type`, `title`, `energy_kwh`, `offer_price_ron_per_kwh`, `window_minutes`, `penalty_type`, `penalty_value`, `offer_expires_at`), one `area_id`, targeting (`target_mode`, `target_segment`, `target_min_kwp`, `linked_incident_id`, `target_zone`), limits (`max_takers`, `max_total_kwh`), `status` `draft` / `available` / `cancelled` / `expired` and timestamps |
+| `offer_targets` | Hand-picked clients for `target_mode=clients` |
+| `user_offers` | One acceptance per client and offer (`UNIQUE(offer_id,user_id)`) for one site, with a copy of the terms, the reference-price snapshot, the window, live progress, reminder marks and the `Idempotency-Key` |
+| `offer_settlements` | The ledger: one row per user offer (`UNIQUE(user_offer_id)`) with every input (metered, fulfilled, unfulfilled, excess kWh, coverage, prices, penalty terms, waiver reason) and result in bani |
+| `savings_totals` | Per-client counter (`lifetime_bani`, `consume_bani`, `export_bani`, `penalties_bani`, `settled_count`), updated in the settlement transaction |
+| `notifications` | In-app notifications: `offer_new`, `offer_accepted`, `offer_reminder_30`, `offer_reminder_10`, `offer_settled` |
+
+**Roles.** There is no new role. A client is a `customer`; its areas are the areas of its sites. A manager is a `supervisor` scoped to `user_areas`; a supervisor granted every area is the admin (same code, wider scope). Other roles get 403 `manager_required` on manager routes; non-customers get 403 `customer_required` on client routes. Managers never see, create or target offers or clients outside their areas: offers elsewhere are 404, an out-of-scope `area_id` is 422 `area_out_of_scope`, hand-picked clients without a site in the offer's area are 422 `client_out_of_scope`, and a linked incident outside the offer's area is 422 `incident_out_of_scope`.
+
+| Method/path | Who | Behavior |
+| --- | --- | --- |
+| `GET /api/v1/manager/offers?status=` | manager | `ManagerOffer[]`: terms, `penalty_rule_text`, `terms_text`, `max_penalty_bani`, `block_value_bani`, `audience_size`, `locked` and `stats` |
+| `POST /api/v1/manager/offers` | manager | Create a draft from `OfferDraft` (201) |
+| `POST /api/v1/manager/offers/preview` | manager | Validate an `OfferDraft` without saving: `audience_size`, `sites`, `sample_clients` (≤ 10), `warnings`, `errors`, `summary` |
+| `GET /api/v1/manager/offers/{id}` | manager | `ManagerOfferDetail`: the offer plus `takers` with live progress and settlement amounts |
+| `POST /api/v1/manager/offers/{id}` | manager | Replace the terms (full `OfferDraft`) of a draft or available offer; 409 `offer_locked` after any acceptance, 409 `offer_closed` when cancelled or expired |
+| `GET /api/v1/manager/offers/{id}/preview` | manager | Preview of the saved offer |
+| `POST /api/v1/manager/offers/{id}/publish` | manager | Draft to `available`; re-validates terms, 422 `expiry_in_past`, 422 `empty_audience`; notifies the audience |
+| `POST /api/v1/manager/offers/{id}/cancel` | manager | Draft or available to `cancelled` (409 `offer_not_cancellable` otherwise) |
+| `GET /api/v1/manager/offers/{id}/audit` | manager | Audit entries for the offer: created, updated (with changed fields), published, accepted, settled, cancelled |
+| `GET /api/v1/manager/clients?area_id=` | manager | Clients with sites in scope, each site's zone, `segment`, `installed_kwp`, PV, export capability and meter |
+| `GET /api/v1/offers` | client | Open offers targeted at the caller and not yet accepted, with `terms_text`, `penalty_rule_text`, `max_penalty_bani`, `eligible_sites` (reference price preview and source) and `remaining_capacity` |
+| `POST /api/v1/offers/{id}/accept` | client | Body `{site_id?}`, optional `Idempotency-Key` header. Returns `UserOffer` (201; 200 for an idempotent repeat) |
+| `GET /api/v1/offers/mine?status=active\|history\|all` | client | `UserOffer[]` with live progress and the `settlement` once settled |
+| `GET /api/v1/offers/savings` | client | Savings/Earnings Counter: `lifetime_bani`, `this_month_bani` (Europe/Bucharest month), `penalties_paid_bani`, `consume_bani`, `export_bani`, `settled_count`, `last_settled_at`, `recent` (10) |
+| `GET /api/v1/notifications?unread=` | any | The caller's 50 newest notifications and `unread_count` |
+| `POST /api/v1/notifications/{id}/read`, `POST /api/v1/notifications/read-all` | any | Mark read; another user's notification is 404 |
+
+**Validation.** `energy_kwh` in (0, 10000] with at most 3 decimals; prices in [0, 10] RON/kWh with at most 4; `window_minutes` 15–1440; `penalty_value` ≥ 0: at most 10 RON/kWh (4 decimals), 100 percent or 1000 RON flat (2 decimals); `max_total_kwh` ≥ `energy_kwh`; `target_segment` only with `segment`, `target_user_ids` only with `clients`, `target_zone` only with a `linked_incident_id` and equal to that incident site's zone. Failures are 422 `invalid_offer_terms` listing every problem; drafts may have a past expiry, publishing may not. Previews warn when a consume price is above the default import tariff, an export price is below the default export tariff, any targeted site would be worse off than with its own contract, the maximum penalty exceeds the block's value, the window is shorter than 30 minutes, or targeted sites cannot measure the needed flow.
+
+**Targeting.** The audience is the set of (client, site) pairs in the offer's area that match. `all`: every client site in the area. `segment=prosumers`: sites with `pv_power` capability and a site profile with `installed_kwp` > 0 (or no profile); `segment=consumers`: sites without PV capability. `clients`: only the hand-picked clients. `target_min_kwp` keeps sites whose `site_profiles.installed_kwp` is at least the value (sites without a profile are excluded). `target_zone` keeps sites in that profile zone. Each acceptance is for one eligible site; `site_id` may be omitted when the client has exactly one.
+
+**Acceptance** runs in one `BEGIN IMMEDIATE` transaction. The offer must be `available` and unexpired (409 `offer_unavailable`); untargeted callers and drafts get 404. The site must be eligible (422 `site_required` / `site_not_eligible`), have a linked meter (422 `meter_required`) and measure `grid_export` for export offers (422 `export_meter_required`) or `grid_import` for consume offers (422 `import_meter_required`). A client may run at most `offer_max_active_per_client` (default 3) offers at once (409 `too_many_active_offers`); `max_takers` and `max_total_kwh` cap the offer (409 `offer_full`). A second acceptance by the same client is 409 `already_accepted`, but repeating the same `Idempotency-Key` returns the original acceptance (a key reused for another offer is 409 `idempotency_key_reused`). The reference price is snapshotted: the site's saved contract import price (consume) or export price (export), otherwise the default tariff from `backend/fixtures/site_profiles.json` (1.30 / 0.55 RON/kWh), with `reference_price_source` `contract` or `default_tariff`. The window starts at acceptance and lasts `window_minutes`. Terms are copied onto the acceptance, and offers cannot be edited once accepted.
+
+**Metering.** Consume offers measure `grid_import`, export offers `grid_export`, from the site's stored telemetry (the designated energy stream). Energy is kW × the overlapped hours of each interval with the window (uniform power within an interval); only `available` readings count. When several offers of the same type overlap on one site, every time slice goes FIFO to the earliest-accepted (`accepted_at`, then id) unfilled offer covering it; energy left once every covering offer is full is `excess` on the earliest covering offer. Excess is settled at the normal tariff outside this feature and is never charged here. `coverage_ratio` is the share of the window covered by intervals that report the metric. Progress is computed on every read with the same attribution, and `status` becomes `active` once any energy is attributed.
+
+**Settlement** is idempotent. A user offer settles when its block is fully delivered, or once `window_end + offer_settlement_grace_minutes` (default 60) has passed so late meter data still counts. One transaction guarded by `status IN ('accepted','active')` and `UNIQUE(user_offer_id)` writes the ledger row, the counter and the notification, so retries, restarts and concurrent workers settle once. Settled offers keep their credited energy when overlapping offers are re-attributed later. Outcomes: `completed` (fulfilled = energy), `partial`, `expired_unfulfilled` (nothing delivered) or `cancelled`.
+
+- `fulfilled = min(metered, energy_kwh)`, `unfulfilled = energy_kwh − fulfilled`, metered rounded half-up to 3 decimals first.
+- Penalty: `per_unfulfilled_kwh` = unfulfilled × value; `percent_of_unfulfilled_value` = unfulfilled × offer price × value / 100; `flat` = value if anything is unfulfilled.
+- The penalty is waived (`penalty_waived_reason`) when `coverage_ratio < 0.8` (`meter_data_incomplete`: a missing or offline meter is never the client's fault) or when the manager cancels the offer during the window (`cancelled_by_distributor`; the window closes at cancellation and the energy delivered so far settles immediately). `penalty_before_waiver_bani` keeps the waived amount.
+- Consume: `amount = fulfilled × offer price + penalty`, charged (`direction=charge`); `savings = fulfilled × (reference − offer price) − penalty`.
+- Export: `amount = fulfilled × offer price − penalty`, credited (`direction=credit`, may be negative); `gain = fulfilled × (offer price − reference) − penalty`, stored as `savings_bani`.
+- Savings and gains may be negative and are never clamped.
+
+**Money and time.** Calculations use `decimal.Decimal`. Prices and kWh are stored and returned as decimal strings ("0.55", "10"); money is integer bani (1 RON = 100 bani) in `*_bani` fields, rounded half-up (away from zero) once per stored amount, so `amount_bani` can differ by 1 ban from `energy_value_bani ± penalty_bani`. All timestamps are UTC ISO 8601; the frontend displays Europe/Bucharest, and "this month" uses the Bucharest calendar month of `settled_at`. Every offer the client sees carries its penalty terms both as fields and as plain-language `penalty_rule_text`/`terms_text`, including the maximum penalty.
+
+**Worker.** Each pass marks offers past `offer_expires_at` as `expired`, updates progress, sends the 30- and 10-minute reminders once each (the 30-minute one only for windows longer than 30 minutes) and settles what is due. It runs inside the app as a background thread every `offer_worker_interval_seconds` (30) unless `SOLAR_OFFER_WORKER=false`, and from the command line. All state lives in the database, so restarting mid-window is safe.
+
+```sh
+.venv/bin/python -m backend offers-worker            # loop; --once for one pass, --interval 30
+.venv/bin/python -m backend settle-offers --now 2026-11-20T12:00:00Z
+.venv/bin/python -m backend reconcile-savings        # recompute counters from the ledger; --check reports only
+```
+
+**Demo meter data.** The seeded telemetry is on the fixed July 2026 replay clock, so no meter data arrives during a live demo. After a client accepts, ingest SYNTHETIC 15-minute readings for the elapsed part of the window through the normal `ingest()` path (`received_at` = now, only ended intervals):
+
+```sh
+.venv/bin/python -m backend simulate-offer-meter <user_offer_id> --fraction 0.8 --coverage 1.0
+```
+
+The attributed energy then reaches about `fraction × energy_kwh` (re-running tops up; existing intervals are never rewritten). `--coverage 0.5` reports the metric as missing in half of the new intervals to demonstrate the incomplete-data waiver. These readings are newer than the replay clock, so the site's freshness may show `future`. `seed-demo` adds, idempotently and without acceptances, two published offers by `supervisor` in area `north` (`demo-offer-north-consume`: 10 kWh at 0.55 RON/kWh within 2 hours, 0.30 RON per kWh not used; `demo-offer-north-export`: 10 kWh at 0.70 RON/kWh within 2 hours, 20% of the undelivered value) expiring 7 days after seeding, and the draft `demo-offer-north-draft`. Delete the local database and seed again for fresh expiries.
+
 ## Frontend API
 
 | Method and path | Response |
@@ -312,6 +381,7 @@ Use a matching hostname for browser and API (`localhost` with `localhost`, or `1
 | `SOLAR_ALLOWED_ORIGINS` | Explicit localhost/127.0.0.1 frontend origins on ports 5173 and 5174 |
 | `SOLAR_DEMO_PASSWORD` | Unset; seed generates random account passwords |
 | `SOLAR_ACCOUNT_PASSWORD` | Unset; account creation prompts locally |
+| `SOLAR_OFFER_WORKER` | `true`; runs the Power Block Offers worker inside the app (set `false` when running `offers-worker` separately) |
 
 Set secure cookies and HTTPS before non-loopback session use. Allowed origins are comma-separated exact origins, not a wildcard. Passwords use salted scrypt, session tokens are stored hashed, login attempts are rate-limited, and state changes require CSRF protection. Requests are bounded to 256 KiB. Accepted/rejected ingestion, login/logout and local provisioning produce audit entries without passwords or session secrets.
 

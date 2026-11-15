@@ -23,6 +23,16 @@ import type {
   OpsMap,
   RevenueView,
   TeamsView,
+  AuditEntry,
+  ClientOffer,
+  ManagerClient,
+  ManagerOffer,
+  ManagerOfferDetail,
+  NotificationList,
+  OfferDraft,
+  OfferPreview,
+  SavingsSummary,
+  UserOffer,
 } from "./index";
 
 export class SolarApiError extends Error {
@@ -231,10 +241,97 @@ export class SolarClient {
     return this.request("/api/v1/ops/capacity", { signal });
   }
 
+  /** Power Block Offers, manager (supervisor) only; scoped to the manager's areas. */
+  managerOffers(status?: ManagerOffer["status"], signal?: AbortSignal): Promise<ManagerOffer[]> {
+    const query = status ? `?${new URLSearchParams({ status })}` : "";
+    return this.request(`/api/v1/manager/offers${query}`, { signal });
+  }
+
+  managerOffer(offerId: string, signal?: AbortSignal): Promise<ManagerOfferDetail> {
+    return this.request(`/api/v1/manager/offers/${encodeURIComponent(offerId)}`, { signal });
+  }
+
+  /** Creates a draft (201). kWh and prices are decimal strings, e.g. "10" and "0.55". */
+  createOffer(draft: OfferDraft): Promise<ManagerOfferDetail> {
+    return this.write("/api/v1/manager/offers", draft);
+  }
+
+  /** Replaces the terms; 409 offer_locked once any client has accepted. */
+  updateOffer(offerId: string, draft: OfferDraft): Promise<ManagerOfferDetail> {
+    return this.write(`/api/v1/manager/offers/${encodeURIComponent(offerId)}`, draft);
+  }
+
+  /** Validates terms and audience without saving anything. */
+  previewOfferDraft(draft: OfferDraft): Promise<OfferPreview> {
+    return this.write("/api/v1/manager/offers/preview", draft);
+  }
+
+  previewOffer(offerId: string, signal?: AbortSignal): Promise<OfferPreview> {
+    return this.request(`/api/v1/manager/offers/${encodeURIComponent(offerId)}/preview`, { signal });
+  }
+
+  publishOffer(offerId: string): Promise<ManagerOfferDetail> {
+    return this.write(`/api/v1/manager/offers/${encodeURIComponent(offerId)}/publish`, {});
+  }
+
+  /** Running windows close now and settle what was delivered, with the penalty waived. */
+  cancelOffer(offerId: string): Promise<ManagerOfferDetail> {
+    return this.write(`/api/v1/manager/offers/${encodeURIComponent(offerId)}/cancel`, {});
+  }
+
+  offerAudit(offerId: string, signal?: AbortSignal): Promise<AuditEntry[]> {
+    return this.request(`/api/v1/manager/offers/${encodeURIComponent(offerId)}/audit`, { signal });
+  }
+
+  /** Clients with sites in the manager's areas, for hand-picked targeting. */
+  offerClients(areaId?: string, signal?: AbortSignal): Promise<ManagerClient[]> {
+    const query = areaId ? `?${new URLSearchParams({ area_id: areaId })}` : "";
+    return this.request(`/api/v1/manager/clients${query}`, { signal });
+  }
+
+  /** Customer only: open offers targeted at one of the caller's sites, not yet accepted. */
+  offers(signal?: AbortSignal): Promise<ClientOffer[]> {
+    return this.request("/api/v1/offers", { signal });
+  }
+
+  /**
+   * Customer only. Pass a stable idempotencyKey (e.g. crypto.randomUUID() per click) so a
+   * retried request returns the original acceptance instead of 409 already_accepted.
+   */
+  acceptOffer(offerId: string, siteId?: string, idempotencyKey?: string): Promise<UserOffer> {
+    return this.write(
+      `/api/v1/offers/${encodeURIComponent(offerId)}/accept`,
+      siteId ? { site_id: siteId } : {},
+      idempotencyKey ? { "Idempotency-Key": idempotencyKey } : undefined,
+    );
+  }
+
+  /** Progress (metered_kwh, remaining_kwh, coverage_ratio) is computed live on every read. */
+  myOffers(status: "active" | "history" | "all" = "all", signal?: AbortSignal): Promise<UserOffer[]> {
+    return this.request(`/api/v1/offers/mine?${new URLSearchParams({ status })}`, { signal });
+  }
+
+  /** Savings/Earnings counter; money is integer bani (divide by 100 for RON). */
+  offerSavings(signal?: AbortSignal): Promise<SavingsSummary> {
+    return this.request("/api/v1/offers/savings", { signal });
+  }
+
+  notifications(unread = false, signal?: AbortSignal): Promise<NotificationList> {
+    return this.request(`/api/v1/notifications?${new URLSearchParams({ unread: String(unread) })}`, { signal });
+  }
+
+  markNotificationRead(notificationId: string): Promise<NotificationList> {
+    return this.write(`/api/v1/notifications/${encodeURIComponent(notificationId)}/read`, {});
+  }
+
+  markAllNotificationsRead(): Promise<NotificationList> {
+    return this.write("/api/v1/notifications/read-all", {});
+  }
+
   /** State changes need the session's CSRF token; restore it after a page reload. */
-  private async write<T>(path: string, body: unknown): Promise<T> {
+  private async write<T>(path: string, body: unknown, headers?: Record<string, string>): Promise<T> {
     if (!this.csrfToken) await this.me();
-    return this.request<T>(path, { method: "POST", body: JSON.stringify(body) });
+    return this.request<T>(path, { method: "POST", body: JSON.stringify(body), headers });
   }
 
   private providerHistory<T>(siteId: string, kind: "observations" | "frames", options: ProviderHistoryQuery, signal?: AbortSignal): Promise<T> {

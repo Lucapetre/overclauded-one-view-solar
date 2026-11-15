@@ -7,6 +7,7 @@ from pathlib import Path
 from backend.db import Database, stamp
 from backend.ingestion import ingest
 from backend.models import Metric
+from backend.offers import publish
 from backend.ops import open_incident, profile_source
 from backend.security import hash_password
 
@@ -183,6 +184,90 @@ def seed_operations(connection):
         )
 
 
+# Power Block Offers by the supervisor in area north: two published, one draft.
+DEMO_OFFERS = (
+    (
+        "demo-offer-north-consume",
+        True,
+        (
+            "consume",
+            "Midday solar surplus",
+            "10",
+            "0.55",
+            120,
+            "per_unfulfilled_kwh",
+            "0.3",
+        ),
+    ),
+    (
+        "demo-offer-north-export",
+        True,
+        (
+            "export",
+            "Evening peak support",
+            "10",
+            "0.7",
+            120,
+            "percent_of_unfulfilled_value",
+            "20",
+        ),
+    ),
+    (
+        "demo-offer-north-draft",
+        False,
+        ("consume", "Weekend load shift", "5", "0.45", 60, "flat", "5"),
+    ),
+)
+OFFER_FIELDS = (
+    "type",
+    "title",
+    "energy_kwh",
+    "offer_price_ron_per_kwh",
+    "window_minutes",
+    "penalty_type",
+    "penalty_value",
+)
+
+
+def seed_offers(database: Database, connection):
+    """Demo offers expiring 7 days after seeding (wall clock). Idempotent; no acceptances."""
+    now = datetime.now(UTC)
+    for offer_id, published, terms in DEMO_OFFERS:
+        offer = dict(zip(OFFER_FIELDS, terms, strict=True)) | {
+            "offer_id": offer_id,
+            "offer_expires_at": stamp(now + timedelta(days=7)),
+            "area_id": "north",
+            "status": "draft",
+            "target_mode": "all",
+            "created_by": "supervisor",
+            "created_at": stamp(now),
+            "updated_at": stamp(now),
+        }
+        columns = list(offer)
+        if not connection.execute(
+            f"INSERT OR IGNORE INTO offers({','.join(columns)}) "
+            f"SELECT {','.join('?' * len(columns))} "
+            "WHERE EXISTS (SELECT 1 FROM users WHERE user_id='supervisor')",
+            [offer[column] for column in columns],
+        ).rowcount:
+            continue
+        database.audit(
+            connection,
+            "supervisor",
+            "offer.created",
+            offer_id,
+            "seed-demo",
+            {"seed": True},
+        )
+        if published:
+            offer |= {
+                "target_segment": None,
+                "target_min_kwp": None,
+                "target_zone": None,
+            }
+            publish(database, connection, offer, "supervisor", "seed-demo", now)
+
+
 def seed_demo(database: Database, password: str | None = None) -> dict[str, str]:
     """Idempotent, explicitly synthetic demo. Existing passwords are never reset."""
     database.migrate()
@@ -291,6 +376,7 @@ def seed_demo(database: Database, password: str | None = None) -> dict[str, str]
             "INSERT OR IGNORE INTO settings VALUES ('replay_at',?)", (stamp(REPLAY_AT),)
         )
         seed_operations(connection)
+        seed_offers(database, connection)
     for area in ("north", "central", "south"):
         for number in range(1, 9):
             site_id = f"{area}-{number:02d}"

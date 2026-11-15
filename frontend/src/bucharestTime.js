@@ -125,3 +125,11 @@ export function meetingLabel(startIso, endIso) {
     ? `${dayFormat.format(a)}, ${clock(s)}–${clock(e)} (Bucharest time)`
     : `${dayFormat.format(a)}, ${clock(s)} – ${dayFormat.format(b)}, ${clock(e)} (Bucharest time)`;
 }
+
+/** UTC instant → Bucharest wall-clock { date: "YYYY-MM-DD", time: "HH:MM" }, or null. */
+export function bucharestParts(value) {
+  const ms = value instanceof Date ? value.getTime() : Date.parse(value);
+  if (!Number.isFinite(ms)) return null;
+  const p = wallParts(ms);
+  return { date: dateOf(p), time: clock(p) };
+}

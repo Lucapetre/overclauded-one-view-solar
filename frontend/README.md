@@ -53,10 +53,10 @@ Menus by role (first entry is the landing page):
 
 | Role | Pages |
 | --- | --- |
-| Supervisor (overall or area manager; the server scopes the data) | Area Radar, Incidents, Teams, Revenue, Sites, History, Account |
+| Supervisor (overall or area manager; the server scopes the data) | Area Radar, Incidents, Teams, Revenue, Offers, Sites, History, Account |
 | Dispatcher | Area Radar, Incidents, Teams, Requests, Sites, History, Account |
 | Technician | Incidents, Requests, Sites, History, Account |
-| Customer | Home, History, Support, Learn, Account |
+| Customer | Home, Offers, History, Support, Learn, Account |
 
 On phones the bottom bar shows four pages plus **More** (opens the full menu) when a role has more than five.
 
@@ -66,6 +66,17 @@ On phones the bottom bar shows four pages plus **More** (opens the full menu) wh
 - **Revenue** (supervisor): the server's monthly estimate and basis sentence; no money is recomputed in the browser.
 - **Requests** (dispatcher, technician): attached videos play inline, booked meetings are shown, and each request links to its incident (and back).
 - Views poll every five seconds; unchanged responses keep their references, so the map is not rebuilt. 401 signs out; a 403/404 is shown as a message and stops that view's polling.
+
+## Power Block Offers (connected app)
+
+Time-limited offers to use or feed in a block of energy at a set price, with a penalty on the undelivered part (backend rules in the root `README.md`). All prices and settlements are synthetic. Files: `src/offersClient.jsx` (customer page), `src/offersManager.jsx` (manager area), `src/offersSavings.jsx` (counter), `src/notifications.jsx` (bell), `src/offersShared.jsx` (polling hook, dialog, count-up), `src/offersLogic.js` and `src/money.js` (pure, unit-tested), `src/offersText.js` (strings), `src/offers.css`. Both pages are lazy-loaded chunks.
+
+- **Customer Offers page** (after Home): the Savings/Earnings counter; **Running now** cards with metered vs block progress, a one-second countdown to the window end (then "Waiting for final meter data (up to 60 min) before settling"), the server's projected penalty, the rule text and a "Meter data delayed" note when more than 30 minutes of the elapsed window have no reading; **Available offers** with type, block, price, window, closing time, capacity and the penalty rule and maximum penalty always visible; **History** with outcome, fulfilled vs block, penalty (or "Waived" and why), charge/credit and saving. Progress refetches every 30 s and on window focus.
+- **Acceptance screen**: the server's `terms_text`, price, window ("starts when you accept … ends at"), penalty rule and maximum penalty, the reference price and its source, and the saving if fully delivered — negative values are said plainly. A site picker when several sites are eligible (sites without a meter or export measurement are explained and cannot be chosen), an unticked "I understand the penalty" checkbox, Cancel as prominent as Accept, no timers. One `Idempotency-Key` per opened screen, reused on retry; API error codes map to plain sentences and stale-list codes refresh the list.
+- **Savings/Earnings counter** on Home (below the source banner) and on the Offers page: "You've saved/earned X RON", or "Your offers cost you X RON so far" (never clamped), with this month, lifetime, penalties paid and use/feed-in split. When a poll shows more settled offers, the number counts up from the old total (requestAnimationFrame; instant with `prefers-reduced-motion`) with a short highlight and a polite live announcement.
+- **Manager Offers area** (supervisor, after Revenue): a status-filtered list with audience/targeted, outcomes, kWh, penalties, charges/payouts and client savings plus a totals row; a builder (type, title, area from `/areas`, kWh, price, 30/60/120/240-minute or custom window, penalty type and value with an instant plain-language rule, Bucharest-time expiry converted to UTC, all/segment(+min kWp)/hand-picked clients with search, optional limits, an optional open incident in the area with "target only the affected zone") and a 500 ms debounced server preview (audience, sample clients, errors, warnings, terms and amounts). Save draft, Publish (confirmation repeats the server preview; disabled while there are errors) and Cancel offer (confirmation). Locked or closed offers cannot be edited and say why. Offer detail shows terms, stats, takers and the audit log with changed fields, refreshed every 15 s.
+- **Notifications bell** (every role): unread badge (polled every 30 s and on focus), a list with title, body and Bucharest time; clicking marks it read and opens the Offers page with that offer, running card or history row highlighted. "Mark all as read"; Escape and outside clicks close it and focus returns to the bell.
+- **Money and text**: amounts are the server's integer bani, shown as `1,234.50 RON` / `−3.20 RON` with `formatRon` (`Intl.NumberFormat`, exact BigInt conversion; floats are refused). kWh and prices stay decimal strings (`formatKwh`, `formatPrice`, BigInt decimal helpers); the builder sends decimal strings only. Every new user-facing string is in `src/offersText.js` (`t(id, vars)`, plural-aware `tn`), ready for translation. Times use Europe/Bucharest.
 
 ## Staff features (workflow demo)
 

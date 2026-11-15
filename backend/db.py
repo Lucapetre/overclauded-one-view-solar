@@ -49,10 +49,21 @@ class Database:
                         + "');\nCOMMIT;"
                     )
 
-    def audit(self, connection, actor: str, action: str, subject: str, request_id: str):
+    def audit(
+        self,
+        connection,
+        actor: str,
+        action: str,
+        subject: str,
+        request_id: str,
+        detail: dict | str | None = None,
+    ):
+        if isinstance(detail, dict):
+            detail = json.dumps(detail, sort_keys=True, separators=(",", ":"))
         connection.execute(
-            "INSERT INTO audit(actor,action,subject,received_at,request_id) VALUES (?,?,?,?,?)",
-            (actor, action, subject, stamp(), request_id),
+            "INSERT INTO audit(actor,action,subject,received_at,request_id,detail) "
+            "VALUES (?,?,?,?,?,?)",
+            (actor, action, subject, stamp(), request_id, detail),
         )
 
 

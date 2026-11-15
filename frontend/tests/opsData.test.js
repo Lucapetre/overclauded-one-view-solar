@@ -27,6 +27,7 @@ test("menus follow the product owner's role decisions", () => {
     "Incidents",
     "Teams",
     "Revenue",
+    "Offers",
     "Sites",
     "History",
     "Account",
@@ -49,6 +50,7 @@ test("menus follow the product owner's role decisions", () => {
   ]);
   assert.deepEqual(pagesFor("customer"), [
     "Home",
+    "Offers",
     "History",
     "Support",
     "Learn",
@@ -73,6 +75,10 @@ test("bottom navigation caps long menus with a More entry", () => {
   assert.equal(long.more, true);
   assert.equal(long.moreActive, true);
   assert.equal(bottomNav(pagesFor("supervisor"), "Teams").moreActive, false);
+  // Customers: Offers sits right after Home on phones; the rest goes under More.
+  const customer = bottomNav(pagesFor("customer"), "Learn");
+  assert.deepEqual(customer.items, ["Home", "Offers", "History", "Support"]);
+  assert.equal(customer.moreActive, true);
 });
 
 const mapSite = (extra) => ({

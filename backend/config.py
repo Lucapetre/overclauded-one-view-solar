@@ -1,6 +1,12 @@
 import os
+from collections.abc import Callable
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from pathlib import Path
+
+
+def utc_now() -> datetime:
+    return datetime.now(UTC)
 
 
 @dataclass(frozen=True)
@@ -41,3 +47,14 @@ class Settings:
     session_hours: int = 8
     max_request_bytes: int = 262144
     max_media_bytes: int = 30 * 1024 * 1024
+    # Power Block Offers. The in-app worker settles offers in a background thread.
+    offer_worker: bool = field(
+        default_factory=lambda: (
+            os.getenv("SOLAR_OFFER_WORKER", "true").lower() == "true"
+        )
+    )
+    offer_worker_interval_seconds: int = 30
+    offer_settlement_grace_minutes: int = 60
+    offer_max_active_per_client: int = 3
+    # Injectable UTC clock for acceptance and settlement (tests and demos).
+    clock: Callable[[], datetime] = utc_now

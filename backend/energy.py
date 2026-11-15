@@ -251,6 +251,18 @@ def aggregate(
     )
 
 
+def records_between(
+    connection, site_id: str, start: datetime, end: datetime, limit: int | None = None
+) -> list[TelemetryRecord]:
+    """Validated records of the site's stored stream that overlap [start, end)."""
+    rows = connection.execute(
+        "SELECT payload FROM telemetry WHERE site_id=? AND interval_start<? AND interval_end>? "
+        "ORDER BY interval_start" + (" LIMIT ?" if limit else ""),
+        (site_id, stamp(end), stamp(start), *((limit,) if limit else ())),
+    ).fetchall()
+    return [TelemetryRecord.model_validate_json(row["payload"]) for row in rows]
+
+
 def history(
     connection, site_row, start: datetime, end: datetime, resolution: str
 ) -> EnergyHistory:
@@ -261,18 +273,13 @@ def history(
             "Use a positive time range of at most 31 elapsed days",
         )
     site = site_from_row(site_row)
-    rows = connection.execute(
-        "SELECT payload FROM telemetry WHERE site_id=? AND interval_start<? AND interval_end>? "
-        "ORDER BY interval_start LIMIT 10001",
-        (site.site_id, stamp(end), stamp(start)),
-    ).fetchall()
-    if len(rows) > 10000:
+    records = records_between(connection, site.site_id, start, end, limit=10001)
+    if len(records) > 10000:
         raise ApiError(
             422,
             "too_many_samples",
             "Narrow the requested time range (maximum 10000 source records)",
         )
-    records = [TelemetryRecord.model_validate_json(row["payload"]) for row in rows]
     if resolution == "raw":
         points = [
             aggregate(

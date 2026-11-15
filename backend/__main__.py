@@ -10,6 +10,12 @@ from backend.db import Database, stamp
 from backend.errors import ApiError
 from backend.ingestion import ingest
 from backend.models import SiteRegistration, utc
+from backend.offers_worker import (
+    reconcile,
+    run_worker,
+    settle_due,
+    simulate_offer_meter,
+)
 from backend.providers import import_provider_snapshot
 from backend.provisioning import (
     add_crew_member,
@@ -99,6 +105,36 @@ def main(argv=None):
     )
     member.add_argument("crew")
     member.add_argument("username")
+    worker = commands.add_parser(
+        "offers-worker",
+        help="Run the Power Block Offers settlement worker (progress, reminders, settlement)",
+    )
+    worker.add_argument(
+        "--once", action="store_true", help="Run a single pass and exit"
+    )
+    worker.add_argument(
+        "--interval", type=float, default=30.0, help="Seconds between passes"
+    )
+    settle = commands.add_parser(
+        "settle-offers",
+        help="Run one offers worker pass, optionally at an explicit time",
+    )
+    settle.add_argument("--now", help="Timezone-aware ISO 8601 time; defaults to now")
+    simulate = commands.add_parser(
+        "simulate-offer-meter",
+        help="SYNTHETIC demo meter data for the elapsed part of an accepted offer's window",
+    )
+    simulate.add_argument("user_offer_id")
+    simulate.add_argument("--fraction", type=float, default=0.8)
+    simulate.add_argument("--coverage", type=float, default=1.0)
+    savings = commands.add_parser(
+        "reconcile-savings",
+        help="Recompute savings counters from the settlement ledger and fix mismatches",
+    )
+    savings.add_argument("--username", help="Only this client account")
+    savings.add_argument(
+        "--check", action="store_true", help="Report only; exit 1 on mismatches"
+    )
     arguments = parser.parse_args(argv)
     settings = Settings()
     database = Database(settings.database_path)
@@ -218,6 +254,50 @@ def execute(arguments, database: Database, settings: Settings):
                 rejected += 1
                 print(json.dumps({"code": exc.code, "message": exc.message}))
         if rejected:
+            raise SystemExit(1)
+    elif arguments.command == "offers-worker":
+        print(
+            "Offers worker running; press Ctrl+C to stop"
+            if not arguments.once
+            else "Offers worker: one pass"
+        )
+        summary = run_worker(
+            database, settings, once=arguments.once, interval=arguments.interval
+        )
+        if summary is not None:
+            print(json.dumps(summary))
+    elif arguments.command == "settle-offers":
+        now = (
+            utc(datetime.fromisoformat(arguments.now.replace("Z", "+00:00")))
+            if arguments.now
+            else None
+        )
+        print(json.dumps(settle_due(database, now, settings)))
+    elif arguments.command == "simulate-offer-meter":
+        print(
+            json.dumps(
+                simulate_offer_meter(
+                    database,
+                    arguments.user_offer_id,
+                    arguments.fraction,
+                    arguments.coverage,
+                ),
+                indent=2,
+            )
+        )
+    elif arguments.command == "reconcile-savings":
+        user_id = None
+        if arguments.username:
+            with database.connect() as connection:
+                row = connection.execute(
+                    "SELECT user_id FROM users WHERE username=?", (arguments.username,)
+                ).fetchone()
+            if not row:
+                raise ApiError(404, "not_found", "User not found")
+            user_id = row["user_id"]
+        mismatches = reconcile(database, user_id, fix=not arguments.check)
+        print(json.dumps({"mismatches": mismatches, "fixed": not arguments.check}))
+        if mismatches and arguments.check:
             raise SystemExit(1)
     elif arguments.command == "replay-clock":
         timestamp = utc(

@@ -1,6 +1,25 @@
 {
   "components": {
     "schemas": {
+      "AcceptOffer": {
+        "additionalProperties": false,
+        "properties": {
+          "site_id": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id"
+          }
+        },
+        "title": "AcceptOffer",
+        "type": "object"
+      },
       "Area": {
         "additionalProperties": false,
         "properties": {
@@ -386,6 +405,54 @@
         "title": "AssignmentSummary",
         "type": "object"
       },
+      "AuditEntry": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "actor": {
+            "title": "Actor",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          },
+          "request_id": {
+            "title": "Request Id",
+            "type": "string"
+          },
+          "subject": {
+            "title": "Subject",
+            "type": "string"
+          }
+        },
+        "required": [
+          "actor",
+          "action",
+          "subject",
+          "detail",
+          "created_at",
+          "request_id"
+        ],
+        "title": "AuditEntry",
+        "type": "object"
+      },
       "AutoAssigned": {
         "additionalProperties": false,
         "properties": {
@@ -597,6 +664,213 @@
           "total_installed_kwp"
         ],
         "title": "CapacityView",
+        "type": "object"
+      },
+      "ClientOffer": {
+        "additionalProperties": false,
+        "properties": {
+          "area_id": {
+            "title": "Area Id",
+            "type": "string"
+          },
+          "block_value_bani": {
+            "title": "Block Value Bani",
+            "type": "integer"
+          },
+          "eligible_sites": {
+            "items": {
+              "$ref": "#/components/schemas/EligibleSite"
+            },
+            "title": "Eligible Sites",
+            "type": "array"
+          },
+          "energy_kwh": {
+            "title": "Energy Kwh",
+            "type": "string"
+          },
+          "max_penalty_bani": {
+            "title": "Max Penalty Bani",
+            "type": "integer"
+          },
+          "offer_expires_at": {
+            "format": "date-time",
+            "title": "Offer Expires At",
+            "type": "string"
+          },
+          "offer_id": {
+            "title": "Offer Id",
+            "type": "string"
+          },
+          "offer_price_ron_per_kwh": {
+            "title": "Offer Price Ron Per Kwh",
+            "type": "string"
+          },
+          "penalty_rule_text": {
+            "title": "Penalty Rule Text",
+            "type": "string"
+          },
+          "penalty_type": {
+            "enum": [
+              "per_unfulfilled_kwh",
+              "percent_of_unfulfilled_value",
+              "flat"
+            ],
+            "title": "Penalty Type",
+            "type": "string"
+          },
+          "penalty_value": {
+            "title": "Penalty Value",
+            "type": "string"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          },
+          "remaining_capacity": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RemainingCapacity"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "terms_text": {
+            "title": "Terms Text",
+            "type": "string"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "type": {
+            "enum": [
+              "consume",
+              "export"
+            ],
+            "title": "Type",
+            "type": "string"
+          },
+          "window_minutes": {
+            "title": "Window Minutes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "offer_id",
+          "type",
+          "title",
+          "area_id",
+          "energy_kwh",
+          "offer_price_ron_per_kwh",
+          "window_minutes",
+          "penalty_type",
+          "penalty_value",
+          "penalty_rule_text",
+          "terms_text",
+          "max_penalty_bani",
+          "block_value_bani",
+          "offer_expires_at",
+          "published_at",
+          "eligible_sites",
+          "remaining_capacity"
+        ],
+        "title": "ClientOffer",
+        "type": "object"
+      },
+      "ClientSite": {
+        "additionalProperties": false,
+        "properties": {
+          "alias": {
+            "title": "Alias",
+            "type": "string"
+          },
+          "area_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Area Id"
+          },
+          "export_capable": {
+            "title": "Export Capable",
+            "type": "boolean"
+          },
+          "has_meter": {
+            "title": "Has Meter",
+            "type": "boolean"
+          },
+          "has_pv": {
+            "title": "Has Pv",
+            "type": "boolean"
+          },
+          "installed_kwp": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Installed Kwp"
+          },
+          "segment": {
+            "enum": [
+              "consumers",
+              "prosumers"
+            ],
+            "title": "Segment",
+            "type": "string"
+          },
+          "site_id": {
+            "title": "Site Id",
+            "type": "string"
+          },
+          "zone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zone"
+          }
+        },
+        "required": [
+          "site_id",
+          "alias",
+          "area_id",
+          "zone",
+          "segment",
+          "installed_kwp",
+          "has_pv",
+          "export_capable",
+          "has_meter"
+        ],
+        "title": "ClientSite",
         "type": "object"
       },
       "Contract": {
@@ -873,6 +1147,54 @@
           "completed_by_tier"
         ],
         "title": "CrewReport",
+        "type": "object"
+      },
+      "EligibleSite": {
+        "additionalProperties": false,
+        "properties": {
+          "alias": {
+            "title": "Alias",
+            "type": "string"
+          },
+          "export_capable": {
+            "title": "Export Capable",
+            "type": "boolean"
+          },
+          "has_meter": {
+            "title": "Has Meter",
+            "type": "boolean"
+          },
+          "reference_price_ron_per_kwh": {
+            "title": "Reference Price Ron Per Kwh",
+            "type": "string"
+          },
+          "reference_price_source": {
+            "enum": [
+              "contract",
+              "default_tariff"
+            ],
+            "title": "Reference Price Source",
+            "type": "string"
+          },
+          "savings_if_completed_bani": {
+            "title": "Savings If Completed Bani",
+            "type": "integer"
+          },
+          "site_id": {
+            "title": "Site Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "site_id",
+          "alias",
+          "reference_price_ron_per_kwh",
+          "reference_price_source",
+          "export_capable",
+          "has_meter",
+          "savings_if_completed_bani"
+        ],
+        "title": "EligibleSite",
         "type": "object"
       },
       "EnergyHistory": {
@@ -1798,6 +2120,557 @@
         "title": "Login",
         "type": "object"
       },
+      "ManagerClient": {
+        "additionalProperties": false,
+        "properties": {
+          "sites": {
+            "items": {
+              "$ref": "#/components/schemas/ClientSite"
+            },
+            "title": "Sites",
+            "type": "array"
+          },
+          "user_id": {
+            "title": "User Id",
+            "type": "string"
+          },
+          "username": {
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id",
+          "username",
+          "sites"
+        ],
+        "title": "ManagerClient",
+        "type": "object"
+      },
+      "ManagerOffer": {
+        "additionalProperties": false,
+        "properties": {
+          "area_id": {
+            "title": "Area Id",
+            "type": "string"
+          },
+          "audience_size": {
+            "title": "Audience Size",
+            "type": "integer"
+          },
+          "block_value_bani": {
+            "title": "Block Value Bani",
+            "type": "integer"
+          },
+          "cancelled_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancelled At"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "created_by": {
+            "title": "Created By",
+            "type": "string"
+          },
+          "energy_kwh": {
+            "title": "Energy Kwh",
+            "type": "string"
+          },
+          "linked_incident_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Linked Incident Id"
+          },
+          "locked": {
+            "title": "Locked",
+            "type": "boolean"
+          },
+          "max_penalty_bani": {
+            "title": "Max Penalty Bani",
+            "type": "integer"
+          },
+          "max_takers": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Takers"
+          },
+          "max_total_kwh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Total Kwh"
+          },
+          "offer_expires_at": {
+            "format": "date-time",
+            "title": "Offer Expires At",
+            "type": "string"
+          },
+          "offer_id": {
+            "title": "Offer Id",
+            "type": "string"
+          },
+          "offer_price_ron_per_kwh": {
+            "title": "Offer Price Ron Per Kwh",
+            "type": "string"
+          },
+          "penalty_rule_text": {
+            "title": "Penalty Rule Text",
+            "type": "string"
+          },
+          "penalty_type": {
+            "enum": [
+              "per_unfulfilled_kwh",
+              "percent_of_unfulfilled_value",
+              "flat"
+            ],
+            "title": "Penalty Type",
+            "type": "string"
+          },
+          "penalty_value": {
+            "title": "Penalty Value",
+            "type": "string"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          },
+          "stats": {
+            "$ref": "#/components/schemas/OfferStats"
+          },
+          "status": {
+            "enum": [
+              "draft",
+              "available",
+              "cancelled",
+              "expired"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "target_min_kwp": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Min Kwp"
+          },
+          "target_mode": {
+            "enum": [
+              "all",
+              "segment",
+              "clients"
+            ],
+            "title": "Target Mode",
+            "type": "string"
+          },
+          "target_segment": {
+            "anyOf": [
+              {
+                "enum": [
+                  "consumers",
+                  "prosumers"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Segment"
+          },
+          "target_user_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Target User Ids",
+            "type": "array"
+          },
+          "target_zone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Zone"
+          },
+          "terms_text": {
+            "title": "Terms Text",
+            "type": "string"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "type": {
+            "enum": [
+              "consume",
+              "export"
+            ],
+            "title": "Type",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "window_minutes": {
+            "title": "Window Minutes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "offer_id",
+          "type",
+          "title",
+          "energy_kwh",
+          "offer_price_ron_per_kwh",
+          "window_minutes",
+          "penalty_type",
+          "penalty_value",
+          "offer_expires_at",
+          "area_id",
+          "status",
+          "target_mode",
+          "target_segment",
+          "target_min_kwp",
+          "target_zone",
+          "target_user_ids",
+          "max_takers",
+          "max_total_kwh",
+          "linked_incident_id",
+          "created_by",
+          "created_at",
+          "updated_at",
+          "published_at",
+          "cancelled_at",
+          "locked",
+          "penalty_rule_text",
+          "terms_text",
+          "max_penalty_bani",
+          "block_value_bani",
+          "audience_size",
+          "stats"
+        ],
+        "title": "ManagerOffer",
+        "type": "object"
+      },
+      "ManagerOfferDetail": {
+        "additionalProperties": false,
+        "properties": {
+          "area_id": {
+            "title": "Area Id",
+            "type": "string"
+          },
+          "audience_size": {
+            "title": "Audience Size",
+            "type": "integer"
+          },
+          "block_value_bani": {
+            "title": "Block Value Bani",
+            "type": "integer"
+          },
+          "cancelled_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancelled At"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "created_by": {
+            "title": "Created By",
+            "type": "string"
+          },
+          "energy_kwh": {
+            "title": "Energy Kwh",
+            "type": "string"
+          },
+          "linked_incident_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Linked Incident Id"
+          },
+          "locked": {
+            "title": "Locked",
+            "type": "boolean"
+          },
+          "max_penalty_bani": {
+            "title": "Max Penalty Bani",
+            "type": "integer"
+          },
+          "max_takers": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Takers"
+          },
+          "max_total_kwh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Total Kwh"
+          },
+          "offer_expires_at": {
+            "format": "date-time",
+            "title": "Offer Expires At",
+            "type": "string"
+          },
+          "offer_id": {
+            "title": "Offer Id",
+            "type": "string"
+          },
+          "offer_price_ron_per_kwh": {
+            "title": "Offer Price Ron Per Kwh",
+            "type": "string"
+          },
+          "penalty_rule_text": {
+            "title": "Penalty Rule Text",
+            "type": "string"
+          },
+          "penalty_type": {
+            "enum": [
+              "per_unfulfilled_kwh",
+              "percent_of_unfulfilled_value",
+              "flat"
+            ],
+            "title": "Penalty Type",
+            "type": "string"
+          },
+          "penalty_value": {
+            "title": "Penalty Value",
+            "type": "string"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          },
+          "stats": {
+            "$ref": "#/components/schemas/OfferStats"
+          },
+          "status": {
+            "enum": [
+              "draft",
+              "available",
+              "cancelled",
+              "expired"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "takers": {
+            "items": {
+              "$ref": "#/components/schemas/OfferTaker"
+            },
+            "title": "Takers",
+            "type": "array"
+          },
+          "target_min_kwp": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Min Kwp"
+          },
+          "target_mode": {
+            "enum": [
+              "all",
+              "segment",
+              "clients"
+            ],
+            "title": "Target Mode",
+            "type": "string"
+          },
+          "target_segment": {
+            "anyOf": [
+              {
+                "enum": [
+                  "consumers",
+                  "prosumers"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Segment"
+          },
+          "target_user_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Target User Ids",
+            "type": "array"
+          },
+          "target_zone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Zone"
+          },
+          "terms_text": {
+            "title": "Terms Text",
+            "type": "string"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "type": {
+            "enum": [
+              "consume",
+              "export"
+            ],
+            "title": "Type",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "window_minutes": {
+            "title": "Window Minutes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "offer_id",
+          "type",
+          "title",
+          "energy_kwh",
+          "offer_price_ron_per_kwh",
+          "window_minutes",
+          "penalty_type",
+          "penalty_value",
+          "offer_expires_at",
+          "area_id",
+          "status",
+          "target_mode",
+          "target_segment",
+          "target_min_kwp",
+          "target_zone",
+          "target_user_ids",
+          "max_takers",
+          "max_total_kwh",
+          "linked_incident_id",
+          "created_by",
+          "created_at",
+          "updated_at",
+          "published_at",
+          "cancelled_at",
+          "locked",
+          "penalty_rule_text",
+          "terms_text",
+          "max_penalty_bani",
+          "block_value_bani",
+          "audience_size",
+          "stats",
+          "takers"
+        ],
+        "title": "ManagerOfferDetail",
+        "type": "object"
+      },
       "MapCenter": {
         "additionalProperties": false,
         "properties": {
@@ -2049,6 +2922,504 @@
         "title": "Metric",
         "type": "string"
       },
+      "Notification": {
+        "additionalProperties": false,
+        "properties": {
+          "body": {
+            "title": "Body",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "offer_new",
+              "offer_accepted",
+              "offer_reminder_30",
+              "offer_reminder_10",
+              "offer_settled"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "link": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Link"
+          },
+          "notification_id": {
+            "title": "Notification Id",
+            "type": "string"
+          },
+          "read_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Read At"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "notification_id",
+          "kind",
+          "title",
+          "body",
+          "link",
+          "created_at",
+          "read_at"
+        ],
+        "title": "Notification",
+        "type": "object"
+      },
+      "NotificationList": {
+        "additionalProperties": false,
+        "properties": {
+          "notifications": {
+            "items": {
+              "$ref": "#/components/schemas/Notification"
+            },
+            "title": "Notifications",
+            "type": "array"
+          },
+          "unread_count": {
+            "title": "Unread Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "unread_count",
+          "notifications"
+        ],
+        "title": "NotificationList",
+        "type": "object"
+      },
+      "OfferDraft": {
+        "additionalProperties": false,
+        "properties": {
+          "area_id": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}$",
+            "title": "Area Id",
+            "type": "string"
+          },
+          "energy_kwh": {
+            "maxLength": 14,
+            "pattern": "^\\d{1,7}(\\.\\d{1,6})?$",
+            "title": "Energy Kwh",
+            "type": "string"
+          },
+          "linked_incident_id": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Linked Incident Id"
+          },
+          "max_takers": {
+            "anyOf": [
+              {
+                "maximum": 100000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Takers"
+          },
+          "max_total_kwh": {
+            "anyOf": [
+              {
+                "maxLength": 14,
+                "pattern": "^\\d{1,7}(\\.\\d{1,6})?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Total Kwh"
+          },
+          "offer_expires_at": {
+            "format": "date-time",
+            "title": "Offer Expires At",
+            "type": "string"
+          },
+          "offer_price_ron_per_kwh": {
+            "maxLength": 14,
+            "pattern": "^\\d{1,7}(\\.\\d{1,6})?$",
+            "title": "Offer Price Ron Per Kwh",
+            "type": "string"
+          },
+          "penalty_type": {
+            "enum": [
+              "per_unfulfilled_kwh",
+              "percent_of_unfulfilled_value",
+              "flat"
+            ],
+            "title": "Penalty Type",
+            "type": "string"
+          },
+          "penalty_value": {
+            "maxLength": 14,
+            "pattern": "^\\d{1,7}(\\.\\d{1,6})?$",
+            "title": "Penalty Value",
+            "type": "string"
+          },
+          "target_min_kwp": {
+            "anyOf": [
+              {
+                "maxLength": 14,
+                "pattern": "^\\d{1,7}(\\.\\d{1,6})?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Min Kwp"
+          },
+          "target_mode": {
+            "default": "all",
+            "enum": [
+              "all",
+              "segment",
+              "clients"
+            ],
+            "title": "Target Mode",
+            "type": "string"
+          },
+          "target_segment": {
+            "anyOf": [
+              {
+                "enum": [
+                  "consumers",
+                  "prosumers"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Segment"
+          },
+          "target_user_ids": {
+            "items": {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}$",
+              "type": "string"
+            },
+            "maxItems": 500,
+            "title": "Target User Ids",
+            "type": "array"
+          },
+          "target_zone": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Zone"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "type": {
+            "enum": [
+              "consume",
+              "export"
+            ],
+            "title": "Type",
+            "type": "string"
+          },
+          "window_minutes": {
+            "title": "Window Minutes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "type",
+          "energy_kwh",
+          "offer_price_ron_per_kwh",
+          "window_minutes",
+          "penalty_type",
+          "penalty_value",
+          "offer_expires_at",
+          "area_id"
+        ],
+        "title": "OfferDraft",
+        "type": "object"
+      },
+      "OfferPreview": {
+        "additionalProperties": false,
+        "properties": {
+          "audience_size": {
+            "title": "Audience Size",
+            "type": "integer"
+          },
+          "errors": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Errors",
+            "type": "array"
+          },
+          "sample_clients": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Sample Clients",
+            "type": "array"
+          },
+          "sites": {
+            "title": "Sites",
+            "type": "integer"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PreviewSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "audience_size",
+          "sites",
+          "sample_clients",
+          "warnings",
+          "errors",
+          "summary"
+        ],
+        "title": "OfferPreview",
+        "type": "object"
+      },
+      "OfferStats": {
+        "additionalProperties": false,
+        "properties": {
+          "accepted": {
+            "title": "Accepted",
+            "type": "integer"
+          },
+          "active": {
+            "title": "Active",
+            "type": "integer"
+          },
+          "cancelled": {
+            "title": "Cancelled",
+            "type": "integer"
+          },
+          "charges_bani": {
+            "title": "Charges Bani",
+            "type": "integer"
+          },
+          "client_savings_bani": {
+            "title": "Client Savings Bani",
+            "type": "integer"
+          },
+          "failed": {
+            "title": "Failed",
+            "type": "integer"
+          },
+          "fulfilled": {
+            "title": "Fulfilled",
+            "type": "integer"
+          },
+          "partial": {
+            "title": "Partial",
+            "type": "integer"
+          },
+          "payouts_bani": {
+            "title": "Payouts Bani",
+            "type": "integer"
+          },
+          "targeted": {
+            "title": "Targeted",
+            "type": "integer"
+          },
+          "total_kwh_committed": {
+            "title": "Total Kwh Committed",
+            "type": "string"
+          },
+          "total_kwh_delivered": {
+            "title": "Total Kwh Delivered",
+            "type": "string"
+          },
+          "total_penalties_bani": {
+            "title": "Total Penalties Bani",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "targeted",
+          "accepted",
+          "active",
+          "fulfilled",
+          "partial",
+          "failed",
+          "cancelled",
+          "total_kwh_committed",
+          "total_kwh_delivered",
+          "total_penalties_bani",
+          "charges_bani",
+          "payouts_bani",
+          "client_savings_bani"
+        ],
+        "title": "OfferStats",
+        "type": "object"
+      },
+      "OfferTaker": {
+        "additionalProperties": false,
+        "properties": {
+          "accepted_at": {
+            "format": "date-time",
+            "title": "Accepted At",
+            "type": "string"
+          },
+          "amount_bani": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Bani"
+          },
+          "coverage_ratio": {
+            "title": "Coverage Ratio",
+            "type": "number"
+          },
+          "fulfilled_kwh": {
+            "title": "Fulfilled Kwh",
+            "type": "string"
+          },
+          "metered_kwh": {
+            "title": "Metered Kwh",
+            "type": "string"
+          },
+          "penalty_bani": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Penalty Bani"
+          },
+          "savings_bani": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Savings Bani"
+          },
+          "site_alias": {
+            "title": "Site Alias",
+            "type": "string"
+          },
+          "site_id": {
+            "title": "Site Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "accepted",
+              "active",
+              "completed",
+              "partial",
+              "expired_unfulfilled",
+              "cancelled"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "user_offer_id": {
+            "title": "User Offer Id",
+            "type": "string"
+          },
+          "username": {
+            "title": "Username",
+            "type": "string"
+          },
+          "window_end": {
+            "format": "date-time",
+            "title": "Window End",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_offer_id",
+          "username",
+          "site_id",
+          "site_alias",
+          "status",
+          "accepted_at",
+          "window_end",
+          "metered_kwh",
+          "fulfilled_kwh",
+          "coverage_ratio",
+          "penalty_bani",
+          "amount_bani",
+          "savings_bani"
+        ],
+        "title": "OfferTaker",
+        "type": "object"
+      },
       "OpsMap": {
         "additionalProperties": false,
         "properties": {
@@ -2073,6 +3444,40 @@
           "sites"
         ],
         "title": "OpsMap",
+        "type": "object"
+      },
+      "PreviewSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "block_value_bani": {
+            "title": "Block Value Bani",
+            "type": "integer"
+          },
+          "max_client_value_bani": {
+            "title": "Max Client Value Bani",
+            "type": "integer"
+          },
+          "max_penalty_bani": {
+            "title": "Max Penalty Bani",
+            "type": "integer"
+          },
+          "penalty_rule_text": {
+            "title": "Penalty Rule Text",
+            "type": "string"
+          },
+          "terms_text": {
+            "title": "Terms Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "terms_text",
+          "penalty_rule_text",
+          "max_penalty_bani",
+          "block_value_bani",
+          "max_client_value_bani"
+        ],
+        "title": "PreviewSummary",
         "type": "object"
       },
       "ProviderFrame": {
@@ -2791,6 +4196,44 @@
         "title": "PublicProvenance",
         "type": "object"
       },
+      "RemainingCapacity": {
+        "additionalProperties": false,
+        "properties": {
+          "full": {
+            "title": "Full",
+            "type": "boolean"
+          },
+          "kwh_left": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kwh Left"
+          },
+          "takers_left": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Takers Left"
+          }
+        },
+        "required": [
+          "takers_left",
+          "kwh_left",
+          "full"
+        ],
+        "title": "RemainingCapacity",
+        "type": "object"
+      },
       "RequestType": {
         "additionalProperties": false,
         "properties": {
@@ -2921,6 +4364,72 @@
         "title": "RevenueView",
         "type": "object"
       },
+      "SavingsSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "consume_bani": {
+            "title": "Consume Bani",
+            "type": "integer"
+          },
+          "display_timezone": {
+            "const": "Europe/Bucharest",
+            "default": "Europe/Bucharest",
+            "title": "Display Timezone",
+            "type": "string"
+          },
+          "export_bani": {
+            "title": "Export Bani",
+            "type": "integer"
+          },
+          "last_settled_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Settled At"
+          },
+          "lifetime_bani": {
+            "title": "Lifetime Bani",
+            "type": "integer"
+          },
+          "penalties_paid_bani": {
+            "title": "Penalties Paid Bani",
+            "type": "integer"
+          },
+          "recent": {
+            "items": {
+              "$ref": "#/components/schemas/SettlementSummary"
+            },
+            "title": "Recent",
+            "type": "array"
+          },
+          "settled_count": {
+            "title": "Settled Count",
+            "type": "integer"
+          },
+          "this_month_bani": {
+            "title": "This Month Bani",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "lifetime_bani",
+          "this_month_bani",
+          "penalties_paid_bani",
+          "consume_bani",
+          "export_bani",
+          "settled_count",
+          "last_settled_at",
+          "recent"
+        ],
+        "title": "SavingsSummary",
+        "type": "object"
+      },
       "SegmentRevenue": {
         "additionalProperties": false,
         "properties": {
@@ -2982,6 +4491,194 @@
           "expires_at"
         ],
         "title": "SessionView",
+        "type": "object"
+      },
+      "SettlementSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "amount_bani": {
+            "title": "Amount Bani",
+            "type": "integer"
+          },
+          "direction": {
+            "enum": [
+              "charge",
+              "credit"
+            ],
+            "title": "Direction",
+            "type": "string"
+          },
+          "energy_kwh": {
+            "title": "Energy Kwh",
+            "type": "string"
+          },
+          "fulfilled_kwh": {
+            "title": "Fulfilled Kwh",
+            "type": "string"
+          },
+          "offer_id": {
+            "title": "Offer Id",
+            "type": "string"
+          },
+          "penalty_bani": {
+            "title": "Penalty Bani",
+            "type": "integer"
+          },
+          "savings_bani": {
+            "title": "Savings Bani",
+            "type": "integer"
+          },
+          "settled_at": {
+            "format": "date-time",
+            "title": "Settled At",
+            "type": "string"
+          },
+          "site_alias": {
+            "title": "Site Alias",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "accepted",
+              "active",
+              "completed",
+              "partial",
+              "expired_unfulfilled",
+              "cancelled"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "type": {
+            "enum": [
+              "consume",
+              "export"
+            ],
+            "title": "Type",
+            "type": "string"
+          },
+          "user_offer_id": {
+            "title": "User Offer Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_offer_id",
+          "offer_id",
+          "type",
+          "title",
+          "site_alias",
+          "status",
+          "energy_kwh",
+          "fulfilled_kwh",
+          "penalty_bani",
+          "amount_bani",
+          "direction",
+          "savings_bani",
+          "settled_at"
+        ],
+        "title": "SettlementSummary",
+        "type": "object"
+      },
+      "SettlementView": {
+        "additionalProperties": false,
+        "properties": {
+          "amount_bani": {
+            "title": "Amount Bani",
+            "type": "integer"
+          },
+          "coverage_ratio": {
+            "title": "Coverage Ratio",
+            "type": "number"
+          },
+          "direction": {
+            "enum": [
+              "charge",
+              "credit"
+            ],
+            "title": "Direction",
+            "type": "string"
+          },
+          "energy_value_bani": {
+            "title": "Energy Value Bani",
+            "type": "integer"
+          },
+          "excess_kwh": {
+            "title": "Excess Kwh",
+            "type": "string"
+          },
+          "fulfilled_kwh": {
+            "title": "Fulfilled Kwh",
+            "type": "string"
+          },
+          "metered_kwh": {
+            "title": "Metered Kwh",
+            "type": "string"
+          },
+          "penalty_bani": {
+            "title": "Penalty Bani",
+            "type": "integer"
+          },
+          "penalty_before_waiver_bani": {
+            "title": "Penalty Before Waiver Bani",
+            "type": "integer"
+          },
+          "penalty_waived_reason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "meter_data_incomplete",
+                  "cancelled_by_distributor"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Penalty Waived Reason"
+          },
+          "savings_bani": {
+            "title": "Savings Bani",
+            "type": "integer"
+          },
+          "settled_at": {
+            "format": "date-time",
+            "title": "Settled At",
+            "type": "string"
+          },
+          "unfulfilled_kwh": {
+            "title": "Unfulfilled Kwh",
+            "type": "string"
+          }
+        },
+        "required": [
+          "metered_kwh",
+          "fulfilled_kwh",
+          "unfulfilled_kwh",
+          "excess_kwh",
+          "coverage_ratio",
+          "penalty_before_waiver_bani",
+          "penalty_bani",
+          "penalty_waived_reason",
+          "energy_value_bani",
+          "amount_bani",
+          "direction",
+          "savings_bani",
+          "settled_at"
+        ],
+        "title": "SettlementView",
         "type": "object"
       },
       "Site": {
@@ -3530,6 +5227,190 @@
           "role"
         ],
         "title": "User",
+        "type": "object"
+      },
+      "UserOffer": {
+        "additionalProperties": false,
+        "properties": {
+          "accepted_at": {
+            "format": "date-time",
+            "title": "Accepted At",
+            "type": "string"
+          },
+          "cancelled_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancelled At"
+          },
+          "coverage_ratio": {
+            "title": "Coverage Ratio",
+            "type": "number"
+          },
+          "energy_kwh": {
+            "title": "Energy Kwh",
+            "type": "string"
+          },
+          "max_penalty_bani": {
+            "title": "Max Penalty Bani",
+            "type": "integer"
+          },
+          "metered_kwh": {
+            "title": "Metered Kwh",
+            "type": "string"
+          },
+          "offer_id": {
+            "title": "Offer Id",
+            "type": "string"
+          },
+          "offer_price_ron_per_kwh": {
+            "title": "Offer Price Ron Per Kwh",
+            "type": "string"
+          },
+          "penalty_rule_text": {
+            "title": "Penalty Rule Text",
+            "type": "string"
+          },
+          "penalty_type": {
+            "enum": [
+              "per_unfulfilled_kwh",
+              "percent_of_unfulfilled_value",
+              "flat"
+            ],
+            "title": "Penalty Type",
+            "type": "string"
+          },
+          "penalty_value": {
+            "title": "Penalty Value",
+            "type": "string"
+          },
+          "projected_penalty_bani": {
+            "title": "Projected Penalty Bani",
+            "type": "integer"
+          },
+          "reference_price_ron_per_kwh": {
+            "title": "Reference Price Ron Per Kwh",
+            "type": "string"
+          },
+          "reference_price_source": {
+            "enum": [
+              "contract",
+              "default_tariff"
+            ],
+            "title": "Reference Price Source",
+            "type": "string"
+          },
+          "remaining_kwh": {
+            "title": "Remaining Kwh",
+            "type": "string"
+          },
+          "settlement": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SettlementView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "site_alias": {
+            "title": "Site Alias",
+            "type": "string"
+          },
+          "site_id": {
+            "title": "Site Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "accepted",
+              "active",
+              "completed",
+              "partial",
+              "expired_unfulfilled",
+              "cancelled"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "terms_text": {
+            "title": "Terms Text",
+            "type": "string"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "type": {
+            "enum": [
+              "consume",
+              "export"
+            ],
+            "title": "Type",
+            "type": "string"
+          },
+          "user_offer_id": {
+            "title": "User Offer Id",
+            "type": "string"
+          },
+          "window_end": {
+            "format": "date-time",
+            "title": "Window End",
+            "type": "string"
+          },
+          "window_minutes": {
+            "title": "Window Minutes",
+            "type": "integer"
+          },
+          "window_start": {
+            "format": "date-time",
+            "title": "Window Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_offer_id",
+          "offer_id",
+          "type",
+          "title",
+          "site_id",
+          "site_alias",
+          "energy_kwh",
+          "offer_price_ron_per_kwh",
+          "reference_price_ron_per_kwh",
+          "reference_price_source",
+          "window_minutes",
+          "penalty_type",
+          "penalty_value",
+          "penalty_rule_text",
+          "terms_text",
+          "status",
+          "accepted_at",
+          "window_start",
+          "window_end",
+          "cancelled_at",
+          "metered_kwh",
+          "remaining_kwh",
+          "coverage_ratio",
+          "max_penalty_bani",
+          "projected_penalty_bani",
+          "settlement"
+        ],
+        "title": "UserOffer",
         "type": "object"
       }
     },
@@ -4282,6 +6163,1313 @@
         ]
       }
     },
+    "/api/v1/manager/clients": {
+      "get": {
+        "operationId": "offer_clients_api_v1_manager_clients_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "area_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 96,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Area Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ManagerClient"
+                  },
+                  "title": "Response Offer Clients Api V1 Manager Clients Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Request Entity Too Large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "summary": "Offer Clients",
+        "tags": [
+          "power offers"
+        ]
+      }
+    },
+    "/api/v1/manager/offers": {
+      "get": {
+        "operationId": "manager_offers_api_v1_manager_offers_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "draft",
+                    "available",
+                    "cancelled",
+                    "expired"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ManagerOffer"
+                  },
+                  "title": "Response Manager Offers Api V1 Manager Offers Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Request Entity Too Large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "summary": "Manager Offers",
+        "tags": [
+          "power offers"
+        ]
+      },
+      "post": {
+        "operationId": "new_offer_api_v1_manager_offers_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OfferDraft"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManagerOfferDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Request Entity Too Large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "summary": "New Offer",
+        "tags": [
+          "power offers"
+        ]
+      }
+    },
+    "/api/v1/manager/offers/preview": {
+      "post": {
+        "operationId": "preview_new_offer_api_v1_manager_offers_preview_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OfferDraft"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OfferPreview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Request Entity Too Large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "summary": "Preview New Offer",
+        "tags": [
+          "power offers"
+        ]
+      }
+    },
+    "/api/v1/manager/offers/{offer_id}": {
+      "get": {
+        "operationId": "manager_offer_api_v1_manager_offers__offer_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "offer_id",
+            "required": true,
+            "schema": {
+              "title": "Offer Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManagerOfferDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Request Entity Too Large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "summary": "Manager Offer",
+        "tags": [
+          "power offers"
+        ]
+      },
+      "post": {
+        "operationId": "edit_offer_api_v1_manager_offers__offer_id__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "offer_id",
+            "required": true,
+            "schema": {
+              "title": "Offer Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OfferDraft"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManagerOfferDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Request Entity Too Large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "summary": "Edit Offer",
+        "tags": [
+          "power offers"
+        ]
+      }
+    },
+    "/api/v1/manager/offers/{offer_id}/audit": {
+      "get": {
+        "operationId": "offer_audit_log_api_v1_manager_offers__offer_id__audit_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "offer_id",
+            "required": true,
+            "schema": {
+              "title": "Offer Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AuditEntry"
+                  },
+                  "title": "Response Offer Audit Log Api V1 Manager Offers  Offer Id  Audit Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Request Entity Too Large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "summary": "Offer Audit Log",
+        "tags": [
+          "power offers"
+        ]
+      }
+    },
+    "/api/v1/manager/offers/{offer_id}/cancel": {
+      "post": {
+        "operationId": "cancel_saved_offer_api_v1_manager_offers__offer_id__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "offer_id",
+            "required": true,
+            "schema": {
+              "title": "Offer Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManagerOfferDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Request Entity Too Large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "summary": "Cancel Saved Offer",
+        "tags": [
+          "power offers"
+        ]
+      }
+    },
+    "/api/v1/manager/offers/{offer_id}/preview": {
+      "get": {
+        "operationId": "preview_saved_offer_api_v1_manager_offers__offer_id__preview_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "offer_id",
+            "required": true,
+            "schema": {
+              "title": "Offer Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OfferPreview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Request Entity Too Large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "summary": "Preview Saved Offer",
+        "tags": [
+          "power offers"
+        ]
+      }
+    },
+    "/api/v1/manager/offers/{offer_id}/publish": {
+      "post": {
+        "operationId": "publish_saved_offer_api_v1_manager_offers__offer_id__publish_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "offer_id",
+            "required": true,
+            "schema": {
+              "title": "Offer Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManagerOfferDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Request Entity Too Large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "summary": "Publish Saved Offer",
+        "tags": [
+          "power offers"
+        ]
+      }
+    },
     "/api/v1/me": {
       "get": {
         "operationId": "me_api_v1_me_get",
@@ -4395,6 +7583,922 @@
         "summary": "Me",
         "tags": [
           "auth"
+        ]
+      }
+    },
+    "/api/v1/notifications": {
+      "get": {
+        "operationId": "notifications_api_v1_notifications_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "unread",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Unread",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Request Entity Too Large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "summary": "Notifications",
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/api/v1/notifications/read-all": {
+      "post": {
+        "operationId": "read_all_notifications_api_v1_notifications_read_all_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Request Entity Too Large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "summary": "Read All Notifications",
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/api/v1/notifications/{notification_id}/read": {
+      "post": {
+        "operationId": "read_notification_api_v1_notifications__notification_id__read_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "notification_id",
+            "required": true,
+            "schema": {
+              "title": "Notification Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Request Entity Too Large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "summary": "Read Notification",
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/api/v1/offers": {
+      "get": {
+        "operationId": "available_offers_api_v1_offers_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ClientOffer"
+                  },
+                  "title": "Response Available Offers Api V1 Offers Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Request Entity Too Large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "summary": "Available Offers",
+        "tags": [
+          "power offers"
+        ]
+      }
+    },
+    "/api/v1/offers/mine": {
+      "get": {
+        "operationId": "accepted_offers_api_v1_offers_mine_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "default": "all",
+              "enum": [
+                "active",
+                "history",
+                "all"
+              ],
+              "title": "Status",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/UserOffer"
+                  },
+                  "title": "Response Accepted Offers Api V1 Offers Mine Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Request Entity Too Large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "summary": "Accepted Offers",
+        "tags": [
+          "power offers"
+        ]
+      }
+    },
+    "/api/v1/offers/savings": {
+      "get": {
+        "operationId": "offer_savings_api_v1_offers_savings_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavingsSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Request Entity Too Large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "summary": "Offer Savings",
+        "tags": [
+          "power offers"
+        ]
+      }
+    },
+    "/api/v1/offers/{offer_id}/accept": {
+      "post": {
+        "operationId": "accept_api_v1_offers__offer_id__accept_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "offer_id",
+            "required": true,
+            "schema": {
+              "title": "Offer Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/AcceptOffer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserOffer"
+                }
+              }
+            },
+            "description": "Idempotent repeat"
+          },
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserOffer"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Request Entity Too Large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "summary": "Accept",
+        "tags": [
+          "power offers"
         ]
       }
     },

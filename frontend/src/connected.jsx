@@ -31,6 +31,7 @@ import {
   Tickets,
   Users,
   Coins,
+  Handshake,
 } from "lucide-react";
 import {
   SolarClient,
@@ -61,6 +62,10 @@ import {
   useEnergy,
 } from "./customer";
 import { FriendlyEnergy } from "./features";
+import { NotificationBell } from "./notifications";
+import { SavingsCounter } from "./offersSavings";
+import { notificationTarget } from "./offersLogic";
+import { t as offerText } from "./offersText";
 // Shared staff/support styles (e.g. .meeting-note) also used by customer pages.
 import "./ops.css";
 // Staff pages (and Leaflet) load only for operations accounts.
@@ -70,6 +75,13 @@ const RadarOps = lazyOps("RadarOps");
 const IncidentsPage = lazyOps("IncidentsPage");
 const TeamsPage = lazyOps("TeamsPage");
 const RevenuePage = lazyOps("RevenuePage");
+// Power Block Offers pages load on first visit.
+const OffersPage = lazy(() =>
+  import("./offersClient").then((module) => ({ default: module.OffersPage })),
+);
+const ManagerOffersPage = lazy(() =>
+  import("./offersManager").then((module) => ({ default: module.ManagerOffersPage })),
+);
 import { bottomNav, pagesFor } from "./opsData";
 import { words } from "./friendly";
 import { total } from "./periods";
@@ -87,6 +99,7 @@ const pageIcons = {
   Incidents: Tickets,
   Teams: Users,
   Revenue: Coins,
+  Offers: Handshake,
   Sites: House,
   History: BarChart3,
   Support: LifeBuoy,
@@ -276,6 +289,9 @@ export default function ConnectedApp() {
   const [incidentSite, setIncidentSite] = useState(null);
   const [incidentFocus, setIncidentFocus] = useState(null);
   const [requestFocus, setRequestFocus] = useState(null);
+  // Notification link → item to highlight on the Offers page.
+  const [offerFocus, setOfferFocus] = useState(null);
+  const [bellNudge, setBellNudge] = useState(0);
   const expire = useCallback((error) => {
     if (error instanceof SolarApiError && error.status === 401) {
       setSession(null);
@@ -297,6 +313,7 @@ export default function ConnectedApp() {
     setIncidentSite(null);
     setIncidentFocus(null);
     setRequestFocus(null);
+    setOfferFocus(null);
     setSession(value);
     setPage(pagesFor(value.user.role)[0]);
     const path = value.user.role === "customer" ? "/consumer" : "/ops";
@@ -456,12 +473,19 @@ export default function ConnectedApp() {
     scopeError || Object.values(records).some((item) => item.error),
   );
   const mobileNav = bottomNav(pages, active);
-  const opsPage = ["Incidents", "Teams", "Revenue", "Requests"].includes(active);
+  const opsPage = ["Incidents", "Teams", "Revenue", "Requests", "Offers"].includes(active);
   function navigate(next) {
     setPage(next);
     setMenu(false);
     if (next !== "Incidents") setIncidentSite(null);
     if (next !== "Requests") setRequestFocus(null);
+    if (next !== "Offers") setOfferFocus(null);
+  }
+  function openNotification(link) {
+    const target = notificationTarget(link, user.role);
+    if (!target || !pages.includes(target.page)) return;
+    navigate(target.page);
+    setOfferFocus(target.focus);
   }
   function selectSite(id) {
     if (!scope.sites.some((site) => site.site_id === id)) return;
@@ -562,6 +586,13 @@ export default function ConnectedApp() {
               <span />
               CONNECTED WORKSPACE
             </span>
+            <NotificationBell
+              api={api}
+              userId={user.user_id}
+              onError={expire}
+              onOpen={openNotification}
+              nudge={bellNudge}
+            />
             <button
               className="icon-btn"
               aria-label="Refresh data"
@@ -607,6 +638,10 @@ export default function ConnectedApp() {
                         ? "Crews and assignments"
                         : active === "Revenue"
                           ? "Estimated revenue"
+                    : active === "Offers"
+                      ? customer
+                        ? offerText("page.client.title")
+                        : offerText("page.manager.title")
                     : active === "Sites"
                       ? "Installation detail"
                       : active === "History"
@@ -629,6 +664,10 @@ export default function ConnectedApp() {
                       ? "Who is on which case, and which crews are free. Synthetic crews and assignments."
                       : active === "Revenue"
                         ? "A monthly estimate from synthetic billing profiles. Not invoices."
+                  : active === "Offers"
+                    ? customer
+                      ? offerText("page.client.lead")
+                      : offerText("page.manager.lead")
                         : active === "Requests"
                           ? "Customer requests in your scope, with their videos and booked meetings."
                   : active === "Learn"
@@ -665,7 +704,7 @@ export default function ConnectedApp() {
               Loading your authorized installations…
             </section>
           ) : !scope.sites.length &&
-            !["Account", "Learn", "Requests", "Incidents", "Teams", "Revenue"].includes(
+            !["Account", "Learn", "Requests", "Incidents", "Teams", "Revenue", "Offers"].includes(
               active,
             ) ? (
             <section className="card empty">
@@ -709,6 +748,8 @@ export default function ConnectedApp() {
                   accountType={accountType}
                   navigate={navigate}
                   onError={expire}
+                  userId={user.user_id}
+                  showOffers={pages.includes("Offers")}
                 />
               )}
               {active === "History" &&
@@ -762,6 +803,26 @@ export default function ConnectedApp() {
               )}
               {active === "Revenue" && (
                 <RevenuePage api={api} onError={expire} reload={reload} />
+              )}
+              {active === "Offers" && customer && (
+                <OffersPage
+                  api={api}
+                  user={user}
+                  onError={expire}
+                  focus={offerFocus}
+                  onFocusHandled={() => setOfferFocus(null)}
+                  onActivity={() => setBellNudge((value) => value + 1)}
+                />
+              )}
+              {active === "Offers" && user.role === "supervisor" && (
+                <ManagerOffersPage
+                  api={api}
+                  areas={scope.areas}
+                  onError={expire}
+                  reload={reload}
+                  focus={offerFocus}
+                  onFocusHandled={() => setOfferFocus(null)}
+                />
               )}
               {active === "Requests" && (
                 <StaffRequests
@@ -879,6 +940,8 @@ function SiteHome({
   accountType,
   navigate,
   onError,
+  userId,
+  showOffers,
 }) {
   const w = words(accountType);
   const today = useEnergy(api, site, record, "Today", onError);
@@ -908,6 +971,15 @@ function SiteHome({
         </div>
         <Status value={info.status} />
       </div>
+      {customer && showOffers && (
+        <SavingsCounter
+          api={api}
+          userId={userId}
+          onError={onError}
+          compact
+          onOpenOffers={() => navigate("Offers")}
+        />
+      )}
       <div className="home-grid">
         <section className="energy-hero">
           <div className="section-head">

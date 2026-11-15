@@ -23,6 +23,8 @@ def client(database):
         database_path=database.path,
         ingest_key="test-pipeline-key",
         media_dir=database.path.parent / "media",
+        # Deterministic tests call settle_due(database, now) themselves.
+        offer_worker=False,
     )
     with TestClient(create_app(settings)) as client:
         yield client
