@@ -18,3 +18,5 @@ build/side/*.sqlite-shm
 build/components/
 # Browser automation tool output (local only)
 .playwright-mcp/
+# stray pytest temp folders created with a mangled --basetemp
+ovs-tmp*/
