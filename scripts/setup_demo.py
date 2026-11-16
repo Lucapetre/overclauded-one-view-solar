@@ -47,6 +47,24 @@ FRIENDLY = [
 # Public demo password (synthetic local data only), the same one the classic demo shows.
 DEMO_PASSWORD = "SolarDemo2026!"
 
+# Bump when the generated demo data change, so start.bat rebuilds old workspaces.
+DEMO_DATA_VERSION = "2026-11-16.1"
+MARKER = "setup-complete.json"
+
+
+def status(workspace):
+    """0 = complete and current, 2 = not built yet, 3 = incomplete or outdated."""
+    if not workspace.exists() or not any(workspace.iterdir()):
+        return 2
+    marker = workspace / MARKER
+    if not marker.exists():
+        return 3
+    try:
+        version = json.loads(marker.read_text(encoding="utf-8")).get("version")
+    except ValueError:
+        return 3
+    return 0 if version == DEMO_DATA_VERSION else 3
+
 
 def apply_demo_password(database_path, credentials_path, password):
     sys.path.insert(0, str(ROOT))
@@ -86,8 +104,15 @@ def main(argv=None):
         action="store_true",
         help="Only reset every account in an existing workspace to the demo password",
     )
+    parser.add_argument(
+        "--status",
+        action="store_true",
+        help="Exit 0 if the workspace is complete and current, 2 if missing, 3 if stale",
+    )
     args = parser.parse_args(argv)
     workspace = args.workspace.resolve()
+    if args.status:
+        sys.exit(status(workspace))
     database = workspace / "api.sqlite3"
     credentials = workspace / "demo-credentials.json"
     temp = workspace.parent / (workspace.name + "-tmp")
@@ -149,6 +174,9 @@ def main(argv=None):
             f"| Victor, area manager (Ilfov) | `victor` | `{creds['victor']}` | /ops |"
         )
     (workspace / "LOGINS.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    (workspace / MARKER).write_text(
+        json.dumps({"version": DEMO_DATA_VERSION}) + "\n", encoding="utf-8"
+    )
 
     print(
         "\nDone. Start the app (laptop only):\n"

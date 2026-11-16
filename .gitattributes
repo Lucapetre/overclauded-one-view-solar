@@ -9,3 +9,4 @@ tests/injection_manifest.json -text
 *.pdf binary
 demo_components/** -text
 tests/component_truth/** -text
+*.bat text eol=crlf

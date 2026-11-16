@@ -20,6 +20,8 @@ Do not run `seed-demo` against a component-scenario database.
 
 ### Run the component demo
 
+**Easiest on Windows: double-click `start.bat`.** On first run it creates `.venv` if needed, generates the demo database in an `ovs-demo` folder next to the repo (a few minutes, ~2 GB), builds the frontend, starts the server for laptop and phones, and opens `http://127.0.0.1:8020/demo/`. Later runs start in seconds. The database is generated from fixed seeds and fixtures, so every machine gets the same sites, accounts, incidents, offers and numbers; only internal random IDs, creation timestamps and password salts differ. When `DEMO_DATA_VERSION` in `scripts/setup_demo.py` changes, `start.bat` offers to rebuild an older workspace.
+
 **Same demo as presented, one command** (new empty workspace outside the repo, ~2 GB free):
 
 ```
