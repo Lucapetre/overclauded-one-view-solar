@@ -136,6 +136,7 @@ Units differ (W vs kW, Wh vs kWh), signs differ (is negative "import" or "export
 ### STEP 3: Final output: the problems we solve (customer and PPC)
 
 See section 3. The detailed feature map is in section 4.
+See section 3. The detailed feature map is in section 4.
 
 ---
 
